@@ -1,0 +1,41 @@
+.app-shell {
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  box-sizing: border-box;
+  background: #f4f6fb;
+}
+
+.login-card,
+.welcome-card {
+  width: min(100%, 420px);
+  padding: 40px;
+  border: 1px solid #e3e7f0;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 20px 60px rgba(38, 50, 85, .12);
+}
+
+.brand-mark {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 24px;
+  border-radius: 14px;
+  color: #fff;
+  background: #175e7a;
+  font-weight: 800;
+}
+
+.eyebrow { color: #175e7a; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
+h1 { margin: 8px 0; font-size: 32px; color: #172033; }
+.subtitle, .welcome-card p { color: #697386; margin: 0 0 28px; }
+form { display: grid; gap: 9px; }
+label { color: #293247; font-size: 14px; font-weight: 600; margin-top: 8px; }
+input { width: 100%; box-sizing: border-box; padding: 13px 14px; border: 1px solid #ccd3e0; border-radius: 9px; font: inherit; outline: none; }
+input:focus { border-color: #175e7a; box-shadow: 0 0 0 3px rgba(23, 94, 122, .14); }
+button { margin-top: 16px; padding: 13px 16px; border: 0; border-radius: 9px; color: #fff; background: #175e7a; font: inherit; font-weight: 700; cursor: pointer; }
+button:disabled { cursor: wait; opacity: .65; }
+.error { margin: 8px 0 0; color: #b42318; font-size: 14px; }
