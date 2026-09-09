@@ -50,6 +50,21 @@ services:
         - action: rebuild
           path: ./backend/package-lock.json
 
+  pgadmin:
+    image: docker.io/dpage/pgadmin4:latest
+    container_name: davinci-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: "${PGADMIN_DEFAULT_EMAIL:?PGADMIN_DEFAULT_EMAIL must be set}"
+      PGADMIN_DEFAULT_PASSWORD: "${PGADMIN_DEFAULT_PASSWORD:?PGADMIN_DEFAULT_PASSWORD must be set}"
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   frontend:
     build:
       context: ./frontend
@@ -74,3 +89,4 @@ services:
 
 volumes:
   postgres-data:
+  pgadmin-data:
