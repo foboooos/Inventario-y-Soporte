@@ -13,9 +13,7 @@ export function SupportPage({ user, activeRoute, onNavigate, onLogout }: Support
   return (
     <DashboardLayout user={user} activeRoute={activeRoute} onNavigate={onNavigate} onLogout={onLogout}>
       <main className="support-content" aria-labelledby="support-title">
-        <span className="eyebrow">Soporte</span>
-        <h1 id="support-title">Solicitar asistencia</h1>
-        <p className="subtitle">Desde aquí podrás registrar y consultar tus solicitudes de soporte.</p>
+        <h1 id="support-title">Soporte</h1>
         <div className="support-card">
           <strong>Módulo de tickets</strong>
           <p>El formulario para ingresar reclamos estará disponible en esta sección.</p>

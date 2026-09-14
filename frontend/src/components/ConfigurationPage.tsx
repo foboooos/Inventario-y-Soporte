@@ -13,9 +13,7 @@ export function ConfigurationPage({ user, activeRoute, onNavigate, onLogout }: C
   return (
     <DashboardLayout user={user} activeRoute={activeRoute} onNavigate={onNavigate} onLogout={onLogout}>
       <main className="support-content" aria-labelledby="configuration-title">
-        <span className="eyebrow">Administración</span>
         <h1 id="configuration-title">Configuración</h1>
-        <p className="subtitle">Gestiona los usuarios, permisos y parámetros del sistema.</p>
         <div className="support-card">
           <strong>Panel administrativo</strong>
           <p>Las herramientas para crear usuarios y administrar el sistema estarán disponibles en esta sección.</p>

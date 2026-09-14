@@ -307,7 +307,7 @@ button:disabled {
 .inventory-shell {
   min-height: 100svh;
   box-sizing: border-box;
-  background: var(--minimal-surface);
+  background: #fafaf8;
   color: var(--minimal-text);
   font-family: 'Open Sans', 'Segoe UI', sans-serif;
 }
@@ -369,22 +369,22 @@ button:disabled {
 .inventory-content {
   width: min(100% - 64px, 1240px);
   margin: 0 auto;
-  padding: 48px 0 72px;
+  padding: 36px 0 56px;
 }
 
 .page-heading {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 32px;
-  margin-bottom: 24px;
-  padding-bottom: 28px;
+  gap: 24px;
+  margin-bottom: 20px;
+  padding-bottom: 20px;
   border-bottom: 1px solid var(--minimal-border);
 }
 
 .page-heading h1 {
   margin-bottom: 8px;
-  font-size: clamp(32px, 5vw, 48px);
+  font-size: clamp(30px, 4vw, 42px);
 }
 
 .page-heading .subtitle {
@@ -395,13 +395,10 @@ button:disabled {
 .inventory-count {
   display: grid;
   gap: 2px;
-  min-width: 118px;
+  min-width: 100px;
   box-sizing: border-box;
-  padding: 12px 16px;
-  border: 1px solid var(--minimal-border);
-  border-radius: 8px;
+  padding: 0 4px;
   color: var(--minimal-muted);
-  background: #fff;
   font-family: Inconsolata, Consolas, monospace;
   text-align: left;
   text-transform: uppercase;
@@ -421,12 +418,32 @@ button:disabled {
 .inventory-count strong {
   color: var(--minimal-text);
   font-family: Inter, 'Segoe UI', sans-serif;
-  font-size: 28px;
+  font-size: 24px;
 }
 
 .inventory-count span {
   font-size: 11px;
   letter-spacing: 0.08em;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: 24px;
+  background: rgba(12, 12, 9, 0.48);
+  overflow-y: auto;
+}
+
+.modal-card {
+  width: min(100%, 640px);
+  max-height: calc(100svh - 48px);
+  margin: 0;
+  overflow-y: auto;
 }
 
 .create-device-card {
@@ -523,10 +540,9 @@ button:disabled {
   gap: 12px;
   align-items: end;
   margin-bottom: 20px;
-  padding: 16px;
-  border: 1px solid var(--minimal-border);
-  border-radius: 8px;
-  background: #fff;
+  padding: 0 0 20px;
+  border-bottom: 1px solid var(--minimal-border);
+  background: transparent;
 }
 
 .inventory-toolbar label {
@@ -545,9 +561,8 @@ button:disabled {
 
 .table-card {
   border: 1px solid var(--minimal-border);
-  border-radius: 8px;
+  border-radius: 6px;
   background: #fff;
-  box-shadow: 0 8px 24px rgba(12, 12, 9, 0.04);
   overflow: hidden;
 }
 
@@ -580,6 +595,20 @@ td:nth-child(4) { width: 28%; }
 th:nth-child(5),
 td:nth-child(5) { width: 16%; }
 
+th:last-child,
+td:last-child {
+  width: 92px;
+  position: sticky;
+  right: 0;
+  z-index: 1;
+  background: #fff;
+}
+
+th:last-child {
+  z-index: 2;
+  background: #fafaf8;
+}
+
 th {
   color: var(--minimal-muted);
   background: #fafaf8;
@@ -601,6 +630,21 @@ tbody tr:last-child td {
 
 tbody tr:hover {
   background: #fafaf8;
+}
+
+.table-action {
+  margin: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--minimal-border);
+  border-radius: 4px;
+  color: var(--minimal-secondary);
+  background: #fff;
+  font-size: 12px;
+}
+
+.table-action:hover:not(:disabled) {
+  color: var(--minimal-primary);
+  background: var(--minimal-surface);
 }
 
 .device-code {
@@ -765,7 +809,21 @@ tbody tr:hover {
   }
 
   .table-scroll table {
-    min-width: 760px;
+    min-width: 0;
+  }
+
+  th,
+  td {
+    padding: 11px 8px;
+    white-space: normal;
+  }
+
+  .secondary-cell {
+    font-size: 11px;
+  }
+
+  .table-action {
+    padding: 5px 7px;
   }
 
   .heading-actions {
@@ -795,6 +853,15 @@ tbody tr:hover {
 }
 
 @media (max-width: 480px) {
+  .modal-backdrop {
+    align-items: flex-start;
+    padding: 12px;
+  }
+
+  .modal-card {
+    max-height: calc(100svh - 24px);
+  }
+
   .app-shell {
     padding: 16px;
   }

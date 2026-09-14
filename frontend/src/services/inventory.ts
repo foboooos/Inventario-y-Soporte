@@ -9,6 +9,8 @@ export type CreateDeviceInput = {
   estado: DeviceStatus
 }
 
+export type UpdateDeviceInput = CreateDeviceInput
+
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
 type InventoryApiDevice = {
@@ -48,6 +50,33 @@ export async function createInventoryDevice(accessToken: string, input: CreateDe
     model: input.modelo || 'Sin modelo',
     location: input.ubicacion,
     status: input.estado,
+  }
+}
+
+export async function updateInventoryDevice(accessToken: string, id: number, input: UpdateDeviceInput): Promise<Device> {
+  const response = await fetch(`${API_URL}/inventory/${id}`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(input),
+  })
+  const data = await response.json() as InventoryApiDevice | { message?: string }
+
+  if (!response.ok) {
+    throw new Error('message' in data && data.message ? data.message : 'No se pudo actualizar el dispositivo')
+  }
+
+  const device = data as InventoryApiDevice
+  return {
+    id: device.id_dispositivo,
+    code: device.codigo_inventario,
+    type: device.tipo,
+    brand: device.marca ?? 'Sin marca',
+    model: device.modelo ?? 'Sin modelo',
+    location: device.ubicacion,
+    status: device.estado,
   }
 }
 

@@ -3,6 +3,7 @@ import { getInventory } from '../services/inventory'
 import type { AuthUser } from '../types/auth'
 import type { Device, DeviceStatus, DeviceType } from '../types/inventory'
 import { CreateDeviceForm } from './CreateDeviceForm'
+import { EditDeviceForm } from './EditDeviceForm'
 import { DashboardLayout } from './DashboardLayout'
 import type { RouteKey } from './Sidebar'
 
@@ -38,6 +39,8 @@ export function InventoryPage({ user, accessToken, onLogout, activeRoute, onNavi
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [showCreateForm, setShowCreateForm] = useState(false)
+  const [editingDevice, setEditingDevice] = useState<Device | null>(null)
+  const canManageInventory = user.rol === 'ADMIN' || user.rol === 'TECNICO'
 
   useEffect(() => {
     let active = true
@@ -77,20 +80,30 @@ export function InventoryPage({ user, accessToken, onLogout, activeRoute, onNavi
         <section className="inventory-content" aria-labelledby="inventory-title">
         <div className="page-heading">
           <div>
-            <span className="eyebrow">Inventario</span>
-            <h1 id="inventory-title">Dispositivos</h1>
-            <p className="subtitle">Consulta y administra los equipos registrados en el establecimiento.</p>
+            <h1 id="inventory-title">Inventario</h1>
           </div>
           <div className="heading-actions">
             <div className="inventory-count" aria-label={`${filteredDevices.length} dispositivos visibles`}>
               <strong>{filteredDevices.length}</strong>
               <span>dispositivos</span>
             </div>
-            {user.rol === 'ADMIN' && <button className="primary-action" type="button" onClick={() => setShowCreateForm(true)}>+ Nuevo dispositivo</button>}
+            {canManageInventory && <button className="primary-action" type="button" onClick={() => { setEditingDevice(null); setShowCreateForm(true) }}>+ Nuevo dispositivo</button>}
           </div>
         </div>
 
-        {showCreateForm && user.rol === 'ADMIN' && (
+        {editingDevice && canManageInventory && (
+          <EditDeviceForm
+            accessToken={accessToken}
+            device={editingDevice}
+            onCancel={() => setEditingDevice(null)}
+            onUpdated={(updatedDevice) => {
+              setDevices((current) => current.map((device) => device.id === updatedDevice.id ? updatedDevice : device))
+              setEditingDevice(null)
+            }}
+          />
+        )}
+
+        {showCreateForm && canManageInventory && (
           <CreateDeviceForm
             accessToken={accessToken}
             onCancel={() => setShowCreateForm(false)}
@@ -141,6 +154,7 @@ export function InventoryPage({ user, accessToken, onLogout, activeRoute, onNavi
                     <th scope="col">Marca y modelo</th>
                     <th scope="col">Ubicación</th>
                     <th scope="col">Estado</th>
+                    {canManageInventory && <th scope="col">Acciones</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -151,6 +165,7 @@ export function InventoryPage({ user, accessToken, onLogout, activeRoute, onNavi
                       <td><strong>{device.brand}</strong><span className="secondary-cell">{device.model}</span></td>
                       <td>{device.location}</td>
                       <td><span className={`status status-${device.status.toLowerCase()}`}>{statusLabels[device.status]}</span></td>
+                      {canManageInventory && <td><button className="table-action" type="button" onClick={() => { setShowCreateForm(false); setEditingDevice(device) }}>Editar</button></td>}
                     </tr>
                   ))}
                 </tbody>

@@ -32,10 +32,6 @@ export function LoginForm({ onAuthenticated }: LoginFormProps) {
   return (
     <main className="app-shell">
       <section className="login-card">
-
-        <span className="eyebrow">Sistema de soporte</span>
-        <h1>Iniciar sesión</h1>
-        <p className="subtitle">Accede para gestionar el inventario y los tickets.</p>
         <form onSubmit={handleSubmit}>
           <label htmlFor="usuario">Usuario</label>
           <input id="usuario" type="text" value={usuario} onChange={(event) => setUsuario(event.target.value)} required autoComplete="username" pattern="[a-z0-9]+\.[a-z0-9]+" title="Usa el formato nombre.apellido" />

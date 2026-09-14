@@ -1,41 +1,45 @@
 import { useState } from 'react'
-import { createInventoryDevice, type CreateDeviceInput } from '../services/inventory'
+import type { FormEvent } from 'react'
+import { updateInventoryDevice, type UpdateDeviceInput } from '../services/inventory'
 import type { Device, DeviceStatus, DeviceType } from '../types/inventory'
 
-type CreateDeviceFormProps = {
+type EditDeviceFormProps = {
   accessToken: string
-  onCreated: (device: Device) => void
+  device: Device
+  onUpdated: (device: Device) => void
   onCancel: () => void
 }
 
-const initialForm: CreateDeviceInput = {
-  codigo_inventario: '',
-  tipo: 'PC',
-  marca: '',
-  modelo: '',
-  ubicacion: '',
-  estado: 'ACTIVO',
+function deviceToForm(device: Device): UpdateDeviceInput {
+  return {
+    codigo_inventario: device.code,
+    tipo: device.type,
+    marca: device.brand === 'Sin marca' ? '' : device.brand,
+    modelo: device.model === 'Sin modelo' ? '' : device.model,
+    ubicacion: device.location,
+    estado: device.status,
+  }
 }
 
-export function CreateDeviceForm({ accessToken, onCreated, onCancel }: CreateDeviceFormProps) {
-  const [form, setForm] = useState(initialForm)
+export function EditDeviceForm({ accessToken, device, onUpdated, onCancel }: EditDeviceFormProps) {
+  const [form, setForm] = useState(() => deviceToForm(device))
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
 
-  function updateField<K extends keyof CreateDeviceInput>(field: K, value: CreateDeviceInput[K]) {
+  function updateField<K extends keyof UpdateDeviceInput>(field: K, value: UpdateDeviceInput[K]) {
     setForm((current) => ({ ...current, [field]: value }))
   }
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError('')
     setSaving(true)
 
     try {
-      const createdDevice = await createInventoryDevice(accessToken, form)
-      onCreated(createdDevice)
+      const updatedDevice = await updateInventoryDevice(accessToken, device.id, form)
+      onUpdated(updatedDevice)
     } catch (exception) {
-      setError(exception instanceof Error ? exception.message : 'No se pudo registrar el dispositivo')
+      setError(exception instanceof Error ? exception.message : 'No se pudo actualizar el dispositivo')
     } finally {
       setSaving(false)
     }
@@ -43,11 +47,11 @@ export function CreateDeviceForm({ accessToken, onCreated, onCancel }: CreateDev
 
   return (
     <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onCancel() }}>
-      <section className="create-device-card modal-card" role="dialog" aria-modal="true" aria-labelledby="create-device-title" onMouseDown={(event) => event.stopPropagation()}>
+      <section className="create-device-card modal-card" role="dialog" aria-modal="true" aria-labelledby="edit-device-title" onMouseDown={(event) => event.stopPropagation()}>
         <div className="form-heading">
         <div>
           <span className="eyebrow">Administración</span>
-          <h2 id="create-device-title">Registrar nuevo dispositivo</h2>
+          <h2 id="edit-device-title">Editar dispositivo</h2>
         </div>
         <button className="icon-button" type="button" aria-label="Cerrar formulario" onClick={onCancel}>×</button>
       </div>
@@ -55,7 +59,7 @@ export function CreateDeviceForm({ accessToken, onCreated, onCancel }: CreateDev
       <form className="device-form" onSubmit={handleSubmit}>
         <label>
           <span>Código de inventario</span>
-          <input value={form.codigo_inventario} onChange={(event) => updateField('codigo_inventario', event.target.value)} placeholder="DV-PC-004" required maxLength={50} />
+          <input value={form.codigo_inventario} onChange={(event) => updateField('codigo_inventario', event.target.value)} required maxLength={50} />
         </label>
         <label>
           <span>Tipo</span>
@@ -76,7 +80,7 @@ export function CreateDeviceForm({ accessToken, onCreated, onCancel }: CreateDev
         </label>
         <label className="device-form-wide">
           <span>Ubicación</span>
-          <input value={form.ubicacion} onChange={(event) => updateField('ubicacion', event.target.value)} placeholder="Laboratorio 1" required maxLength={100} />
+          <input value={form.ubicacion} onChange={(event) => updateField('ubicacion', event.target.value)} required maxLength={100} />
         </label>
         <label>
           <span>Estado</span>
@@ -89,7 +93,7 @@ export function CreateDeviceForm({ accessToken, onCreated, onCancel }: CreateDev
         {error && <p className="error device-form-wide" role="alert">{error}</p>}
         <div className="device-form-actions device-form-wide">
           <button className="secondary-button" type="button" onClick={onCancel}>Cancelar</button>
-          <button type="submit" disabled={saving}>{saving ? 'Guardando…' : 'Registrar dispositivo'}</button>
+          <button type="submit" disabled={saving}>{saving ? 'Guardando…' : 'Guardar cambios'}</button>
         </div>
         </form>
       </section>
