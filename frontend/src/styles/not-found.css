@@ -1,0 +1,32 @@
+.not-found-page {
+  text-align: center;
+}
+
+.not-found-card {
+  width: min(100%, 420px);
+  box-sizing: border-box;
+  padding: 40px;
+  border: 1px solid var(--minimal-border);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.not-found-code {
+  color: var(--minimal-secondary);
+  font-family: Inconsolata, Consolas, monospace;
+  font-size: 48px;
+  font-weight: 700;
+}
+
+.not-found-card h1 {
+  margin-top: 16px;
+}
+
+.not-found-card p {
+  margin: 0;
+  color: var(--minimal-muted);
+}
+
+.not-found-card button {
+  margin-top: 24px;
+}

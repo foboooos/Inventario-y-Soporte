@@ -1,0 +1,11 @@
+:root {
+  --minimal-primary: #0c0c09;
+  --minimal-secondary: #312c85;
+  --minimal-surface: #f4f4f1;
+  --minimal-text: #0c0c09;
+  --minimal-muted: #5f5f59;
+  --minimal-border: #c9c9c2;
+  --minimal-danger: #dc2626;
+  --minimal-success: #166534;
+  --minimal-warning: #92400e;
+}

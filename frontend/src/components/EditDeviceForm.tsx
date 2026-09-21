@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { updateInventoryDevice, type UpdateDeviceInput } from '../services/inventory'
+import { isSessionExpired } from '../services/http'
 import type { Device, DeviceStatus, DeviceType } from '../types/inventory'
 
 type EditDeviceFormProps = {
@@ -8,6 +9,7 @@ type EditDeviceFormProps = {
   device: Device
   onUpdated: (device: Device) => void
   onCancel: () => void
+  onSessionExpired: () => void
 }
 
 function deviceToForm(device: Device): UpdateDeviceInput {
@@ -21,7 +23,7 @@ function deviceToForm(device: Device): UpdateDeviceInput {
   }
 }
 
-export function EditDeviceForm({ accessToken, device, onUpdated, onCancel }: EditDeviceFormProps) {
+export function EditDeviceForm({ accessToken, device, onUpdated, onCancel, onSessionExpired }: EditDeviceFormProps) {
   const [form, setForm] = useState(() => deviceToForm(device))
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
@@ -39,6 +41,10 @@ export function EditDeviceForm({ accessToken, device, onUpdated, onCancel }: Edi
       const updatedDevice = await updateInventoryDevice(accessToken, device.id, form)
       onUpdated(updatedDevice)
     } catch (exception) {
+      if (isSessionExpired(exception)) {
+        onSessionExpired()
+        return
+      }
       setError(exception instanceof Error ? exception.message : 'No se pudo actualizar el dispositivo')
     } finally {
       setSaving(false)

@@ -1,0 +1,23 @@
+.app-shell {
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  padding: 32px 24px;
+  background: var(--minimal-surface);
+  color: var(--minimal-text);
+  font-family: 'Open Sans', 'Segoe UI', sans-serif;
+}
+
+.login-card {
+  width: min(100%, 400px);
+  box-sizing: border-box;
+  padding: 32px;
+  border: 1px solid var(--minimal-border);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.login-card form label:first-of-type {
+  margin-top: 0;
+}

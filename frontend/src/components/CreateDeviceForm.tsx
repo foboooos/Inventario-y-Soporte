@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { createInventoryDevice, type CreateDeviceInput } from '../services/inventory'
+import { isSessionExpired } from '../services/http'
 import type { Device, DeviceStatus, DeviceType } from '../types/inventory'
 
 type CreateDeviceFormProps = {
   accessToken: string
   onCreated: (device: Device) => void
   onCancel: () => void
+  onSessionExpired: () => void
 }
 
 const initialForm: CreateDeviceInput = {
@@ -17,7 +19,7 @@ const initialForm: CreateDeviceInput = {
   estado: 'ACTIVO',
 }
 
-export function CreateDeviceForm({ accessToken, onCreated, onCancel }: CreateDeviceFormProps) {
+export function CreateDeviceForm({ accessToken, onCreated, onCancel, onSessionExpired }: CreateDeviceFormProps) {
   const [form, setForm] = useState(initialForm)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
@@ -35,6 +37,10 @@ export function CreateDeviceForm({ accessToken, onCreated, onCancel }: CreateDev
       const createdDevice = await createInventoryDevice(accessToken, form)
       onCreated(createdDevice)
     } catch (exception) {
+      if (isSessionExpired(exception)) {
+        onSessionExpired()
+        return
+      }
       setError(exception instanceof Error ? exception.message : 'No se pudo registrar el dispositivo')
     } finally {
       setSaving(false)

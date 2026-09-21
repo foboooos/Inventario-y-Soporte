@@ -12,6 +12,12 @@ import { UpdateDeviceDto } from './dto/update-device.dto.js';
 export class InventoryController {
   constructor(private readonly inventoryService: InventoryService) {}
 
+  @Get('options')
+  @Roles(UserRole.ADMIN, UserRole.TECNICO, UserRole.DOCENTE)
+  findOptions() {
+    return this.inventoryService.findOptions();
+  }
+
   @Get()
   @Roles(UserRole.ADMIN, UserRole.TECNICO)
   findAll() {

@@ -1,0 +1,73 @@
+.support-content {
+  width: min(100% - 48px, 760px);
+  margin: 0 auto;
+  padding: 56px 0 72px;
+}
+
+.support-content h1 {
+  margin-bottom: 8px;
+}
+
+.support-card {
+  margin-top: 32px;
+  padding: 24px;
+  border: 1px solid var(--minimal-border);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.support-card p {
+  margin: 8px 0 0;
+  color: var(--minimal-muted);
+}
+
+.ticket-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.ticket-form label {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.ticket-form label > span {
+  color: var(--minimal-muted);
+  font-family: Inconsolata, Consolas, monospace;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ticket-form em {
+  font-family: 'Open Sans', 'Segoe UI', sans-serif;
+  font-style: normal;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.ticket-form-wide {
+  grid-column: 1 / -1;
+}
+
+.ticket-form button {
+  grid-column: 1 / -1;
+  justify-self: end;
+}
+
+.ticket-confirmation {
+  text-align: center;
+}
+
+.ticket-confirmation h2 {
+  margin: 20px 0 0;
+  color: var(--minimal-secondary);
+  font-family: Inconsolata, Consolas, monospace;
+  font-size: 30px;
+}
+
+.ticket-confirmation button {
+  margin-top: 24px;
+}

@@ -20,7 +20,7 @@ export function LoginForm({ onAuthenticated }: LoginFormProps) {
     setLoading(true)
 
     try {
-      const session = await login({ usuario, password })
+      const session = await login({ usuario: usuario.trim().toLowerCase(), password })
       onAuthenticated(session.user, session.access_token)
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : 'Error de conexión')
@@ -34,7 +34,7 @@ export function LoginForm({ onAuthenticated }: LoginFormProps) {
       <section className="login-card">
         <form onSubmit={handleSubmit}>
           <label htmlFor="usuario">Usuario</label>
-          <input id="usuario" type="text" value={usuario} onChange={(event) => setUsuario(event.target.value)} required autoComplete="username" pattern="[a-z0-9]+\.[a-z0-9]+" title="Usa el formato nombre.apellido" />
+          <input id="usuario" type="text" value={usuario} onChange={(event) => setUsuario(event.target.value)} required autoComplete="username" pattern="[a-z0-9._-]+\.[a-z0-9._-]+" title="Usa el formato nombre.apellido en minúsculas" />
           <label htmlFor="password">Contraseña</label>
           <input id="password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} required minLength={8} autoComplete="current-password" />
           {error && <p className="error" role="alert">{error}</p>}

@@ -15,6 +15,17 @@ export class InventoryService {
     return this.devices.find({ order: { id_dispositivo: 'ASC' } });
   }
 
+  findOptions() {
+    return this.devices.find({
+      select: {
+        id_dispositivo: true,
+        codigo_inventario: true,
+        ubicacion: true,
+      },
+      order: { codigo_inventario: 'ASC' },
+    });
+  }
+
   async create(createDeviceDto: CreateDeviceDto) {
     const codigo_inventario = createDeviceDto.codigo_inventario.trim().toUpperCase();
     const existingDevice = await this.devices.findOneBy({ codigo_inventario });
