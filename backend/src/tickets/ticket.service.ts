@@ -1,7 +1,7 @@
 import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { UserRole } from '../users/user-role.enum.js';
+
 import { Device } from '../inventory/device.entity.js';
 import { CreateTicketDto } from './dto/create-ticket.dto.js';
 import { formatTicketCode } from './ticket-code.js';
@@ -13,17 +13,11 @@ import { TicketStatus } from './ticket-status.enum.js';
 export class TicketService {
   constructor(@InjectRepository(Ticket) private readonly tickets: Repository<Ticket>) {}
 
-  async findAll(requesterRut: string, role: UserRole) {
-    const order = { fecha_creacion: 'DESC' as const, id_ticket: 'DESC' as const };
-
-    if (role === UserRole.DOCENTE) {
-      return this.tickets.find({
-        where: { id_solicitante: requesterRut },
-        order,
-      });
-    }
-
-    return this.tickets.find({ order });
+  async findAll(requesterRut: string) {
+    return this.tickets.find({
+      where: { id_solicitante: requesterRut },
+      order: { fecha_creacion: 'DESC', id_ticket: 'DESC' },
+    });
   }
 
   async create(createTicketDto: CreateTicketDto, requesterRut: string) {

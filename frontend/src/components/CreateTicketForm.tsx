@@ -6,11 +6,12 @@ import type { DeviceOption, Ticket } from '../types/ticket'
 type CreateTicketFormProps = {
   accessToken: string
   onSessionExpired: () => void
+  onTicketCreated: () => void
 }
 
 const OTHER_LOCATION = '__OTHER__'
 
-export function CreateTicketForm({ accessToken, onSessionExpired }: CreateTicketFormProps) {
+export function CreateTicketForm({ accessToken, onSessionExpired, onTicketCreated }: CreateTicketFormProps) {
   const [devices, setDevices] = useState<DeviceOption[]>([])
   const [location, setLocation] = useState('')
   const [customLocation, setCustomLocation] = useState('')
@@ -66,6 +67,7 @@ export function CreateTicketForm({ accessToken, onSessionExpired }: CreateTicket
         ...(effectiveDeviceId ? { id_dispositivo: Number(effectiveDeviceId) } : {}),
       })
       setCreatedTicket(ticket)
+      onTicketCreated()
     } catch (exception: unknown) {
       if (isSessionExpired(exception)) {
         onSessionExpired()

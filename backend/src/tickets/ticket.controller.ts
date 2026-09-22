@@ -15,13 +15,13 @@ export class TicketController {
   constructor(private readonly ticketService: TicketService) {}
 
   @Get()
-  @Roles(UserRole.DOCENTE, UserRole.ADMIN, UserRole.TECNICO)
+  @Roles(UserRole.DOCENTE)
   findAll(@Req() request: AuthenticatedRequest) {
-    return this.ticketService.findAll(request.user.sub, request.user.rol as UserRole);
+    return this.ticketService.findAll(request.user.sub);
   }
 
   @Post()
-  @Roles(UserRole.DOCENTE, UserRole.ADMIN)
+  @Roles(UserRole.DOCENTE)
   create(@Body() createTicketDto: CreateTicketDto, @Req() request: AuthenticatedRequest) {
     return this.ticketService.create(createTicketDto, request.user.sub);
   }

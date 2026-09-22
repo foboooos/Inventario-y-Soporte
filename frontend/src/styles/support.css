@@ -90,6 +90,18 @@
   margin-top: 24px;
 }
 
+.ticket-history-section {
+  margin-top: 36px;
+}
+
+.ticket-history-heading {
+  margin-bottom: 16px;
+}
+
+.ticket-history-heading h2 {
+  margin: 8px 0 0;
+}
+
 .ticket-history-card {
   padding: 0;
   overflow: hidden;
@@ -150,10 +162,6 @@
   width: 14%;
 }
 
-.ticket-history-requester-column,
-.ticket-history-device-column {
-  width: 13%;
-}
 
 .ticket-history-location-column {
   width: 14%;

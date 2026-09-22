@@ -1,7 +1,9 @@
+import { useState } from 'react'
 import type { AuthUser } from '../types/auth'
 import { DashboardLayout } from './DashboardLayout'
 import type { RouteKey } from './Sidebar'
 import { CreateTicketForm } from './CreateTicketForm'
+import { TicketHistory } from './TicketHistory'
 
 type SupportPageProps = {
   user: AuthUser
@@ -12,6 +14,8 @@ type SupportPageProps = {
 }
 
 export function SupportPage({ user, activeRoute, onNavigate, onLogout, accessToken }: SupportPageProps) {
+  const [ticketHistoryRefreshKey, setTicketHistoryRefreshKey] = useState(0)
+
   return (
     <DashboardLayout user={user} activeRoute={activeRoute} onNavigate={onNavigate} onLogout={onLogout}>
       <main className="support-shell">
@@ -21,7 +25,16 @@ export function SupportPage({ user, activeRoute, onNavigate, onLogout, accessTok
               <h1 id="support-title">Soporte</h1>
             </div>
           </header>
-          <CreateTicketForm accessToken={accessToken} onSessionExpired={onLogout} />
+          <CreateTicketForm
+            accessToken={accessToken}
+            onSessionExpired={onLogout}
+            onTicketCreated={() => setTicketHistoryRefreshKey((key) => key + 1)}
+          />
+          <TicketHistory
+            accessToken={accessToken}
+            onSessionExpired={onLogout}
+            refreshKey={ticketHistoryRefreshKey}
+          />
         </section>
       </main>
     </DashboardLayout>

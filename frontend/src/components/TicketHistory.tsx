@@ -1,17 +1,12 @@
 import { useEffect, useState } from 'react'
 import { getTickets } from '../services/tickets'
 import { isSessionExpired } from '../services/http'
-import type { AuthUser } from '../types/auth'
 import type { Ticket, TicketStatus } from '../types/ticket'
-import { DashboardLayout } from './DashboardLayout'
-import type { RouteKey } from './Sidebar'
 
-type TicketHistoryPageProps = {
-  user: AuthUser
+type TicketHistoryProps = {
   accessToken: string
-  activeRoute: RouteKey
-  onNavigate: (route: RouteKey) => void
-  onLogout: () => void
+  onSessionExpired: () => void
+  refreshKey: number
 }
 
 const statusLabels: Record<TicketStatus, string> = {
@@ -33,7 +28,7 @@ function formatTicketDate(value?: string) {
   return Number.isNaN(date.getTime()) ? value : dateFormatter.format(date)
 }
 
-function TicketHistoryTable({ tickets, showRequester }: { tickets: Ticket[]; showRequester: boolean }) {
+function TicketHistoryTable({ tickets }: { tickets: Ticket[] }) {
   return (
     <div className="ticket-history-table-scroll" role="region" tabIndex={0} aria-label="Tabla de historial de tickets">
       <table className="ticket-history-table">
@@ -42,8 +37,7 @@ function TicketHistoryTable({ tickets, showRequester }: { tickets: Ticket[]; sho
           <tr>
             <th className="ticket-history-code-column" scope="col">Código</th>
             <th className="ticket-history-status-column" scope="col">Estado</th>
-            {showRequester && <th className="ticket-history-requester-column" scope="col">Solicitante</th>}
-            {showRequester && <th className="ticket-history-device-column" scope="col">Dispositivo</th>}
+
             <th className="ticket-history-location-column" scope="col">Ubicación</th>
             <th className="ticket-history-symptom-column" scope="col">Síntoma</th>
             <th className="ticket-history-date-column" scope="col">Fecha de creación</th>
@@ -58,8 +52,7 @@ function TicketHistoryTable({ tickets, showRequester }: { tickets: Ticket[]; sho
                   {statusLabels[ticket.estado] ?? ticket.estado}
                 </span>
               </td>
-              {showRequester && <td>{ticket.id_solicitante ?? 'No disponible'}</td>}
-              {showRequester && <td>{ticket.id_dispositivo ?? 'No asociado'}</td>}
+
               <td>{ticket.ubicacion}</td>
               <td className="ticket-history-symptom">{ticket.sintoma}</td>
               <td className="ticket-history-date">
@@ -77,12 +70,11 @@ function TicketHistoryTable({ tickets, showRequester }: { tickets: Ticket[]; sho
   )
 }
 
-export function TicketHistoryPage({ user, accessToken, activeRoute, onNavigate, onLogout }: TicketHistoryPageProps) {
+export function TicketHistory({ accessToken, onSessionExpired, refreshKey }: TicketHistoryProps) {
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [reloadKey, setReloadKey] = useState(0)
-  const showRequester = user.rol === 'ADMIN' || user.rol === 'TECNICO'
 
   useEffect(() => {
     let isMounted = true
@@ -97,7 +89,7 @@ export function TicketHistoryPage({ user, accessToken, activeRoute, onNavigate, 
         if (isMounted) setTickets(loadedTickets)
       } catch (exception: unknown) {
         if (isSessionExpired(exception)) {
-          onLogout()
+          onSessionExpired()
           return
         }
         if (isMounted) {
@@ -113,26 +105,18 @@ export function TicketHistoryPage({ user, accessToken, activeRoute, onNavigate, 
     return () => {
       isMounted = false
     }
-  }, [accessToken, onLogout, reloadKey])
+  }, [accessToken, onSessionExpired, refreshKey, reloadKey])
 
   return (
-    <DashboardLayout user={user} activeRoute={activeRoute} onNavigate={onNavigate} onLogout={onLogout}>
-      <main className="support-shell">
-        <section className="support-content" aria-labelledby="ticket-history-title">
-          <header className="page-heading support-page-heading">
-            <div>
-              <span className="eyebrow">Seguimiento</span>
-              <h1 id="ticket-history-title">Historial de tickets</h1>
-              <p className="subtitle">
-                {showRequester
-                  ? 'Revisa el estado y los detalles de todas las solicitudes de soporte.'
-                  : 'Consulta el estado y los detalles de tus solicitudes de soporte.'}
-              </p>
-            </div>
-          </header>
+    <section className="ticket-history-section" aria-labelledby="ticket-history-title">
+      <header className="ticket-history-heading">
+        <span className="eyebrow">Seguimiento</span>
+        <h2 id="ticket-history-title">Historial de tickets</h2>
+        <p className="subtitle">Consulta el estado y los detalles de tus solicitudes de soporte.</p>
+      </header>
 
-          <section className="support-card ticket-history-card" aria-labelledby="ticket-history-list-title">
-            <h2 id="ticket-history-list-title" className="sr-only">Listado de tickets</h2>
+      <section className="support-card ticket-history-card" aria-labelledby="ticket-history-list-title">
+        <h3 id="ticket-history-list-title" className="sr-only">Listado de tickets</h3>
 
             {loading && (
               <div className="ticket-history-state" role="status" aria-live="polite">
@@ -159,11 +143,9 @@ export function TicketHistoryPage({ user, accessToken, activeRoute, onNavigate, 
             )}
 
             {!loading && !error && tickets.length > 0 && (
-              <TicketHistoryTable tickets={tickets} showRequester={showRequester} />
+              <TicketHistoryTable tickets={tickets} />
             )}
-          </section>
-        </section>
-      </main>
-    </DashboardLayout>
+      </section>
+    </section>
   )
 }

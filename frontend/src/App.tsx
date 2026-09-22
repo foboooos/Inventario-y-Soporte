@@ -13,13 +13,13 @@ import { InventoryPage } from './components/InventoryPage'
 import { LoginForm } from './components/LoginForm'
 import { NotFoundPage } from './components/NotFoundPage'
 import { SupportPage } from './components/SupportPage'
-import { TicketHistoryPage } from './components/TicketHistoryPage'
+
 import type { RouteKey } from './components/Sidebar'
 import type { AuthUser } from './types/auth'
 
 const routePaths: Record<RouteKey, string> = {
   support: '/soporte',
-  tickets: '/tickets',
+
   inventory: '/inventario',
   settings: '/config',
 }
@@ -39,8 +39,8 @@ function defaultRouteForRole(role: string): RouteKey {
 }
 
 function canAccessRoute(role: string, route: RouteKey) {
-  if (route === 'support') return role === 'DOCENTE' || role === 'ADMIN'
-  if (route === 'tickets') return role === 'DOCENTE' || role === 'ADMIN' || role === 'TECNICO'
+  if (route === 'support') return role === 'DOCENTE'
+
   if (route === 'inventory') return role === 'ADMIN' || role === 'TECNICO'
   return role === 'ADMIN'
 }
@@ -127,9 +127,6 @@ function App() {
     return <SupportPage user={user} accessToken={accessToken} activeRoute={activeRoute} onNavigate={(route) => navigate(routePaths[route])} onLogout={handleLogout} />
   }
 
-  if (activeRoute === 'tickets') {
-    return <TicketHistoryPage user={user} accessToken={accessToken} activeRoute={activeRoute} onNavigate={(route) => navigate(routePaths[route])} onLogout={handleLogout} />
-  }
 
   if (activeRoute === 'settings') {
     return <ConfigurationPage user={user} activeRoute={activeRoute} onNavigate={(route) => navigate(routePaths[route])} onLogout={handleLogout} />
