@@ -8,6 +8,7 @@ import { InventoryModule } from './inventory/inventory.module.js';
 import { TicketModule } from './tickets/ticket.module.js';
 import { Device } from './inventory/device.entity.js';
 import { Ticket } from './tickets/ticket.entity.js';
+import { TicketSequence } from './tickets/ticket-sequence.entity.js';
 import { User } from './users/user.entity.js';
 
 @Module({
@@ -25,7 +26,7 @@ import { User } from './users/user.entity.js';
         username: config.get<string>('DB_USERNAME', 'postgres'),
         password: config.get<string>('DB_PASSWORD', ''),
         database: config.get<string>('DB_DATABASE', 'backend'),
-        entities: [User, Device, Ticket],
+        entities: [User, Device, Ticket, TicketSequence],
         autoLoadEntities: true,
         synchronize: config.get<string>('DB_SYNCHRONIZE', 'false') === 'true',
       }),
