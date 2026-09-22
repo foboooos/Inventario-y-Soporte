@@ -22,7 +22,7 @@ type SortDir = 'asc' | 'desc'
 type Modal = { kind: 'create' } | { kind: 'edit'; device: Device } | null
 
 const FILTERS_KEY = 'inventory-filters-v1'
-const PAGE_SIZE = 8
+const PAGE_SIZE = 10
 const NO_BRAND = 'Sin marca'
 const NO_MODEL = 'Sin modelo'
 
@@ -104,7 +104,11 @@ function SortButton({ label, sortKey, activeKey, dir, onToggle }: {
   return (
     <button type="button" className="th-sort" onClick={() => onToggle(sortKey)} aria-label={`${label}: ${hint}`}>
       {label}
-      <span aria-hidden="true" className="th-sort-icon">{active ? (dir === 'asc' ? '▲' : '▼') : '↕'}</span>
+      <svg className="th-sort-icon" viewBox="0 0 24 24" aria-hidden="true">
+        {!active && <><path d="m8 9 4-4 4 4" /><path d="m8 15 4 4 4-4" /></>}
+        {active && dir === 'asc' && <path d="M12 19V5M6 11l6-6 6 6" />}
+        {active && dir === 'desc' && <path d="M12 5v14M6 13l6 6 6-6" />}
+      </svg>
     </button>
   )
 }
@@ -401,25 +405,24 @@ export function InventoryPage({ user, accessToken, onLogout, activeRoute, onNavi
                           <th scope="col" aria-sort={sortKey === 'status' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
                             <SortButton label="Estado" sortKey="status" activeKey={sortKey} dir={sortDir} onToggle={toggleSort} />
                           </th>
-                          {canManageInventory && <th scope="col">Acciones</th>}
                         </tr>
                       </thead>
                       <tbody>
                         {pagedDevices.map((device) => (
                           <tr key={device.id}>
-                            <td className="device-code">{device.code}</td>
+                            <td className="device-code">
+                              {canManageInventory ? (
+                                <button className="device-code-button" type="button" aria-label={`Editar ${device.code}`} title={`Editar ${device.code}`} onClick={() => setModal({ kind: 'edit', device })}>
+                                  {device.code}
+                                </button>
+                              ) : (
+                                device.code
+                              )}
+                            </td>
                             <td>{typeLabels[device.type]}</td>
                             <td>{renderBrandModel(device)}</td>
                             <td>{device.location}</td>
                             <td><span className={`status status-${device.status.toLowerCase().replace('_', '-')}`}>{statusLabels[device.status]}</span></td>
-                            {canManageInventory && (
-                              <td>
-                                <button className="table-action table-action-icon" type="button" aria-label={`Editar ${device.code}`} onClick={() => setModal({ kind: 'edit', device })}>
-                                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16-.75 4.75L8 20l11.5-11.5a2.12 2.12 0 0 0-3-3L5 17Z" /><path d="m14.5 7.5 2 2" /></svg>
-                                  <span className="sr-only">Editar {device.code}</span>
-                                </button>
-                              </td>
-                            )}
                           </tr>
                         ))}
                       </tbody>

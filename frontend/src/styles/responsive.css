@@ -3,6 +3,11 @@
     display: block;
   }
 
+  .inventory-shell {
+    height: auto;
+    overflow: visible;
+  }
+
   .sidebar {
     position: static;
     width: 100%;
@@ -95,10 +100,6 @@
 
   .secondary-cell {
     font-size: 10px;
-  }
-
-  .table-action {
-    padding: 4px 6px;
   }
 
   .device-form,

@@ -1,15 +1,22 @@
 .inventory-shell {
   min-height: 100svh;
+  height: 100svh;
   box-sizing: border-box;
+  display: flex;
+  overflow-y: auto;
   background: #fafaf8;
   color: var(--minimal-text);
   font-family: 'Open Sans', 'Segoe UI', sans-serif;
 }
 
 .inventory-content {
-  width: min(100% - 64px, 1240px);
+  width: min(100% - 48px, 1280px);
   margin: 0 auto;
-  padding: 24px 0 40px;
+  padding: 12px 0 8px;
+  height: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
 }
 
 .page-heading {
@@ -17,8 +24,8 @@
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: end;
   gap: 16px 24px;
-  margin-bottom: 20px;
-  padding-bottom: 20px;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
   border-bottom: 1px solid var(--minimal-border);
 }
 
@@ -34,39 +41,39 @@
 .inventory-actions {
   display: flex;
   justify-content: flex-end;
-  margin-bottom: 12px;
+  margin-bottom: 6px;
 }
 
 .inventory-summary {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
-  margin-bottom: 14px;
+  margin-bottom: 8px;
 }
 
 .inventory-summary-card {
-  min-height: 78px;
+  min-height: 56px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: 5px;
+  gap: 2px;
   box-sizing: border-box;
-  padding: 12px 16px;
-  border: 1px solid #e5e6e2;
-  border-radius: 12px;
+  padding: 8px 12px;
+  border: 1px solid #e7e7e2;
+  border-radius: 10px;
   background: #fff;
-  box-shadow: 0 3px 12px rgba(12, 12, 9, 0.04);
 }
 
 .summary-label {
   color: var(--minimal-muted);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
+  line-height: 1.35;
 }
 
 .summary-value {
   color: var(--minimal-primary);
-  font-size: 26px;
+  font-size: 20px;
   font-weight: 700;
   letter-spacing: -0.04em;
   line-height: 1;
@@ -88,7 +95,7 @@
   display: flex;
   align-items: stretch;
   gap: 20px;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   border-bottom: 1px solid #e4e4df;
   overflow-x: auto;
   scrollbar-width: thin;
@@ -96,10 +103,10 @@
 
 .inventory-status-tab {
   position: relative;
-  min-height: 36px;
+  min-height: 32px;
   flex: 0 0 auto;
   margin: 0;
-  padding: 8px 4px 9px;
+  padding: 6px 4px 7px;
   border: 0;
   border-radius: 0;
   color: var(--minimal-muted);
@@ -151,7 +158,7 @@
 
 .primary-action {
   margin: 0;
-  padding: 10px 14px;
+  padding: 8px 12px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -184,22 +191,20 @@
 
 
 .table-card {
-  height: 520px;
+  flex: none;
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--minimal-border);
-  border-radius: 12px;
+  border: 1px solid #e7e7e2;
+  border-radius: 10px;
   background: #fff;
   overflow: hidden;
 }
 
 .table-scroll {
   min-height: 0;
-  flex: 1 1 auto;
-  overflow: auto;
 }
 
-table {
+.table-scroll table {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
@@ -207,23 +212,25 @@ table {
 
 th,
 td {
-  padding: 9px 16px;
-  border-bottom: 1px solid #e4e4df;
+  padding: 3px 16px;
+  border-bottom: 1px solid #ecece6;
 }
 
-th {
+thead th {
   color: var(--minimal-muted);
-  background: #fafaf8;
-  font-family: inherit;
+  background: transparent;
   font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
+  font-weight: 600;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
+  padding: 3px 16px;
+  border-bottom: 1px solid #e4e4df;
 }
 
 td {
   color: var(--minimal-text);
-  font-size: 13px;
+  font-size: 12.5px;
+  line-height: 1.35;
   overflow-wrap: anywhere;
 }
 
@@ -256,43 +263,44 @@ tbody tr:hover {
 }
 
 .th-sort-icon {
-  font-size: 10px;
-}
-
-.table-action {
-  width: 30px;
-  height: 30px;
-  display: inline-grid;
-  place-items: center;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  border-radius: 8px;
-  color: var(--minimal-muted);
-  background: transparent;
-}
-
-.table-action:hover:not(:disabled) {
-  color: var(--minimal-primary);
-  background: var(--minimal-surface);
-}
-
-.table-action-icon svg {
-  width: 15px;
-  height: 15px;
+  width: 12px;
+  height: 12px;
   fill: none;
   stroke: currentColor;
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-width: 1.8;
+  stroke-width: 2;
 }
-
 
 .device-code {
   color: var(--minimal-secondary);
   font-family: Inconsolata, Consolas, monospace;
   font-weight: 700;
   white-space: nowrap;
+}
+
+.device-code-button {
+  display: block;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  color: var(--minimal-secondary);
+  background: transparent;
+  font-family: Inconsolata, Consolas, monospace;
+  font-size: inherit;
+  font-weight: 700;
+  line-height: 1.35;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.device-code-button:hover:not(:disabled) {
+  color: var(--minimal-primary);
+  background: transparent;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .secondary-cell {
@@ -310,15 +318,16 @@ tbody tr:hover {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 3px 7px;
+  padding: 2px 8px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 700;
+  line-height: 1.5;
 }
 
 .status::before {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
   background: currentColor;
   content: '';
@@ -335,18 +344,18 @@ tbody tr:hover {
 }
 
 .status-baja-tecnica {
-  color: var(--minimal-danger);
+  color: #b91c1c;
   background: #fee2e2;
 }
 
 .table-footer {
-  min-height: 52px;
+  min-height: 36px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
   flex: 0 0 auto;
-  padding: 8px 16px;
+  padding: 3px 16px;
   border-top: 1px solid #e4e4df;
   color: var(--minimal-muted);
   background: #fff;
@@ -360,8 +369,8 @@ tbody tr:hover {
 }
 
 .pagination-button {
-  min-width: 32px;
-  height: 32px;
+  min-width: 30px;
+  height: 30px;
   display: inline-grid;
   place-items: center;
   margin: 0;
@@ -402,11 +411,11 @@ tbody tr:hover {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 10px 20px;
+  padding: 8px 16px;
   border-bottom: 1px solid #e4e4df;
-  color: var(--minimal-danger);
+  color: #b91c1c;
   background: #fef2f2;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .banner-error .text-button {
@@ -417,9 +426,10 @@ tbody tr:hover {
 .empty-state-block {
   flex: 1 1 auto;
   display: grid;
-  gap: 16px;
+  align-content: center;
+  gap: 12px;
   justify-items: center;
-  padding: 40px 20px;
+  padding: 24px 20px;
   color: var(--minimal-muted);
   text-align: center;
 }
@@ -440,7 +450,7 @@ tbody tr:hover {
 }
 
 .skeleton-row {
-  height: 44px;
+  height: 34px;
   border-radius: 6px;
   background: linear-gradient(90deg, #e9e9e4 25%, #f7f7f4 50%, #e9e9e4 75%);
   background-size: 200% 100%;
@@ -461,7 +471,7 @@ tbody tr:hover {
 
 @media (max-width: 700px) {
   .table-card {
-    height: 460px;
+    flex: none;
   }
 
   .table-footer {
