@@ -22,7 +22,17 @@ type SortDir = 'asc' | 'desc'
 type Modal = { kind: 'create' } | { kind: 'edit'; device: Device } | null
 
 const FILTERS_KEY = 'inventory-filters-v1'
-const PAGE_SIZE = 10
+const MIN_PAGE_SIZE = 5
+const MAX_PAGE_SIZE = 30
+const ROW_HEIGHT = 40
+const TABLE_CHROME = 60
+const BOTTOM_SAFETY = 8
+const CHROME_GAPS = 22
+const CONTENT_PADDING = 20
+const FALLBACK_ACTIONS = 44
+const FALLBACK_SUMMARY = 64
+const FALLBACK_TABS = 41
+const INITIAL_PAGE_SIZE = 10
 const NO_BRAND = 'Sin marca'
 const NO_MODEL = 'Sin modelo'
 
@@ -130,7 +140,11 @@ export function InventoryPage({ user, accessToken, onLogout, activeRoute, onNavi
   const [reloadKey, setReloadKey] = useState(0)
   const [modal, setModal] = useState<Modal>(null)
   const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(INITIAL_PAGE_SIZE)
   const hasDataRef = useRef(false)
+  const actionsRef = useRef<HTMLDivElement | null>(null)
+  const summaryRef = useRef<HTMLElement | null>(null)
+  const tabsRef = useRef<HTMLDivElement | null>(null)
   const statusTabRefs = useRef<Array<HTMLButtonElement | null>>([])
   const canManageInventory = user.rol === 'ADMIN' || user.rol === 'TECNICO'
 
@@ -182,6 +196,23 @@ export function InventoryPage({ user, accessToken, onLogout, activeRoute, onNavi
     }
   }, [statusFilter, sortKey, sortDir])
 
+  useEffect(() => {
+    function computePageSize() {
+      const chrome =
+        (actionsRef.current?.offsetHeight ?? FALLBACK_ACTIONS) +
+        (summaryRef.current?.offsetHeight ?? FALLBACK_SUMMARY) +
+        (tabsRef.current?.offsetHeight ?? FALLBACK_TABS) +
+        CHROME_GAPS +
+        CONTENT_PADDING
+      const rows = Math.floor((window.innerHeight - chrome - TABLE_CHROME - BOTTOM_SAFETY) / ROW_HEIGHT)
+      setPageSize(Math.min(MAX_PAGE_SIZE, Math.max(MIN_PAGE_SIZE, rows)))
+    }
+
+    computePageSize()
+    window.addEventListener('resize', computePageSize)
+    return () => window.removeEventListener('resize', computePageSize)
+  }, [loading])
+
   function retryLoad() {
     setError('')
     setRefreshError('')
@@ -216,10 +247,10 @@ export function InventoryPage({ user, accessToken, onLogout, activeRoute, onNavi
     return summary
   }, { total: 0, active: 0, inactive: 0, technicalRetirement: 0 }), [devices])
 
-  const totalPages = Math.max(1, Math.ceil(visibleDevices.length / PAGE_SIZE))
+  const totalPages = Math.max(1, Math.ceil(visibleDevices.length / pageSize))
   const activePage = Math.min(currentPage, totalPages)
-  const pageStart = (activePage - 1) * PAGE_SIZE
-  const pagedDevices = visibleDevices.slice(pageStart, pageStart + PAGE_SIZE)
+  const pageStart = (activePage - 1) * pageSize
+  const pagedDevices = visibleDevices.slice(pageStart, pageStart + pageSize)
   const pageNumbers = getPageNumbers(activePage, totalPages)
 
   function changeStatusFilter(nextStatus: StatusFilter) {
@@ -263,7 +294,7 @@ export function InventoryPage({ user, accessToken, onLogout, activeRoute, onNavi
       <main className="inventory-shell">
         <section className="inventory-content" aria-label="Inventario">
           {canManageInventory && (
-            <div className="inventory-actions">
+            <div className="inventory-actions" ref={actionsRef}>
               <button className="primary-action" type="button" onClick={() => setModal({ kind: 'create' })}>
                 <svg viewBox="0 0 24 24" aria-hidden="true" className="button-icon"><path d="M12 5v14M5 12h14" /></svg>
                 Nuevo dispositivo
@@ -271,7 +302,7 @@ export function InventoryPage({ user, accessToken, onLogout, activeRoute, onNavi
             </div>
           )}
 
-          <section className="inventory-summary" aria-label="Resumen del inventario">
+          <section className="inventory-summary" aria-label="Resumen del inventario" ref={summaryRef}>
             <article className="inventory-summary-card" data-status="total">
               <span className="summary-label">Total</span>
               <strong className="summary-value">{deviceSummary.total}</strong>
@@ -290,7 +321,7 @@ export function InventoryPage({ user, accessToken, onLogout, activeRoute, onNavi
             </article>
           </section>
 
-          <div className="inventory-status-tabs" role="tablist" aria-label="Filtrar por estado">
+          <div className="inventory-status-tabs" role="tablist" aria-label="Filtrar por estado" ref={tabsRef}>
             {statusOptions.map((option, index) => {
               const selected = statusFilter === option.value
               const tabId = `inventory-tab-${option.value.toLowerCase()}`
@@ -431,7 +462,7 @@ export function InventoryPage({ user, accessToken, onLogout, activeRoute, onNavi
                 )}
                 {visibleDevices.length > 0 && (
                   <footer className="table-footer">
-                    <span>Mostrando {pageStart + 1}–{Math.min(pageStart + PAGE_SIZE, visibleDevices.length)} de {visibleDevices.length} dispositivos</span>
+                    <span>Mostrando {pageStart + 1}–{Math.min(pageStart + pageSize, visibleDevices.length)} de {visibleDevices.length} dispositivos</span>
                     <nav className="pagination" aria-label="Paginación del inventario">
                       <button className="pagination-button" type="button" disabled={activePage === 1} onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}>Anterior</button>
                       {pageNumbers.map((page, index) => page === 'ellipsis'
