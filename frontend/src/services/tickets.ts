@@ -11,6 +11,11 @@ export async function getTickets(accessToken: string): Promise<Ticket[]> {
   return readApiJson<Ticket[]>(response, 'No se pudo cargar el historial de tickets')
 }
 
+export async function getTicketInbox(accessToken: string): Promise<Ticket[]> {
+  const response = await apiFetch('/tickets/inbox', accessToken)
+  return readApiJson<Ticket[]>(response, 'No se pudo cargar la bandeja de tickets')
+}
+
 export async function createTicket(accessToken: string, input: CreateTicketInput): Promise<Ticket> {
   const response = await apiFetch('/tickets', accessToken, {
     method: 'POST',

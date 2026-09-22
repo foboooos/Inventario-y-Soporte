@@ -9,6 +9,7 @@ import './styles/dialogs.css'
 import './styles/support.css'
 import './styles/responsive.css'
 import { ConfigurationPage } from './components/ConfigurationPage'
+import { InboxPage } from './components/InboxPage'
 import { InventoryPage } from './components/InventoryPage'
 import { LoginForm } from './components/LoginForm'
 import { NotFoundPage } from './components/NotFoundPage'
@@ -21,6 +22,7 @@ const routePaths: Record<RouteKey, string> = {
   support: '/soporte',
 
   inventory: '/inventario',
+  inbox: '/bandeja',
   settings: '/config',
 }
 
@@ -41,7 +43,7 @@ function defaultRouteForRole(role: string): RouteKey {
 function canAccessRoute(role: string, route: RouteKey) {
   if (route === 'support') return role === 'DOCENTE'
 
-  if (route === 'inventory') return role === 'ADMIN' || role === 'TECNICO'
+  if (route === 'inventory' || route === 'inbox') return role === 'ADMIN' || role === 'TECNICO'
   return role === 'ADMIN'
 }
 
@@ -130,6 +132,10 @@ function App() {
 
   if (activeRoute === 'settings') {
     return <ConfigurationPage user={user} activeRoute={activeRoute} onNavigate={(route) => navigate(routePaths[route])} onLogout={handleLogout} />
+  }
+
+  if (activeRoute === 'inbox') {
+    return <InboxPage user={user} accessToken={accessToken} activeRoute={activeRoute} onNavigate={(route) => navigate(routePaths[route])} onLogout={handleLogout} />
   }
 
   return <InventoryPage user={user} accessToken={accessToken} activeRoute={activeRoute} onNavigate={(route) => navigate(routePaths[route])} onLogout={handleLogout} />

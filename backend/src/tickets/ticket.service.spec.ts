@@ -18,6 +18,17 @@ describe('TicketService', () => {
     vi.useRealTimers();
   });
 
+  it('returns pending tickets ordered from oldest to newest for the technical inbox', async () => {
+    const find = vi.fn().mockResolvedValue([]);
+    const service = new TicketService({ find } as unknown as Repository<Ticket>);
+
+    await service.findInbox();
+
+    const [options] = find.mock.calls[0] as [{ where: { estado: { value: unknown } }; order: unknown }];
+    expect(options.where.estado.value).toEqual([TicketStatus.ABIERTO, TicketStatus.EN_PROCESO]);
+    expect(options.order).toEqual({ fecha_creacion: 'ASC', id_ticket: 'ASC' });
+  });
+
   it('filters ticket history by requester for a teacher', async () => {
     const find = vi.fn().mockResolvedValue([]);
     const service = new TicketService({ find } as unknown as Repository<Ticket>);

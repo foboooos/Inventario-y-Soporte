@@ -91,6 +91,14 @@
     min-width: 0;
   }
 
+  .inbox-table-scroll {
+    overflow-x: auto;
+  }
+
+  .inbox-table {
+    min-width: 920px;
+  }
+
   th,
   td {
     padding: 7px 8px;

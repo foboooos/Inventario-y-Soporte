@@ -1,6 +1,6 @@
 import type { AuthUser } from '../types/auth'
 
-export type RouteKey = 'support' | 'inventory' | 'settings'
+export type RouteKey = 'support' | 'inventory' | 'inbox' | 'settings'
 
 type SidebarProps = {
   user: AuthUser
@@ -19,6 +19,7 @@ const routes: RouteDefinition[] = [
   { key: 'support', label: 'Soporte', roles: ['DOCENTE'] },
 
   { key: 'inventory', label: 'Inventario', roles: ['ADMIN', 'TECNICO'] },
+  { key: 'inbox', label: 'Bandeja de entrada', roles: ['ADMIN', 'TECNICO'] },
   { key: 'settings', label: 'Configuración', roles: ['ADMIN'] },
 ]
 
@@ -43,6 +44,9 @@ function RouteIcon({ route }: { route: RouteKey }) {
     return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Z" /><path d="m4.5 7.5 7.5 4 7.5-4M12 21v-9.5M8 5.25l8 4.5" /></svg>
   }
 
+  if (route === 'inbox') {
+    return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v13A2.5 2.5 0 0 1 17.5 21h-11A2.5 2.5 0 0 1 4 18.5v-13Z" /><path d="M8 8h8M8 12h8M8 16h5" /></svg>
+  }
 
   return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5a2 2 0 0 1 2 2v.38a6.8 6.8 0 0 1 1.55.9l.33-.19a2 2 0 1 1 2 3.46l-.33.19c.08.36.12.73.12 1.11s-.04.75-.12 1.11l.33.19a2 2 0 1 1-2 3.46l-.33-.19a6.8 6.8 0 0 1-1.55.9v.38a2 2 0 1 1-4 0v-.38a6.8 6.8 0 0 1-1.55-.9l-.33.19a2 2 0 1 1-2-3.46l.33-.19A5.7 5.7 0 0 1 6.33 12c0-.38.04-.75.12-1.11l-.33-.19a2 2 0 1 1 2-3.46l.33.19A6.8 6.8 0 0 1 10 5.88V5.5a2 2 0 0 1 2-2Z" /><circle cx="12" cy="11.35" r="2.5" /></svg>
 }

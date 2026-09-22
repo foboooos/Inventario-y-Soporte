@@ -1,6 +1,6 @@
 import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 
 import { Device } from '../inventory/device.entity.js';
 import { CreateTicketDto } from './dto/create-ticket.dto.js';
@@ -12,6 +12,13 @@ import { TicketStatus } from './ticket-status.enum.js';
 @Injectable()
 export class TicketService {
   constructor(@InjectRepository(Ticket) private readonly tickets: Repository<Ticket>) {}
+
+  async findInbox() {
+    return this.tickets.find({
+      where: { estado: In([TicketStatus.ABIERTO, TicketStatus.EN_PROCESO]) },
+      order: { fecha_creacion: 'ASC', id_ticket: 'ASC' },
+    });
+  }
 
   async findAll(requesterRut: string) {
     return this.tickets.find({

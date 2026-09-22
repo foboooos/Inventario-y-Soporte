@@ -14,6 +14,12 @@ type AuthenticatedRequest = Request & { user: { sub: string; rol: string } };
 export class TicketController {
   constructor(private readonly ticketService: TicketService) {}
 
+  @Get('inbox')
+  @Roles(UserRole.ADMIN, UserRole.TECNICO)
+  findInbox() {
+    return this.ticketService.findInbox();
+  }
+
   @Get()
   @Roles(UserRole.DOCENTE)
   findAll(@Req() request: AuthenticatedRequest) {

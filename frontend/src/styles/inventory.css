@@ -514,6 +514,71 @@ tbody tr:hover {
   }
 }
 
+.inbox-content {
+  padding: 24px 0;
+}
+
+.inbox-table-scroll {
+  overflow-x: auto;
+  overflow-y: auto;
+  overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.inbox-table {
+  min-width: 920px;
+}
+
+.inbox-table th:nth-child(1),
+.inbox-table td:nth-child(1) {
+  width: 13%;
+}
+
+.inbox-table th:nth-child(2),
+.inbox-table td:nth-child(2) {
+  width: 13%;
+}
+
+.inbox-table th:nth-child(3),
+.inbox-table td:nth-child(3) {
+  width: 16%;
+}
+
+.inbox-table th:nth-child(4),
+.inbox-table td:nth-child(4) {
+  width: 16%;
+}
+
+.inbox-table th:nth-child(5),
+.inbox-table td:nth-child(5) {
+  width: 27%;
+}
+
+.inbox-table th:nth-child(6),
+.inbox-table td:nth-child(6) {
+  width: 15%;
+}
+
+.inbox-table td {
+  vertical-align: top;
+}
+
+.inbox-code {
+  color: var(--minimal-secondary);
+  font-family: Inconsolata, Consolas, monospace;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.inbox-symptom {
+  min-width: 220px;
+}
+
+.inbox-date {
+  min-width: 145px;
+  white-space: nowrap;
+}
+
 @media (max-width: 900px) {
   .inventory-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
