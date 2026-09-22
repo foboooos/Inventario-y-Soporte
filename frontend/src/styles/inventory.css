@@ -559,8 +559,14 @@ tbody tr:hover {
   width: 15%;
 }
 
+.inbox-table tbody tr {
+  height: 32px;
+}
+
 .inbox-table td {
-  vertical-align: top;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  vertical-align: middle;
 }
 
 .inbox-code {

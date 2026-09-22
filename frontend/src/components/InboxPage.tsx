@@ -4,6 +4,7 @@ import { isSessionExpired } from '../services/http'
 import type { AuthUser } from '../types/auth'
 import type { Ticket, TicketStatus } from '../types/ticket'
 import { DashboardLayout } from './DashboardLayout'
+import { TicketSymptomPreview } from './TicketSymptomPreview'
 import type { RouteKey } from './Sidebar'
 
 type InboxPageProps = {
@@ -76,7 +77,7 @@ function InboxTable({ tickets }: { tickets: Ticket[] }) {
               </td>
               <td>{ticket.id_solicitante ?? 'No disponible'}</td>
               <td>{ticket.ubicacion}</td>
-              <td className="inbox-symptom">{ticket.sintoma}</td>
+              <td className="inbox-symptom"><TicketSymptomPreview ticket={ticket} /></td>
               <td className="inbox-date">
                 {ticket.fecha_creacion ? (
                   <time dateTime={ticket.fecha_creacion}>{formatTicketDate(ticket.fecha_creacion)}</time>

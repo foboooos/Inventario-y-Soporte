@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseIntPipe, Post, Req, UseGuards } from '@nestjs/common';
 import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { Roles } from '../auth/guards/roles.decorator.js';
@@ -24,6 +24,13 @@ export class TicketController {
   @Roles(UserRole.DOCENTE)
   findAll(@Req() request: AuthenticatedRequest) {
     return this.ticketService.findAll(request.user.sub);
+  }
+
+  @Delete(':id_ticket')
+  @Roles(UserRole.DOCENTE)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async remove(@Param('id_ticket', ParseIntPipe) idTicket: number, @Req() request: AuthenticatedRequest) {
+    await this.ticketService.remove(idTicket, request.user.sub);
   }
 
   @Post()

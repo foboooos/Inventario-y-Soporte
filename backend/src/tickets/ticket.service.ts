@@ -27,6 +27,17 @@ export class TicketService {
     });
   }
 
+  async remove(idTicket: number, requesterRut: string) {
+    const result = await this.tickets.delete({
+      id_ticket: idTicket,
+      id_solicitante: requesterRut,
+    });
+
+    if (!result.affected) {
+      throw new NotFoundException('El ticket no existe o no pertenece al usuario');
+    }
+  }
+
   async create(createTicketDto: CreateTicketDto, requesterRut: string) {
     return this.tickets.manager.transaction(async (transactionManager) => {
       const tickets = transactionManager.getRepository(Ticket);

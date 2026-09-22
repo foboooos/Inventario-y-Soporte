@@ -1,3 +1,4 @@
+import { NotFoundException } from '@nestjs/common';
 import type { Repository } from 'typeorm';
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { Device } from '../inventory/device.entity.js';
@@ -41,6 +42,25 @@ describe('TicketService', () => {
     });
   });
 
+
+  it('deletes only a ticket owned by the authenticated teacher', async () => {
+    const deleteTicket = vi.fn().mockResolvedValue({ affected: 1 });
+    const service = new TicketService({ delete: deleteTicket } as unknown as Repository<Ticket>);
+
+    await service.remove(7, '12345678-9');
+
+    expect(deleteTicket).toHaveBeenCalledWith({
+      id_ticket: 7,
+      id_solicitante: '12345678-9',
+    });
+  });
+
+  it('rejects deletion when the ticket is not owned by the teacher', async () => {
+    const deleteTicket = vi.fn().mockResolvedValue({ affected: 0 });
+    const service = new TicketService({ delete: deleteTicket } as unknown as Repository<Ticket>);
+
+    await expect(service.remove(7, '12345678-9')).rejects.toThrow(NotFoundException);
+  });
 
   it('creates a ticket with the next yearly correlativo inside a transaction', async () => {
     const sequence = { anio: 2026, ultimo_numero: 0 } as TicketSequence;

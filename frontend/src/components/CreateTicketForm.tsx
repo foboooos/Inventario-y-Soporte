@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { createTicket, getDeviceOptions } from '../services/tickets'
 import { isSessionExpired } from '../services/http'
-import type { DeviceOption, Ticket } from '../types/ticket'
+import type { DeviceOption } from '../types/ticket'
 
 type CreateTicketFormProps = {
   accessToken: string
@@ -20,7 +20,6 @@ export function CreateTicketForm({ accessToken, onSessionExpired, onTicketCreate
   const [loadingDevices, setLoadingDevices] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
-  const [createdTicket, setCreatedTicket] = useState<Ticket | null>(null)
 
   useEffect(() => {
     let active = true
@@ -61,12 +60,15 @@ export function CreateTicketForm({ accessToken, onSessionExpired, onTicketCreate
     setSubmitting(true)
 
     try {
-      const ticket = await createTicket(accessToken, {
+      await createTicket(accessToken, {
         ubicacion: resolvedLocation,
         sintoma: symptom.trim(),
         ...(effectiveDeviceId ? { id_dispositivo: Number(effectiveDeviceId) } : {}),
       })
-      setCreatedTicket(ticket)
+      setLocation('')
+      setCustomLocation('')
+      setDeviceId('')
+      setSymptom('')
       onTicketCreated()
     } catch (exception: unknown) {
       if (isSessionExpired(exception)) {
@@ -79,25 +81,9 @@ export function CreateTicketForm({ accessToken, onSessionExpired, onTicketCreate
     }
   }
 
-  if (createdTicket) {
-    return (
-      <section className="support-card ticket-confirmation" aria-live="polite">
-        <span className="eyebrow">Solicitud registrada</span>
-        <h2>{createdTicket.codigo_ticket}</h2>
-        <p>Tu solicitud fue creada y quedó en estado abierto. Guarda este código para consultar su avance.</p>
-        <button className="primary-action" type="button" onClick={() => {
-          setCreatedTicket(null)
-          setLocation('')
-          setCustomLocation('')
-          setDeviceId('')
-          setSymptom('')
-        }}>Crear otro ticket</button>
-      </section>
-    )
-  }
 
   return (
-    <section className="support-card" aria-labelledby="new-ticket-title">
+    <section className="support-card ticket-form-card" aria-labelledby="new-ticket-title">
       <div className="form-heading">
         <div>
           <h2 id="new-ticket-title">Reportar un problema</h2>

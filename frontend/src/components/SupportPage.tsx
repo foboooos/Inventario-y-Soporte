@@ -19,12 +19,7 @@ export function SupportPage({ user, activeRoute, onNavigate, onLogout, accessTok
   return (
     <DashboardLayout user={user} activeRoute={activeRoute} onNavigate={onNavigate} onLogout={onLogout}>
       <main className="support-shell">
-        <section className="support-content" aria-labelledby="support-title">
-          <header className="page-heading support-page-heading">
-            <div>
-              <h1 id="support-title">Soporte</h1>
-            </div>
-          </header>
+        <section className="support-content" aria-label="Soporte">
           <CreateTicketForm
             accessToken={accessToken}
             onSessionExpired={onLogout}

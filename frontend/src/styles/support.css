@@ -1,15 +1,22 @@
 .support-shell {
   min-height: 100svh;
+  height: 100svh;
   box-sizing: border-box;
   background: #fafaf8;
   color: var(--minimal-text);
   font-family: 'Open Sans', 'Segoe UI', sans-serif;
+  overflow: hidden;
 }
 
 .support-content {
-  width: min(100% - 64px, 1240px);
+  width: min(100% - 48px, 1280px);
+  height: 100%;
+  min-height: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
   margin: 0 auto;
-  padding: 36px 0 56px;
+  padding: 24px 0;
 }
 
 .support-page-heading {
@@ -29,6 +36,11 @@
   color: var(--minimal-muted);
 }
 
+.ticket-form-card {
+  width: 100%;
+  box-sizing: border-box;
+}
+
 .ticket-form {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -43,10 +55,25 @@
 
 .ticket-form label > span {
   color: var(--minimal-muted);
-  font-family: Inconsolata, Consolas, monospace;
-  font-size: 12px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.ticket-form input:focus,
+.ticket-form select:focus,
+.ticket-form textarea:focus {
+  border-color: var(--minimal-primary);
+}
+
+.ticket-form input:focus-visible,
+.ticket-form select:focus-visible,
+.ticket-form textarea:focus-visible {
+  outline: none;
+}
+
+.ticket-form select:hover:not(:focus) {
+  border-color: var(--minimal-border);
 }
 
 .ticket-form em {
@@ -75,48 +102,38 @@
   background: rgba(255, 255, 255, 0.72);
 }
 
-.ticket-confirmation {
-  text-align: center;
-}
-
-.ticket-confirmation h2 {
-  margin: 20px 0 0;
-  color: var(--minimal-secondary);
-  font-family: Inconsolata, Consolas, monospace;
-  font-size: 30px;
-}
-
-.ticket-confirmation button {
-  margin-top: 24px;
-}
 
 .ticket-history-section {
-  margin-top: 36px;
-}
-
-.ticket-history-heading {
-  margin-bottom: 16px;
-}
-
-.ticket-history-heading h2 {
-  margin: 8px 0 0;
+  min-height: 0;
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  margin-top: 20px;
 }
 
 .ticket-history-card {
+  min-height: 0;
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
   padding: 0;
+  border: 1px solid #e7e7e2;
+  border-radius: 10px;
   overflow: hidden;
 }
 
 .ticket-history-table-scroll {
+  min-height: 0;
   max-width: 100%;
-  overflow-x: auto;
+  flex: 1 1 auto;
+  overflow: hidden;
   overscroll-behavior-inline: contain;
   -webkit-overflow-scrolling: touch;
 }
 
 .ticket-history-table {
   width: 100%;
-  min-width: 760px;
+  min-width: 0;
   border-collapse: collapse;
   table-layout: fixed;
   text-align: left;
@@ -124,25 +141,30 @@
 
 .ticket-history-table th,
 .ticket-history-table td {
-  padding: 14px 16px;
+  padding: 3px 16px;
   border-bottom: 1px solid #ecece6;
-  vertical-align: top;
+  vertical-align: middle;
 }
 
 .ticket-history-table th {
   color: var(--minimal-muted);
-  background: #fff;
+  background: transparent;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+  border-bottom-color: #e4e4df;
 }
 
 .ticket-history-table td {
   color: var(--minimal-text);
-  font-size: 13px;
-  line-height: 1.45;
+  font-size: 12.5px;
+  line-height: 1.35;
   overflow-wrap: anywhere;
+}
+
+.ticket-history-table tbody tr {
+  height: 32px;
 }
 
 .ticket-history-table tbody tr:last-child td {
@@ -151,6 +173,12 @@
 
 .ticket-history-table tbody tr:hover {
   background: #fafaf8;
+}
+
+.ticket-history-actions-column {
+  width: 4%;
+  padding-right: 8px;
+  padding-left: 8px;
 }
 
 .ticket-history-code-column,
@@ -162,17 +190,18 @@
   width: 14%;
 }
 
-
 .ticket-history-location-column {
   width: 14%;
 }
 
 .ticket-history-symptom-column {
-  width: 23%;
+  width: 35%;
 }
 
 .ticket-history-date-column {
-  width: 16%;
+  width: 19%;
+  padding-left: 32px;
+  text-align: left;
 }
 
 .ticket-history-code {
@@ -183,12 +212,134 @@
 }
 
 .ticket-history-symptom {
-  min-width: 170px;
+  min-width: 0;
 }
 
 .ticket-history-date {
-  min-width: 140px;
+  min-width: 0;
+  padding-left: 32px;
+  text-align: left;
   white-space: nowrap;
+}
+
+.ticket-history-actions {
+  padding-right: 8px;
+  padding-left: 8px;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.ticket-delete-button,
+.ticket-symptom-toggle {
+  width: 24px;
+  height: 24px;
+  display: inline-grid;
+  place-items: center;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+}
+
+.ticket-delete-button {
+  color: var(--minimal-muted);
+}
+
+.ticket-delete-button:hover:not(:disabled) {
+  color: var(--minimal-danger);
+  background: #fef2f2;
+}
+
+.ticket-delete-button svg,
+.ticket-symptom-toggle svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.ticket-symptom-content,
+.ticket-history-symptom-preview {
+  min-width: 0;
+}
+
+.ticket-history-symptom-preview {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.ticket-history-symptom-text {
+  min-width: 0;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ticket-symptom-toggle {
+  color: var(--minimal-muted);
+}
+
+.ticket-symptom-toggle:hover:not(:disabled),
+.ticket-symptom-toggle[aria-expanded='true'] {
+  color: var(--minimal-primary);
+  background: #ececf6;
+}
+
+.ticket-symptom-expanded {
+  position: fixed;
+  z-index: 20;
+  width: 360px;
+  max-width: calc(100vw - 32px);
+  max-height: min(240px, calc(100vh - 32px));
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid var(--minimal-border);
+  border-radius: 6px;
+  color: var(--minimal-text);
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(12, 12, 9, 0.14);
+  line-height: 1.45;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+}
+
+.ticket-delete-modal {
+  padding: 24px;
+  border: 1px solid var(--minimal-border);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(12, 12, 9, 0.12);
+}
+
+.ticket-delete-modal h2 {
+  margin: 0;
+  color: var(--minimal-text);
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.ticket-delete-modal p {
+  margin: 12px 0 0;
+  color: var(--minimal-muted);
+  line-height: 1.5;
+}
+
+.ticket-delete-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.ticket-delete-actions button {
+  margin: 0;
 }
 
 .ticket-status {
