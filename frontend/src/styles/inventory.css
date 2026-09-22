@@ -66,10 +66,39 @@
 }
 
 .summary-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   color: var(--minimal-muted);
   font-size: 12px;
   font-weight: 600;
   line-height: 1.35;
+}
+
+.summary-label::before {
+  width: 10px;
+  height: 10px;
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 2px solid var(--minimal-primary);
+  background: var(--minimal-primary);
+  content: '';
+}
+
+.inventory-summary-card[data-status='activo'] .summary-label::before {
+  border-color: var(--minimal-success);
+  background: #dcfce7;
+}
+
+.inventory-summary-card[data-status='inactivo'] .summary-label::before {
+  border-color: #78350f;
+  background: #fef3c7;
+}
+
+.inventory-summary-card[data-status='baja-tecnica'] .summary-label::before {
+  border-color: #b91c1c;
+  background: #fee2e2;
 }
 
 .summary-value {
@@ -78,18 +107,6 @@
   font-weight: 700;
   letter-spacing: -0.04em;
   line-height: 1;
-}
-
-.inventory-summary-card[data-status='activo'] .summary-value {
-  color: var(--minimal-success);
-}
-
-.inventory-summary-card[data-status='inactivo'] .summary-value {
-  color: #78350f;
-}
-
-.inventory-summary-card[data-status='baja-tecnica'] .summary-value {
-  color: var(--minimal-danger);
 }
 
 .inventory-status-tabs {
@@ -211,7 +228,33 @@
 .table-scroll table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
   text-align: left;
+}
+
+.table-scroll th:nth-child(1),
+.table-scroll td:nth-child(1) {
+  width: 18%;
+}
+
+.table-scroll th:nth-child(2),
+.table-scroll td:nth-child(2) {
+  width: 12%;
+}
+
+.table-scroll th:nth-child(3),
+.table-scroll td:nth-child(3) {
+  width: 26%;
+}
+
+.table-scroll th:nth-child(4),
+.table-scroll td:nth-child(4) {
+  width: 29%;
+}
+
+.table-scroll th:nth-child(5),
+.table-scroll td:nth-child(5) {
+  width: 15%;
 }
 
 th,
@@ -281,6 +324,8 @@ tbody tr:hover {
   font-family: Inconsolata, Consolas, monospace;
   font-weight: 700;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .device-code-button {
@@ -297,6 +342,8 @@ tbody tr:hover {
   line-height: 1.35;
   text-align: left;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   cursor: pointer;
 }
 
@@ -486,7 +533,18 @@ tbody tr:hover {
 
 @media (max-width: 520px) {
   .inventory-summary {
-    grid-template-columns: 1fr;
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    scrollbar-width: thin;
+    scroll-snap-type: x proximity;
+    padding-bottom: 4px;
+  }
+
+  .inventory-summary-card {
+    flex: 0 0 auto;
+    min-width: 148px;
+    scroll-snap-align: start;
   }
 
   .inventory-status-tabs {
