@@ -121,7 +121,6 @@ export function InventoryPage({ user, accessToken, onLogout, activeRoute, onNavi
   )
   const [sortDir, setSortDir] = useState<SortDir>(initial.sortDir === 'desc' ? 'desc' : 'asc')
   const [loading, setLoading] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState('')
   const [refreshError, setRefreshError] = useState('')
   const [reloadKey, setReloadKey] = useState(0)
@@ -156,7 +155,6 @@ export function InventoryPage({ user, accessToken, onLogout, activeRoute, onNavi
       .finally(() => {
         if (active) {
           setLoading(false)
-          setRefreshing(false)
         }
       })
 
@@ -187,7 +185,6 @@ export function InventoryPage({ user, accessToken, onLogout, activeRoute, onNavi
   function retryLoad() {
     setError('')
     setRefreshError('')
-    setRefreshing(true)
     setReloadKey((key) => key + 1)
   }
 
@@ -255,11 +252,9 @@ export function InventoryPage({ user, accessToken, onLogout, activeRoute, onNavi
     <DashboardLayout user={user} activeRoute={activeRoute} onNavigate={onNavigate} onLogout={onLogout}>
       <main className="inventory-shell">
         <section className="inventory-content" aria-labelledby="inventory-title">
-          <div className="page-heading">
+          <header className="page-heading">
             <div>
-              <span className="eyebrow">Administración</span>
               <h1 id="inventory-title">Inventario</h1>
-              <p className="subtitle">Gestiona los dispositivos de la institución: registra, edita y filtra por ubicación o estado.</p>
             </div>
             <div className="heading-actions">
               {canManageInventory && (
@@ -269,7 +264,7 @@ export function InventoryPage({ user, accessToken, onLogout, activeRoute, onNavi
                 </button>
               )}
             </div>
-          </div>
+          </header>
 
           {modal?.kind === 'edit' && canManageInventory && (
             <EditDeviceForm
@@ -346,10 +341,7 @@ export function InventoryPage({ user, accessToken, onLogout, activeRoute, onNavi
                     <button className="text-button" type="button" onClick={retryLoad}>Reintentar</button>
                   </div>
                 )}
-                <p className="toolbar-result" role="status" aria-live="polite">
-                  <strong>{visibleDevices.length}</strong> de {devices.length} dispositivos
-                  {refreshing && <span> · Actualizando…</span>}
-                </p>
+
                 {devices.length === 0 ? (
                   <div className="empty-state-block">
                     <p>Aún no hay dispositivos registrados.</p>

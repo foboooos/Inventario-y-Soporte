@@ -14,9 +14,15 @@ type SupportPageProps = {
 export function SupportPage({ user, activeRoute, onNavigate, onLogout, accessToken }: SupportPageProps) {
   return (
     <DashboardLayout user={user} activeRoute={activeRoute} onNavigate={onNavigate} onLogout={onLogout}>
-      <main className="support-content" aria-labelledby="support-title">
-        <h1 id="support-title">Soporte</h1>
-        <CreateTicketForm accessToken={accessToken} onSessionExpired={onLogout} />
+      <main className="support-shell">
+        <section className="support-content" aria-labelledby="support-title">
+          <header className="page-heading support-page-heading">
+            <div>
+              <h1 id="support-title">Soporte</h1>
+            </div>
+          </header>
+          <CreateTicketForm accessToken={accessToken} onSessionExpired={onLogout} />
+        </section>
       </main>
     </DashboardLayout>
   )

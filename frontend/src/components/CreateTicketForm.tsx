@@ -98,7 +98,6 @@ export function CreateTicketForm({ accessToken, onSessionExpired }: CreateTicket
     <section className="support-card" aria-labelledby="new-ticket-title">
       <div className="form-heading">
         <div>
-          <span className="eyebrow">Nueva solicitud</span>
           <h2 id="new-ticket-title">Reportar un problema</h2>
         </div>
       </div>

@@ -1,15 +1,23 @@
-.support-content {
-  width: min(100% - 48px, 760px);
-  margin: 0 auto;
-  padding: 56px 0 72px;
+.support-shell {
+  min-height: 100svh;
+  box-sizing: border-box;
+  background: #fafaf8;
+  color: var(--minimal-text);
+  font-family: 'Open Sans', 'Segoe UI', sans-serif;
 }
 
-.support-content h1 {
-  margin-bottom: 8px;
+.support-content {
+  width: min(100% - 64px, 1240px);
+  margin: 0 auto;
+  padding: 36px 0 56px;
+}
+
+.support-page-heading {
+  grid-template-columns: 1fr;
 }
 
 .support-card {
-  margin-top: 32px;
+  margin-top: 0;
   padding: 24px;
   border: 1px solid var(--minimal-border);
   border-radius: 8px;
@@ -55,6 +63,11 @@
 .ticket-form button {
   grid-column: 1 / -1;
   justify-self: end;
+}
+
+.ticket-form > button[type='submit']:hover:not(:disabled) {
+  color: #fff;
+  background: var(--minimal-primary);
 }
 
 .ticket-confirmation {
