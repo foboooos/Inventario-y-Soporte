@@ -99,7 +99,7 @@ export function EditDeviceForm({ accessToken, device, onUpdated, onCancel, onSes
         {error && <p className="error device-form-wide" role="alert">{error}</p>}
         <div className="device-form-actions device-form-wide">
           <button className="secondary-button" type="button" onClick={onCancel}>Cancelar</button>
-          <button type="submit" disabled={saving}>{saving ? 'Guardando…' : 'Guardar cambios'}</button>
+          <button className="primary-action" type="submit" disabled={saving}>{saving ? 'Guardando…' : 'Guardar cambios'}</button>
         </div>
         </form>
       </section>

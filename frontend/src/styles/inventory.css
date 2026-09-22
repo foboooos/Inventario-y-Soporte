@@ -9,7 +9,7 @@
 .inventory-content {
   width: min(100% - 64px, 1240px);
   margin: 0 auto;
-  padding: 36px 0 56px;
+  padding: 24px 0 40px;
 }
 
 .page-heading {
@@ -31,6 +31,116 @@
   font-size: clamp(28px, 3.2vw, 36px);
 }
 
+.inventory-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+
+.inventory-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.inventory-summary-card {
+  min-height: 78px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 5px;
+  box-sizing: border-box;
+  padding: 12px 16px;
+  border: 1px solid #e5e6e2;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 3px 12px rgba(12, 12, 9, 0.04);
+}
+
+.summary-label {
+  color: var(--minimal-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.summary-value {
+  color: var(--minimal-primary);
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.inventory-summary-card[data-status='activo'] .summary-value {
+  color: var(--minimal-success);
+}
+
+.inventory-summary-card[data-status='inactivo'] .summary-value {
+  color: #78350f;
+}
+
+.inventory-summary-card[data-status='baja-tecnica'] .summary-value {
+  color: var(--minimal-danger);
+}
+
+.inventory-status-tabs {
+  display: flex;
+  align-items: stretch;
+  gap: 20px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid #e4e4df;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.inventory-status-tab {
+  position: relative;
+  min-height: 36px;
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 8px 4px 9px;
+  border: 0;
+  border-radius: 0;
+  color: var(--minimal-muted);
+  background: transparent;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: color 120ms ease, background-color 120ms ease;
+}
+
+.inventory-status-tab::after {
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: var(--minimal-secondary);
+  content: '';
+  transform: scaleX(0);
+  transition: transform 120ms ease;
+}
+
+.inventory-status-tab:hover:not(:disabled) {
+  color: var(--minimal-primary);
+  background: transparent;
+}
+
+.inventory-status-tab.active {
+  color: var(--minimal-primary);
+}
+
+.inventory-status-tab.active::after {
+  transform: scaleX(1);
+}
+
+.inventory-status-tab:focus-visible {
+  z-index: 1;
+  outline: 3px solid rgba(49, 44, 133, 0.3);
+  outline-offset: -2px;
+}
 
 .heading-actions {
   display: flex;
@@ -45,15 +155,22 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  border-radius: 4px;
+  border: 1px solid rgba(12, 12, 9, 0.08);
+  border-radius: 12px;
+  color: var(--minimal-primary);
+  background: #fff;
+  box-shadow: 0 3px 12px rgba(12, 12, 9, 0.06);
   font-size: 14px;
+  font-weight: 600;
   white-space: nowrap;
+  transition: color 120ms ease, background-color 120ms ease, box-shadow 120ms ease;
 }
 
 .primary-action:hover:not(:disabled) {
-  border-color: var(--minimal-primary);
-  color: #fff;
-  background: var(--minimal-primary);
+  border-color: rgba(12, 12, 9, 0.1);
+  color: var(--minimal-primary);
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 2px 8px rgba(12, 12, 9, 0.04);
 }
 
 .primary-action .button-icon {
@@ -65,64 +182,21 @@
   stroke-width: 2;
 }
 
-.inventory-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: end;
-  gap: 12px;
-  margin-bottom: 16px;
-  padding: 0;
-  background: transparent;
-}
-
-.inventory-toolbar .search-field {
-  flex: 1 1 220px;
-}
-
-.inventory-toolbar label {
-  display: grid;
-  gap: 8px;
-  margin: 0;
-  flex: 0 1 180px;
-}
-
-.inventory-toolbar label > span {
-  color: var(--minimal-muted);
-  font-family: Inconsolata, Consolas, monospace;
-  font-size: 12px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.inventory-toolbar .text-button {
-  margin: 0 0 1px;
-  flex: 0 0 auto;
-}
-
-input[type='search']::-webkit-search-cancel-button {
-  cursor: pointer;
-}
-
-.toolbar-result {
-  margin: 0;
-  padding: 12px 20px 0;
-  color: var(--minimal-muted);
-  font-size: 13px;
-}
-
-.toolbar-result strong {
-  color: var(--minimal-text);
-}
 
 .table-card {
+  height: 520px;
+  display: flex;
+  flex-direction: column;
   border: 1px solid var(--minimal-border);
-  border-radius: 6px;
+  border-radius: 12px;
   background: #fff;
   overflow: hidden;
 }
 
 .table-scroll {
-  overflow-x: auto;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: auto;
 }
 
 table {
@@ -133,15 +207,15 @@ table {
 
 th,
 td {
-  padding: 10px 20px;
+  padding: 9px 16px;
   border-bottom: 1px solid #e4e4df;
 }
 
 th {
   color: var(--minimal-muted);
   background: #fafaf8;
-  font-family: Inconsolata, Consolas, monospace;
-  font-size: 12px;
+  font-family: inherit;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -149,7 +223,7 @@ th {
 
 td {
   color: var(--minimal-text);
-  font-size: 14px;
+  font-size: 13px;
   overflow-wrap: anywhere;
 }
 
@@ -186,19 +260,33 @@ tbody tr:hover {
 }
 
 .table-action {
+  width: 30px;
+  height: 30px;
+  display: inline-grid;
+  place-items: center;
   margin: 0;
-  padding: 6px 10px;
-  border: 1px solid var(--minimal-border);
-  border-radius: 4px;
-  color: var(--minimal-secondary);
-  background: #fff;
-  font-size: 12px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  color: var(--minimal-muted);
+  background: transparent;
 }
 
 .table-action:hover:not(:disabled) {
   color: var(--minimal-primary);
   background: var(--minimal-surface);
 }
+
+.table-action-icon svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
 
 .device-code {
   color: var(--minimal-secondary);
@@ -209,9 +297,9 @@ tbody tr:hover {
 
 .secondary-cell {
   display: block;
-  margin-top: 2px;
+  margin-top: 1px;
   color: var(--minimal-muted);
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .muted-cell {
@@ -221,10 +309,10 @@ tbody tr:hover {
 .status {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 8px;
+  gap: 5px;
+  padding: 3px 7px;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
 }
 
@@ -251,6 +339,64 @@ tbody tr:hover {
   background: #fee2e2;
 }
 
+.table-footer {
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex: 0 0 auto;
+  padding: 8px 16px;
+  border-top: 1px solid #e4e4df;
+  color: var(--minimal-muted);
+  background: #fff;
+  font-size: 12px;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pagination-button {
+  min-width: 32px;
+  height: 32px;
+  display: inline-grid;
+  place-items: center;
+  margin: 0;
+  padding: 0 8px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--minimal-muted);
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.pagination-button:hover:not(:disabled) {
+  color: var(--minimal-primary);
+  background: var(--minimal-surface);
+}
+
+.pagination-button.page-number.active {
+  color: #fff;
+  background: var(--minimal-secondary);
+  box-shadow: 0 2px 8px rgba(49, 44, 133, 0.18);
+}
+
+.pagination-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.pagination-ellipsis {
+  display: inline-grid;
+  width: 24px;
+  place-items: center;
+  color: var(--minimal-muted);
+}
+
 .banner-error {
   display: flex;
   align-items: center;
@@ -269,6 +415,7 @@ tbody tr:hover {
 }
 
 .empty-state-block {
+  flex: 1 1 auto;
   display: grid;
   gap: 16px;
   justify-items: center;
@@ -286,6 +433,7 @@ tbody tr:hover {
 }
 
 .skeleton-block {
+  flex: 1 1 auto;
   display: grid;
   gap: 10px;
   padding: 20px;
@@ -305,8 +453,40 @@ tbody tr:hover {
   }
 }
 
+@media (max-width: 900px) {
+  .inventory-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .table-card {
+    height: 460px;
+  }
+
+  .table-footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 520px) {
+  .inventory-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .inventory-status-tabs {
+    gap: 18px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .skeleton-row {
     animation: none;
+  }
+
+  .inventory-status-tab,
+  .inventory-status-tab::after {
+    transition: none;
   }
 }

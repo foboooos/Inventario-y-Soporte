@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { getInventory } from '../services/inventory'
 import { isSessionExpired } from '../services/http'
 import type { AuthUser } from '../types/auth'
@@ -16,14 +16,13 @@ type InventoryPageProps = {
   onNavigate: (route: RouteKey) => void
 }
 
-type TypeFilter = 'ALL' | DeviceType
 type StatusFilter = 'ALL' | DeviceStatus
 type SortKey = 'code' | 'location' | 'status'
 type SortDir = 'asc' | 'desc'
 type Modal = { kind: 'create' } | { kind: 'edit'; device: Device } | null
 
 const FILTERS_KEY = 'inventory-filters-v1'
-const SEARCH_DEBOUNCE_MS = 180
+const PAGE_SIZE = 8
 const NO_BRAND = 'Sin marca'
 const NO_MODEL = 'Sin modelo'
 
@@ -46,13 +45,6 @@ const typeLabels: Record<DeviceType, string> = {
   RED: 'Equipo de red',
 }
 
-const typeOptions: Array<{ value: TypeFilter; label: string }> = [
-  { value: 'ALL', label: 'Todos' },
-  { value: 'PC', label: 'PC' },
-  { value: 'PROYECTOR', label: 'Proyectores' },
-  { value: 'IMPRESORA', label: 'Impresoras' },
-  { value: 'RED', label: 'Equipos de red' },
-]
 
 const statusOptions: Array<{ value: StatusFilter; label: string }> = [
   { value: 'ALL', label: 'Todos' },
@@ -62,8 +54,6 @@ const statusOptions: Array<{ value: StatusFilter; label: string }> = [
 ]
 
 type StoredFilters = {
-  q?: unknown
-  type?: unknown
   status?: unknown
   sortKey?: unknown
   sortDir?: unknown
@@ -82,6 +72,21 @@ function loadStoredFilters(): StoredFilters {
 
 function pickFilter<T extends string>(value: unknown, allowed: readonly T[], fallback: T): T {
   return typeof value === 'string' && (allowed as readonly string[]).includes(value) ? (value as T) : fallback
+}
+
+function getPageNumbers(currentPage: number, totalPages: number): Array<number | 'ellipsis'> {
+  if (totalPages <= 5) return Array.from({ length: totalPages }, (_, index) => index + 1)
+
+  const pages: Array<number | 'ellipsis'> = [1]
+  const start = Math.max(2, currentPage - 1)
+  const end = Math.min(totalPages - 1, currentPage + 1)
+
+  if (start > 2) pages.push('ellipsis')
+  for (let page = start; page <= end; page += 1) pages.push(page)
+  if (end < totalPages - 1) pages.push('ellipsis')
+  pages.push(totalPages)
+
+  return pages
 }
 
 function SortButton({ label, sortKey, activeKey, dir, onToggle }: {
@@ -108,11 +113,6 @@ export function InventoryPage({ user, accessToken, onLogout, activeRoute, onNavi
   const [initial] = useState<StoredFilters>(() => loadStoredFilters())
 
   const [devices, setDevices] = useState<Device[]>([])
-  const [searchInput, setSearchInput] = useState(typeof initial.q === 'string' ? initial.q : '')
-  const [search, setSearch] = useState(typeof initial.q === 'string' ? initial.q : '')
-  const [typeFilter, setTypeFilter] = useState<TypeFilter>(
-    pickFilter(initial.type, ['ALL', 'PC', 'PROYECTOR', 'IMPRESORA', 'RED'] as const, 'ALL'),
-  )
   const [statusFilter, setStatusFilter] = useState<StatusFilter>(
     pickFilter(initial.status, ['ALL', 'ACTIVO', 'INACTIVO', 'BAJA_TECNICA'] as const, 'ALL'),
   )
@@ -125,7 +125,9 @@ export function InventoryPage({ user, accessToken, onLogout, activeRoute, onNavi
   const [refreshError, setRefreshError] = useState('')
   const [reloadKey, setReloadKey] = useState(0)
   const [modal, setModal] = useState<Modal>(null)
+  const [currentPage, setCurrentPage] = useState(1)
   const hasDataRef = useRef(false)
+  const statusTabRefs = useRef<Array<HTMLButtonElement | null>>([])
   const canManageInventory = user.rol === 'ADMIN' || user.rol === 'TECNICO'
 
   useEffect(() => {
@@ -163,16 +165,10 @@ export function InventoryPage({ user, accessToken, onLogout, activeRoute, onNavi
     }
   }, [accessToken, onLogout, reloadKey])
 
-  useEffect(() => {
-    const timer = setTimeout(() => setSearch(searchInput), SEARCH_DEBOUNCE_MS)
-    return () => clearTimeout(timer)
-  }, [searchInput])
 
   useEffect(() => {
     try {
       sessionStorage.setItem(FILTERS_KEY, JSON.stringify({
-        q: searchInput,
-        type: typeFilter,
         status: statusFilter,
         sortKey,
         sortDir,
@@ -180,7 +176,7 @@ export function InventoryPage({ user, accessToken, onLogout, activeRoute, onNavi
     } catch {
       return
     }
-  }, [searchInput, typeFilter, statusFilter, sortKey, sortDir])
+  }, [statusFilter, sortKey, sortDir])
 
   function retryLoad() {
     setError('')
@@ -198,22 +194,7 @@ export function InventoryPage({ user, accessToken, onLogout, activeRoute, onNavi
   }
 
   const visibleDevices = useMemo(() => {
-    const normalizedSearch = search.trim().toLowerCase()
-
-    const filtered = devices.filter((device) => {
-      const haystack = [
-        device.code,
-        device.location,
-        typeLabels[device.type],
-        ...(device.brand !== NO_BRAND ? [device.brand] : []),
-        ...(device.model !== NO_MODEL ? [device.model] : []),
-      ]
-      const matchesSearch = !normalizedSearch || haystack.some((value) => value.toLowerCase().includes(normalizedSearch))
-      const matchesType = typeFilter === 'ALL' || device.type === typeFilter
-      const matchesStatus = statusFilter === 'ALL' || device.status === statusFilter
-
-      return matchesSearch && matchesType && matchesStatus
-    })
+    const filtered = devices.filter((device) => statusFilter === 'ALL' || device.status === statusFilter)
 
     const dir = sortDir === 'asc' ? 1 : -1
     return [...filtered].sort((a, b) => {
@@ -221,16 +202,41 @@ export function InventoryPage({ user, accessToken, onLogout, activeRoute, onNavi
       if (sortKey === 'status') return (statusOrder[a.status] - statusOrder[b.status]) * dir
       return a.code.localeCompare(b.code, 'es', { numeric: true }) * dir
     })
-  }, [devices, search, typeFilter, statusFilter, sortKey, sortDir])
+  }, [devices, statusFilter, sortKey, sortDir])
 
-  const hasActiveFilters = searchInput.trim() !== '' || typeFilter !== 'ALL' || statusFilter !== 'ALL'
+  const deviceSummary = useMemo(() => devices.reduce((summary, device) => {
+    summary.total += 1
+    if (device.status === 'ACTIVO') summary.active += 1
+    if (device.status === 'INACTIVO') summary.inactive += 1
+    if (device.status === 'BAJA_TECNICA') summary.technicalRetirement += 1
+    return summary
+  }, { total: 0, active: 0, inactive: 0, technicalRetirement: 0 }), [devices])
 
-  function clearFilters() {
-    setSearchInput('')
-    setSearch('')
-    setTypeFilter('ALL')
-    setStatusFilter('ALL')
+  const totalPages = Math.max(1, Math.ceil(visibleDevices.length / PAGE_SIZE))
+  const activePage = Math.min(currentPage, totalPages)
+  const pageStart = (activePage - 1) * PAGE_SIZE
+  const pagedDevices = visibleDevices.slice(pageStart, pageStart + PAGE_SIZE)
+  const pageNumbers = getPageNumbers(activePage, totalPages)
+
+  function changeStatusFilter(nextStatus: StatusFilter) {
+    setStatusFilter(nextStatus)
+    setCurrentPage(1)
   }
+
+  function handleStatusTabKeyDown(event: KeyboardEvent<HTMLButtonElement>, index: number) {
+    let nextIndex = index
+
+    if (event.key === 'ArrowRight') nextIndex = (index + 1) % statusOptions.length
+    if (event.key === 'ArrowLeft') nextIndex = (index - 1 + statusOptions.length) % statusOptions.length
+    if (event.key === 'Home') nextIndex = 0
+    if (event.key === 'End') nextIndex = statusOptions.length - 1
+    if (nextIndex === index) return
+
+    event.preventDefault()
+    changeStatusFilter(statusOptions[nextIndex].value)
+    statusTabRefs.current[nextIndex]?.focus()
+  }
+
 
   function renderBrandModel(device: Device) {
     const unknownBrand = device.brand === NO_BRAND
@@ -251,20 +257,59 @@ export function InventoryPage({ user, accessToken, onLogout, activeRoute, onNavi
   return (
     <DashboardLayout user={user} activeRoute={activeRoute} onNavigate={onNavigate} onLogout={onLogout}>
       <main className="inventory-shell">
-        <section className="inventory-content" aria-labelledby="inventory-title">
-          <header className="page-heading">
-            <div>
-              <h1 id="inventory-title">Inventario</h1>
+        <section className="inventory-content" aria-label="Inventario">
+          {canManageInventory && (
+            <div className="inventory-actions">
+              <button className="primary-action" type="button" onClick={() => setModal({ kind: 'create' })}>
+                <svg viewBox="0 0 24 24" aria-hidden="true" className="button-icon"><path d="M12 5v14M5 12h14" /></svg>
+                Nuevo dispositivo
+              </button>
             </div>
-            <div className="heading-actions">
-              {canManageInventory && (
-                <button className="primary-action" type="button" onClick={() => setModal({ kind: 'create' })}>
-                  <svg viewBox="0 0 24 24" aria-hidden="true" className="button-icon"><path d="M12 5v14M5 12h14" /></svg>
-                  Nuevo dispositivo
+          )}
+
+          <section className="inventory-summary" aria-label="Resumen del inventario">
+            <article className="inventory-summary-card" data-status="total">
+              <span className="summary-label">Total</span>
+              <strong className="summary-value">{deviceSummary.total}</strong>
+            </article>
+            <article className="inventory-summary-card" data-status="activo">
+              <span className="summary-label">Activos</span>
+              <strong className="summary-value">{deviceSummary.active}</strong>
+            </article>
+            <article className="inventory-summary-card" data-status="inactivo">
+              <span className="summary-label">Inactivos</span>
+              <strong className="summary-value">{deviceSummary.inactive}</strong>
+            </article>
+            <article className="inventory-summary-card" data-status="baja-tecnica">
+              <span className="summary-label">Baja técnica</span>
+              <strong className="summary-value">{deviceSummary.technicalRetirement}</strong>
+            </article>
+          </section>
+
+          <div className="inventory-status-tabs" role="tablist" aria-label="Filtrar por estado">
+            {statusOptions.map((option, index) => {
+              const selected = statusFilter === option.value
+              const tabId = `inventory-tab-${option.value.toLowerCase()}`
+
+              return (
+                <button
+                  className={`inventory-status-tab${selected ? ' active' : ''}`}
+                  id={tabId}
+                  key={option.value}
+                  type="button"
+                  role="tab"
+                  aria-selected={selected}
+                  aria-controls="inventory-results-panel"
+                  tabIndex={selected ? 0 : -1}
+                  ref={(element) => { statusTabRefs.current[index] = element }}
+                  onClick={() => changeStatusFilter(option.value)}
+                  onKeyDown={(event) => handleStatusTabKeyDown(event, index)}
+                >
+                  {option.label}
                 </button>
-              )}
-            </div>
-          </header>
+              )
+            })}
+          </div>
 
           {modal?.kind === 'edit' && canManageInventory && (
             <EditDeviceForm
@@ -292,29 +337,13 @@ export function InventoryPage({ user, accessToken, onLogout, activeRoute, onNavi
             />
           )}
 
-          <div className="inventory-toolbar">
-            <label className="search-field" htmlFor="inventory-search">
-              <span>Buscar</span>
-              <input id="inventory-search" type="search" placeholder="Código, marca o ubicación" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} />
-            </label>
-            <label htmlFor="inventory-type-filter">
-              <span>Tipo</span>
-              <select id="inventory-type-filter" value={typeFilter} onChange={(event) => setTypeFilter(event.target.value as TypeFilter)}>
-                {typeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-              </select>
-            </label>
-            <label htmlFor="inventory-status-filter">
-              <span>Estado</span>
-              <select id="inventory-status-filter" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}>
-                {statusOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-              </select>
-            </label>
-            {hasActiveFilters && (
-              <button className="text-button" type="button" onClick={clearFilters}>Limpiar filtros</button>
-            )}
-          </div>
 
-          <div className="table-card">
+          <div
+            className="table-card"
+            id="inventory-results-panel"
+            role="tabpanel"
+            aria-labelledby={`inventory-tab-${statusFilter.toLowerCase()}`}
+          >
             {loading && (
               <div className="skeleton-block" role="status" aria-label="Cargando inventario">
                 <span className="sr-only">Cargando inventario…</span>
@@ -346,13 +375,13 @@ export function InventoryPage({ user, accessToken, onLogout, activeRoute, onNavi
                   <div className="empty-state-block">
                     <p>Aún no hay dispositivos registrados.</p>
                     {canManageInventory && (
-                      <button type="button" onClick={() => setModal({ kind: 'create' })}>Registrar el primero</button>
+                      <button className="primary-action" type="button" onClick={() => setModal({ kind: 'create' })}>Registrar el primero</button>
                     )}
                   </div>
                 ) : visibleDevices.length === 0 ? (
                   <div className="empty-state-block">
                     <p role="status">No encontramos dispositivos con esos filtros.</p>
-                    <button className="secondary-button" type="button" onClick={clearFilters}>Limpiar filtros</button>
+                    <button className="secondary-button" type="button" onClick={() => changeStatusFilter('ALL')}>Ver todos</button>
                   </div>
                 ) : (
                   <div className="table-scroll">
@@ -360,6 +389,7 @@ export function InventoryPage({ user, accessToken, onLogout, activeRoute, onNavi
                       <caption className="sr-only">Listado de dispositivos del inventario</caption>
                       <thead>
                         <tr>
+
                           <th scope="col" aria-sort={sortKey === 'code' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
                             <SortButton label="Código" sortKey="code" activeKey={sortKey} dir={sortDir} onToggle={toggleSort} />
                           </th>
@@ -375,7 +405,7 @@ export function InventoryPage({ user, accessToken, onLogout, activeRoute, onNavi
                         </tr>
                       </thead>
                       <tbody>
-                        {visibleDevices.map((device) => (
+                        {pagedDevices.map((device) => (
                           <tr key={device.id}>
                             <td className="device-code">{device.code}</td>
                             <td>{typeLabels[device.type]}</td>
@@ -384,8 +414,9 @@ export function InventoryPage({ user, accessToken, onLogout, activeRoute, onNavi
                             <td><span className={`status status-${device.status.toLowerCase().replace('_', '-')}`}>{statusLabels[device.status]}</span></td>
                             {canManageInventory && (
                               <td>
-                                <button className="table-action" type="button" aria-label={`Editar ${device.code}`} onClick={() => setModal({ kind: 'edit', device })}>
-                                  Editar
+                                <button className="table-action table-action-icon" type="button" aria-label={`Editar ${device.code}`} onClick={() => setModal({ kind: 'edit', device })}>
+                                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16-.75 4.75L8 20l11.5-11.5a2.12 2.12 0 0 0-3-3L5 17Z" /><path d="m14.5 7.5 2 2" /></svg>
+                                  <span className="sr-only">Editar {device.code}</span>
                                 </button>
                               </td>
                             )}
@@ -394,6 +425,18 @@ export function InventoryPage({ user, accessToken, onLogout, activeRoute, onNavi
                       </tbody>
                     </table>
                   </div>
+                )}
+                {visibleDevices.length > 0 && (
+                  <footer className="table-footer">
+                    <span>Mostrando {pageStart + 1}–{Math.min(pageStart + PAGE_SIZE, visibleDevices.length)} de {visibleDevices.length} dispositivos</span>
+                    <nav className="pagination" aria-label="Paginación del inventario">
+                      <button className="pagination-button" type="button" disabled={activePage === 1} onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}>Anterior</button>
+                      {pageNumbers.map((page, index) => page === 'ellipsis'
+                        ? <span className="pagination-ellipsis" key={`ellipsis-${index}`} aria-hidden="true">…</span>
+                        : <button className={`pagination-button page-number${page === activePage ? ' active' : ''}`} type="button" key={page} aria-current={page === activePage ? 'page' : undefined} onClick={() => setCurrentPage(page)}>{page}</button>)}
+                      <button className="pagination-button" type="button" disabled={activePage === totalPages} onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}>Siguiente</button>
+                    </nav>
+                  </footer>
                 )}
               </>
             )}

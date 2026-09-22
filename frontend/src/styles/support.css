@@ -65,9 +65,14 @@
   justify-self: end;
 }
 
-.ticket-form > button[type='submit']:hover:not(:disabled) {
-  color: #fff;
-  background: var(--minimal-primary);
+.ticket-form > button.primary-action {
+  margin-top: 0;
+}
+
+.ticket-form > button.primary-action:hover:not(:disabled) {
+  border-color: rgba(12, 12, 9, 0.1);
+  color: var(--minimal-primary);
+  background: rgba(255, 255, 255, 0.72);
 }
 
 .ticket-confirmation {

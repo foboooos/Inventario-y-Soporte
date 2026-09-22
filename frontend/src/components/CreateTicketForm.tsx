@@ -83,7 +83,7 @@ export function CreateTicketForm({ accessToken, onSessionExpired }: CreateTicket
         <span className="eyebrow">Solicitud registrada</span>
         <h2>{createdTicket.codigo_ticket}</h2>
         <p>Tu solicitud fue creada y quedó en estado abierto. Guarda este código para consultar su avance.</p>
-        <button type="button" onClick={() => {
+        <button className="primary-action" type="button" onClick={() => {
           setCreatedTicket(null)
           setLocation('')
           setCustomLocation('')
@@ -128,7 +128,7 @@ export function CreateTicketForm({ accessToken, onSessionExpired }: CreateTicket
           <textarea value={symptom} onChange={(event) => setSymptom(event.target.value)} placeholder="Cuéntanos qué está ocurriendo…" maxLength={2000} rows={6} required />
         </label>
         {error && <p className="error" role="alert">{error}</p>}
-        <button type="submit" disabled={submitting || !resolvedLocation || !symptom.trim()}>{submitting ? 'Enviando…' : 'Enviar solicitud'}</button>
+        <button className="primary-action" type="submit" disabled={submitting || !resolvedLocation || !symptom.trim()}>{submitting ? 'Enviando…' : 'Enviar solicitud'}</button>
       </form>
     </section>
   )
