@@ -6,6 +6,7 @@ import { Ticket } from './ticket.entity.js';
 import { TicketService } from './ticket.service.js';
 import { TicketSequence } from './ticket-sequence.entity.js';
 import { TicketStatus } from './ticket-status.enum.js';
+import { UserRole } from '../users/user-role.enum.js';
 
 describe('TicketService', () => {
   beforeEach(() => {
@@ -15,6 +16,29 @@ describe('TicketService', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  it('filters ticket history by requester for a teacher', async () => {
+    const find = vi.fn().mockResolvedValue([]);
+    const service = new TicketService({ find } as unknown as Repository<Ticket>);
+
+    await service.findAll('12345678-9', UserRole.DOCENTE);
+
+    expect(find).toHaveBeenCalledWith({
+      where: { id_solicitante: '12345678-9' },
+      order: { fecha_creacion: 'DESC', id_ticket: 'DESC' },
+    });
+  });
+
+  it('returns all tickets for administrators and technicians', async () => {
+    const find = vi.fn().mockResolvedValue([]);
+    const service = new TicketService({ find } as unknown as Repository<Ticket>);
+
+    await service.findAll('12345678-9', UserRole.TECNICO);
+
+    expect(find).toHaveBeenCalledWith({
+      order: { fecha_creacion: 'DESC', id_ticket: 'DESC' },
+    });
   });
 
   it('creates a ticket with the next yearly correlativo inside a transaction', async () => {

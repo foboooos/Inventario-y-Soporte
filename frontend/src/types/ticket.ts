@@ -10,10 +10,15 @@ export type CreateTicketInput = {
   id_dispositivo?: number
 }
 
+export type TicketStatus = 'ABIERTO' | 'EN_PROCESO' | 'RESUELTO' | 'CERRADO'
+
 export type Ticket = {
   id_ticket: number
   codigo_ticket: string
-  estado: 'ABIERTO' | 'EN_PROCESO' | 'RESUELTO' | 'CERRADO'
+  id_solicitante?: string
+  id_dispositivo?: number | null
+  estado: TicketStatus
   ubicacion: string
   sintoma: string
+  fecha_creacion?: string
 }

@@ -6,6 +6,11 @@ export async function getDeviceOptions(accessToken: string): Promise<DeviceOptio
   return readApiJson<DeviceOption[]>(response, 'No se pudieron cargar los equipos')
 }
 
+export async function getTickets(accessToken: string): Promise<Ticket[]> {
+  const response = await apiFetch('/tickets', accessToken)
+  return readApiJson<Ticket[]>(response, 'No se pudo cargar el historial de tickets')
+}
+
 export async function createTicket(accessToken: string, input: CreateTicketInput): Promise<Ticket> {
   const response = await apiFetch('/tickets', accessToken, {
     method: 'POST',
