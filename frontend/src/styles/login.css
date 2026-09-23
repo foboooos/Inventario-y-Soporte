@@ -88,14 +88,6 @@
   transform: translateY(-50%);
 }
 
-.login-card input:focus {
-  border-color: var(--minimal-primary);
-}
-
-.login-card input:focus-visible {
-  outline: none;
-}
-
 .login-card form > button[type="submit"]:hover:not(:disabled) {
   border-color: var(--minimal-primary);
   color: #fff;

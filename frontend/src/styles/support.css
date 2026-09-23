@@ -67,22 +67,6 @@
   border-color: #e7e7e2;
 }
 
-.ticket-form input:focus,
-.ticket-form select:focus,
-.ticket-form textarea:focus {
-  border-color: var(--minimal-primary);
-}
-
-.ticket-form input:focus-visible,
-.ticket-form select:focus-visible,
-.ticket-form textarea:focus-visible {
-  outline: none;
-}
-
-.ticket-form select:hover:not(:focus) {
-  border-color: #e7e7e2;
-}
-
 .ticket-form em {
   font-family: 'Open Sans', 'Segoe UI', sans-serif;
   font-style: normal;
@@ -424,32 +408,34 @@
 }
 
 .ticket-resolution-modal {
-  padding: 24px;
+  padding: 0;
   border: 1px solid #e7e7e2;
-  border-radius: 10px;
+  border-radius: 14px;
   background: #fff;
-  box-shadow: 0 8px 24px rgba(12, 12, 9, 0.12);
+  box-shadow: 0 28px 64px -20px rgba(12, 12, 9, 0.35);
 }
 
-.ticket-resolution-description {
-  margin: -8px 0 20px;
-  color: var(--minimal-muted);
-  line-height: 1.5;
+.ticket-resolution-body {
+  display: grid;
+  gap: 18px;
+  padding: 20px 24px 24px;
 }
 
 .ticket-resolution-summary {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  margin: 0 0 20px;
-  padding: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1px;
+  margin: 0;
   border: 1px solid #ecece6;
-  border-radius: 6px;
-  background: #fafaf8;
+  border-radius: 10px;
+  background: #ecece6;
+  overflow: hidden;
 }
 
-.ticket-resolution-summary div {
+.ticket-resolution-summary > div {
   min-width: 0;
+  padding: 12px 14px;
+  background: #fafaf8;
 }
 
 .ticket-resolution-summary dt {
@@ -461,7 +447,10 @@
 }
 
 .ticket-resolution-summary dd {
-  margin: 4px 0 0;
+  margin: 6px 0 0;
+  color: var(--minimal-text);
+  font-size: 13.5px;
+  line-height: 1.4;
   overflow-wrap: anywhere;
 }
 
@@ -484,7 +473,8 @@
 }
 
 .ticket-resolution-form textarea {
-  min-height: 104px;
+  font-size: 13px;
+  min-height: 96px;
   resize: none;
 }
 
@@ -492,7 +482,6 @@
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  margin-top: 4px;
 }
 
 .ticket-resolution-actions button {
@@ -500,8 +489,16 @@
 }
 
 @media (max-width: 560px) {
-  .ticket-resolution-summary {
-    grid-template-columns: 1fr;
+  .ticket-resolution-body {
+    padding: 18px;
+  }
+
+  .ticket-resolution-actions {
+    flex-direction: column-reverse;
+  }
+
+  .ticket-resolution-actions button {
+    width: 100%;
   }
 }
 

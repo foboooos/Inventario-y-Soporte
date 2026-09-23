@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { isSessionExpired } from '../services/http'
 import { resolveTicket } from '../services/tickets'
-import type { Ticket } from '../types/ticket'
+import type { Ticket, TicketStatus } from '../types/ticket'
 
 type TicketResolutionFormProps = {
   accessToken: string
@@ -12,12 +12,18 @@ type TicketResolutionFormProps = {
   onSessionExpired: () => void
 }
 
+const statusLabels: Record<TicketStatus, string> = {
+  ABIERTO: 'Abierto',
+  EN_PROCESO: 'En proceso',
+  RESUELTO: 'Resuelto',
+  CERRADO: 'Cerrado',
+}
+
 export function TicketResolutionForm({ accessToken, ticket, onResolved, onCancel, onSessionExpired }: TicketResolutionFormProps) {
   const [cause, setCause] = useState('')
   const [solution, setSolution] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const closeRef = useRef<HTMLButtonElement | null>(null)
   const causeRef = useRef<HTMLTextAreaElement | null>(null)
   const solutionRef = useRef<HTMLTextAreaElement | null>(null)
   const cancelRef = useRef<HTMLButtonElement | null>(null)
@@ -34,7 +40,7 @@ export function TicketResolutionForm({ accessToken, ticket, onResolved, onCancel
 
       if (event.key !== 'Tab') return
 
-      const focusableElements = [closeRef.current, causeRef.current, solutionRef.current, cancelRef.current, saveRef.current]
+      const focusableElements = [causeRef.current, solutionRef.current, cancelRef.current, saveRef.current]
         .filter((element): element is HTMLButtonElement | HTMLTextAreaElement => element !== null && !element.disabled)
       const firstElement = focusableElements[0]
       const lastElement = focusableElements[focusableElements.length - 1]
@@ -74,6 +80,9 @@ export function TicketResolutionForm({ accessToken, ticket, onResolved, onCancel
     }
   }
 
+  const statusLabel = statusLabels[ticket.estado] ?? ticket.estado
+  const statusModifier = ticket.estado.toLowerCase().replace('_', '-')
+
   return (
     <div
       className="modal-backdrop ticket-resolution-backdrop"
@@ -86,66 +95,59 @@ export function TicketResolutionForm({ accessToken, ticket, onResolved, onCancel
         className="modal-card ticket-resolution-modal"
         role="dialog"
         aria-modal="true"
-        aria-labelledby="ticket-resolution-title"
-        aria-describedby="ticket-resolution-description"
+        aria-label={`Resolver ticket ${ticket.codigo_ticket}`}
         onMouseDown={(event) => event.stopPropagation()}
       >
-        <div className="form-heading">
-          <div>
-            <span className="eyebrow">Cierre de ticket</span>
-            <h2 id="ticket-resolution-title">Resolver {ticket.codigo_ticket}</h2>
-          </div>
-          <button ref={closeRef} className="icon-button" type="button" aria-label="Cerrar formulario de resolución" disabled={saving} onClick={onCancel}>×</button>
+        <div className="ticket-resolution-body">
+          <dl className="ticket-resolution-summary">
+            <div>
+              <dt>Estado</dt>
+              <dd><span className={`ticket-status ticket-status-${statusModifier}`}>{statusLabel}</span></dd>
+            </div>
+            <div>
+              <dt>Solicitante</dt>
+              <dd>{ticket.id_solicitante ?? 'No disponible'}</dd>
+            </div>
+            <div>
+              <dt>Ubicación</dt>
+              <dd>{ticket.ubicacion}</dd>
+            </div>
+          </dl>
+
+          <form className="ticket-resolution-form" onSubmit={handleSubmit}>
+            <label>
+              <span>Causa raíz</span>
+              <textarea
+                ref={causeRef}
+                value={cause}
+                onChange={(event) => setCause(event.target.value)}
+                maxLength={2000}
+                rows={4}
+                required
+                aria-invalid={Boolean(error) || undefined}
+              />
+            </label>
+            <label>
+              <span>Solución aplicada</span>
+              <textarea
+                ref={solutionRef}
+                value={solution}
+                onChange={(event) => setSolution(event.target.value)}
+                maxLength={2000}
+                rows={4}
+                required
+                aria-invalid={Boolean(error) || undefined}
+              />
+            </label>
+            {error && <p className="error" role="alert">{error}</p>}
+            <div className="ticket-resolution-actions">
+              <button ref={cancelRef} className="primary-action" type="button" disabled={saving} onClick={onCancel}>Cancelar</button>
+              <button ref={saveRef} className="primary-action" type="submit" disabled={saving || !cause.trim() || !solution.trim()}>
+                {saving ? 'Guardando…' : 'Cerrar ticket'}
+              </button>
+            </div>
+          </form>
         </div>
-
-        <p id="ticket-resolution-description" className="ticket-resolution-description">
-          Registra la causa raíz y la solución aplicada para cerrar este incidente.
-        </p>
-
-        <dl className="ticket-resolution-summary">
-          <div>
-            <dt>Solicitante</dt>
-            <dd>{ticket.id_solicitante ?? 'No disponible'}</dd>
-          </div>
-          <div>
-            <dt>Ubicación</dt>
-            <dd>{ticket.ubicacion}</dd>
-          </div>
-        </dl>
-
-        <form className="ticket-resolution-form" onSubmit={handleSubmit}>
-          <label>
-            <span>Causa raíz</span>
-            <textarea
-              ref={causeRef}
-              value={cause}
-              onChange={(event) => setCause(event.target.value)}
-              maxLength={2000}
-              rows={4}
-              required
-              aria-invalid={Boolean(error) || undefined}
-            />
-          </label>
-          <label>
-            <span>Solución aplicada</span>
-            <textarea
-              ref={solutionRef}
-              value={solution}
-              onChange={(event) => setSolution(event.target.value)}
-              maxLength={2000}
-              rows={4}
-              required
-              aria-invalid={Boolean(error) || undefined}
-            />
-          </label>
-          {error && <p className="error" role="alert">{error}</p>}
-          <div className="ticket-resolution-actions">
-            <button ref={cancelRef} className="secondary-button" type="button" disabled={saving} onClick={onCancel}>Cancelar</button>
-            <button ref={saveRef} className="primary-action" type="submit" disabled={saving || !cause.trim() || !solution.trim()}>
-              {saving ? 'Guardando…' : 'Cerrar ticket'}
-            </button>
-          </div>
-        </form>
       </section>
     </div>
   )

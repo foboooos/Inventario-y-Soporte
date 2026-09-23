@@ -64,13 +64,6 @@ select {
   background-size: 14px;
 }
 
-input:hover,
-select:hover {
-  border-color: var(--minimal-primary);
-}
-
-input:focus-visible,
-select:focus-visible,
 button:focus-visible {
   outline: 3px solid rgba(49, 44, 133, 0.35);
   outline-offset: 2px;
@@ -87,12 +80,8 @@ textarea {
   color: var(--minimal-text);
   background: #fff;
   font: inherit;
+  font-size: 15px;
   line-height: 1.4;
-}
-
-textarea:focus-visible {
-  outline: 3px solid rgba(49, 44, 133, 0.35);
-  outline-offset: 2px;
 }
 
 button {

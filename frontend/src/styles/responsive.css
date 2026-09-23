@@ -129,6 +129,10 @@
     width: 100%;
   }
 
+  .device-modal-body {
+    padding: 18px;
+  }
+
 
 }
 
