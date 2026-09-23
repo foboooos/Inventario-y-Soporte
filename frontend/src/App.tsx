@@ -27,6 +27,16 @@ const routePaths: Record<RouteKey, string> = {
   settings: '/config',
 }
 
+const routeTitles: Record<RouteKey, string> = {
+  support: 'Soporte',
+  inventory: 'Inventario',
+  inbox: 'Bandeja de entrada',
+  settings: 'Configuración',
+}
+
+const LOGIN_TITLE = 'Iniciar sesión'
+const NOT_FOUND_TITLE = 'Página no encontrada'
+
 function normalizePath(pathname: string) {
   const path = pathname.replace(/\/+$/, '')
   return path || '/login'
@@ -89,6 +99,17 @@ function App() {
   }, [])
 
   const activeRoute = routeFromPath(pathname)
+
+  let pageTitle = NOT_FOUND_TITLE
+  if (!user) {
+    pageTitle = pathname !== '/login' && !activeRoute ? NOT_FOUND_TITLE : LOGIN_TITLE
+  } else if (activeRoute && canAccessRoute(user.rol, activeRoute)) {
+    pageTitle = routeTitles[activeRoute]
+  }
+
+  useEffect(() => {
+    document.title = pageTitle
+  }, [pageTitle])
 
   useEffect(() => {
     if (!user && pathname !== '/login' && activeRoute) {

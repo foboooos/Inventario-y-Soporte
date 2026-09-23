@@ -86,7 +86,7 @@ export function EditDeviceForm({ accessToken, device, onUpdated, onCancel, onSes
               <span>Modelo</span>
               <input value={form.modelo} onChange={(event) => updateField('modelo', event.target.value)} maxLength={50} />
             </label>
-            <label className="device-form-wide">
+            <label>
               <span>Ubicación</span>
               <input value={form.ubicacion} onChange={(event) => updateField('ubicacion', event.target.value)} required maxLength={100} />
             </label>

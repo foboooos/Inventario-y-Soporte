@@ -5,6 +5,12 @@
  width="447.000000pt" height="447.000000pt" viewBox="0 0 447.000000 447.000000"
  preserveAspectRatio="xMidYMid meet">
 
+<defs>
+<clipPath id="logo-bg-clip">
+<circle cx="223.5" cy="223.5" r="220"/>
+</clipPath>
+</defs>
+<rect x="0" y="0" width="447" height="447" fill="#ffffff" clip-path="url(#logo-bg-clip)"/>
 <g transform="translate(0.000000,447.000000) scale(0.100000,-0.100000)"
 fill="#a10f15" stroke="none">
 <path d="M2012 4440 c-662 -70 -1263 -436 -1626 -990 -213 -325 -329 -668

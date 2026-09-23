@@ -87,6 +87,7 @@ export function CreateTicketForm({ accessToken, onSessionExpired, onTicketCreate
       <div className="form-heading">
         <div>
           <h2 id="new-ticket-title">Reportar un problema</h2>
+          <p>Cuéntanos qué está fallando y en qué equipo. Tu solicitud llegará al área de soporte.</p>
         </div>
       </div>
       <form className="ticket-form" onSubmit={handleSubmit}>

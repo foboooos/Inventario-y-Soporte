@@ -199,7 +199,9 @@ export function TicketHistory({ accessToken, onSessionExpired, refreshKey }: Tic
   return (
     <section className="ticket-history-section" aria-label="Historial de tickets">
       <section className="support-card ticket-history-card">
-        <h3 id="ticket-history-list-title" className="sr-only">Listado de tickets</h3>
+        <header className="ticket-history-header">
+          <h2 id="ticket-history-list-title">Historial de tickets</h2>
+        </header>
 
             {loading && (
               <div className="ticket-history-state" role="status" aria-live="polite">
