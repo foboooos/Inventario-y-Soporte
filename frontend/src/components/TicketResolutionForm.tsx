@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { isSessionExpired } from '../services/http'
 import { resolveTicket } from '../services/tickets'
+import type { DeviceStatus } from '../types/inventory'
 import type { Ticket, TicketStatus } from '../types/ticket'
 
 type TicketResolutionFormProps = {
@@ -18,11 +19,18 @@ const statusLabels: Record<TicketStatus, string> = {
   RESUELTO: 'Resuelto',
 }
 
+const finalStatusOptions: Array<{ value: DeviceStatus; label: string }> = [
+  { value: 'ACTIVO', label: 'Activo' },
+  { value: 'INACTIVO', label: 'Inactivo' },
+  { value: 'BAJA_TECNICA', label: 'Baja Técnica' },
+]
+
 export function TicketResolutionForm({ accessToken, ticket, onResolved, onCancel, onSessionExpired }: TicketResolutionFormProps) {
   const [cause, setCause] = useState('')
   const [solution, setSolution] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [finalStatus, setFinalStatus] = useState<DeviceStatus | ''>('')
   const causeRef = useRef<HTMLTextAreaElement | null>(null)
   const solutionRef = useRef<HTMLTextAreaElement | null>(null)
   const cancelRef = useRef<HTMLButtonElement | null>(null)
@@ -59,6 +67,7 @@ export function TicketResolutionForm({ accessToken, ticket, onResolved, onCancel
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (!finalStatus) return
     setError('')
     setSaving(true)
 
@@ -66,6 +75,7 @@ export function TicketResolutionForm({ accessToken, ticket, onResolved, onCancel
       const resolvedTicket = await resolveTicket(accessToken, ticket.id_ticket, {
         causa_raiz: cause.trim(),
         solucion_aplicada: solution.trim(),
+        estado_final: finalStatus,
       })
       onResolved(resolvedTicket)
     } catch (exception: unknown) {
@@ -138,10 +148,27 @@ export function TicketResolutionForm({ accessToken, ticket, onResolved, onCancel
                 aria-invalid={Boolean(error) || undefined}
               />
             </label>
+            <fieldset className="ticket-resolution-status">
+              <legend>Estado Final</legend>
+              <div className="ticket-resolution-status-options">
+                {finalStatusOptions.map((option) => (
+                  <label key={option.value} className="ticket-resolution-status-option" data-status={option.value.toLowerCase()}>
+                    <input
+                      type="radio"
+                      name="ticket-estado-final"
+                      value={option.value}
+                      checked={finalStatus === option.value}
+                      onChange={() => setFinalStatus(option.value)}
+                    />
+                    <span>{option.label}</span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
             {error && <p className="error" role="alert">{error}</p>}
             <div className="ticket-resolution-actions">
               <button ref={cancelRef} className="primary-action" type="button" disabled={saving} onClick={onCancel}>Cancelar</button>
-              <button ref={saveRef} className="primary-action" type="submit" disabled={saving || !cause.trim() || !solution.trim()}>
+              <button ref={saveRef} className="primary-action" type="submit" disabled={saving || !cause.trim() || !solution.trim() || !finalStatus}>
                 {saving ? 'Guardando…' : 'Cerrar ticket'}
               </button>
             </div>

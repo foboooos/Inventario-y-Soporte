@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 import { Device } from '../inventory/device.entity.js';
+import { User } from '../users/user.entity.js';
 import { CreateTicketDto } from './dto/create-ticket.dto.js';
 import { ResolveTicketDto } from './dto/resolve-ticket.dto.js';
 import { formatTicketCode } from './ticket-code.js';
@@ -13,7 +14,11 @@ import { canTransition } from './ticket-status-transitions.js';
 
 @Injectable()
 export class TicketService {
-  constructor(@InjectRepository(Ticket) private readonly tickets: Repository<Ticket>) {}
+  constructor(
+    @InjectRepository(Ticket) private readonly tickets: Repository<Ticket>,
+    @InjectRepository(Device) private readonly devices: Repository<Device>,
+    @InjectRepository(User) private readonly users: Repository<User>,
+  ) {}
 
   async findInbox() {
     return this.tickets.find({
@@ -39,7 +44,7 @@ export class TicketService {
     }
   }
 
-  async resolve(idTicket: number, resolveTicketDto: ResolveTicketDto) {
+  async resolve(idTicket: number, resolveTicketDto: ResolveTicketDto, tecnicoRut: string) {
     const ticket = await this.tickets.findOneBy({ id_ticket: idTicket });
 
     if (!ticket) {
@@ -50,8 +55,13 @@ export class TicketService {
       throw new ConflictException('Transición de estado no permitida');
     }
 
+    const tecnico = await this.users.findOneBy({ rut: tecnicoRut });
+
     ticket.causa_raiz = resolveTicketDto.causa_raiz.trim();
     ticket.solucion_aplicada = resolveTicketDto.solucion_aplicada.trim();
+    ticket.estado_final = resolveTicketDto.estado_final;
+    ticket.tecnico_nombre = tecnico?.nombre ?? null;
+    ticket.fecha_resolucion = new Date();
     ticket.estado = TicketStatus.RESUELTO;
 
     return this.tickets.save(ticket);
@@ -82,6 +92,35 @@ export class TicketService {
     }
 
     return { ...ticket, estado: nextStatus };
+  }
+
+  async findBitacora(idTicket: number) {
+    const ticket = await this.tickets.findOneBy({ id_ticket: idTicket });
+
+    if (!ticket) {
+      throw new NotFoundException('El ticket no existe');
+    }
+
+    if (ticket.estado !== TicketStatus.RESUELTO) {
+      throw new ConflictException('El ticket aún no tiene bitácora');
+    }
+
+    const device = ticket.id_dispositivo
+      ? await this.devices.findOneBy({ id_dispositivo: ticket.id_dispositivo })
+      : null;
+
+    return {
+      codigo_ticket: ticket.codigo_ticket,
+      fecha_resolucion: ticket.fecha_resolucion,
+      tecnico_nombre: ticket.tecnico_nombre,
+      ubicacion: ticket.ubicacion,
+      dispositivo_tipo: device?.tipo ?? null,
+      codigo_inventario: device?.codigo_inventario ?? null,
+      sintoma: ticket.sintoma,
+      causa_raiz: ticket.causa_raiz,
+      solucion_aplicada: ticket.solucion_aplicada,
+      estado_final: ticket.estado_final,
+    };
   }
 
   async create(createTicketDto: CreateTicketDto, requesterRut: string) {

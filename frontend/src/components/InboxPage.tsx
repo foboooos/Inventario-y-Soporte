@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
-import { getTicketInbox, updateTicketStatus } from '../services/tickets'
+import { getTicketBitacora, getTicketInbox, updateTicketStatus } from '../services/tickets'
 import { isSessionExpired } from '../services/http'
 import type { AuthUser } from '../types/auth'
-import type { Ticket, TicketStatus } from '../types/ticket'
+import type { Ticket, TicketBitacora, TicketStatus } from '../types/ticket'
 import { DashboardLayout } from './DashboardLayout'
+import { TicketLogDocument } from './TicketLogDocument'
 import { TicketResolutionForm } from './TicketResolutionForm'
 import { TicketSymptomPreview } from './TicketSymptomPreview'
 import type { RouteKey } from './Sidebar'
@@ -60,11 +61,13 @@ function formatTicketDate(value?: string) {
   return Number.isNaN(date.getTime()) ? value : dateFormatter.format(date)
 }
 
-function InboxTable({ tickets, startingId, onSelectTicket, onStartTicket }: {
+function InboxTable({ tickets, startingId, bitacoraId, onSelectTicket, onStartTicket, onOpenBitacora }: {
   tickets: Ticket[]
   startingId: number | null
+  bitacoraId: number | null
   onSelectTicket: (ticket: Ticket, trigger: HTMLButtonElement) => void
   onStartTicket: (ticket: Ticket) => void
+  onOpenBitacora: (ticket: Ticket) => void
 }) {
   return (
     <div className="table-scroll inbox-table-scroll" role="region" tabIndex={0} aria-label="Tabla de tickets">
@@ -128,6 +131,17 @@ function InboxTable({ tickets, startingId, onSelectTicket, onStartTicket }: {
                       {startingId === ticket.id_ticket ? 'Iniciando…' : 'Iniciar'}
                     </button>
                   )}
+                  {ticket.estado === 'RESUELTO' && (
+                    <button
+                      className="text-button"
+                      type="button"
+                      disabled={bitacoraId === ticket.id_ticket}
+                      aria-label={`Ver bitácora del ticket ${ticket.codigo_ticket}`}
+                      onClick={() => onOpenBitacora(ticket)}
+                    >
+                      {bitacoraId === ticket.id_ticket ? 'Abriendo…' : 'Bitácora'}
+                    </button>
+                  )}
                 </td>
               </tr>
             )
@@ -149,6 +163,8 @@ export function InboxPage({ user, accessToken, onLogout, activeRoute, onNavigate
   const resolutionTriggerRef = useRef<HTMLButtonElement | null>(null)
   const statusTabRefs = useRef<Array<HTMLButtonElement | null>>([])
   const [startingId, setStartingId] = useState<number | null>(null)
+  const [bitacoraId, setBitacoraId] = useState<number | null>(null)
+  const [bitacora, setBitacora] = useState<TicketBitacora | null>(null)
   const [actionError, setActionError] = useState('')
 
   useEffect(() => {
@@ -229,6 +245,24 @@ export function InboxPage({ user, accessToken, onLogout, activeRoute, onNavigate
     }
   }
 
+  async function openBitacora(ticket: Ticket) {
+    setBitacoraId(ticket.id_ticket)
+    setActionError('')
+
+    try {
+      const record = await getTicketBitacora(accessToken, ticket.id_ticket)
+      setBitacora(record)
+    } catch (exception: unknown) {
+      if (isSessionExpired(exception)) {
+        onLogout()
+        return
+      }
+      setActionError(exception instanceof Error ? exception.message : 'No se pudo cargar la bitácora del ticket')
+    } finally {
+      setBitacoraId(null)
+    }
+  }
+
   return (
     <DashboardLayout user={user} activeRoute={activeRoute} onNavigate={onNavigate} onLogout={onLogout}>
       <main className="inventory-shell">
@@ -306,7 +340,9 @@ export function InboxPage({ user, accessToken, onLogout, activeRoute, onNavigate
                 <InboxTable
                   tickets={pagedTickets}
                   startingId={startingId}
+                  bitacoraId={bitacoraId}
                   onStartTicket={startTicket}
+                  onOpenBitacora={openBitacora}
                   onSelectTicket={(ticket, trigger) => {
                     resolutionTriggerRef.current = trigger
                     setSelectedTicket(ticket)
@@ -341,6 +377,9 @@ export function InboxPage({ user, accessToken, onLogout, activeRoute, onNavigate
             }}
             onSessionExpired={onLogout}
           />
+        )}
+        {bitacora && (
+          <TicketLogDocument bitacora={bitacora} onClose={() => setBitacora(null)} />
         )}
       </main>
     </DashboardLayout>

@@ -22,6 +22,12 @@ export class TicketController {
     return this.ticketService.findInbox();
   }
 
+  @Get(':id_ticket/bitacora')
+  @Roles(UserRole.ADMIN, UserRole.TECNICO)
+  findBitacora(@Param('id_ticket', ParseIntPipe) idTicket: number) {
+    return this.ticketService.findBitacora(idTicket);
+  }
+
   @Get()
   @Roles(UserRole.DOCENTE)
   findAll(@Req() request: AuthenticatedRequest) {
@@ -37,8 +43,8 @@ export class TicketController {
 
   @Patch(':id_ticket')
   @Roles(UserRole.ADMIN, UserRole.TECNICO)
-  resolve(@Param('id_ticket', ParseIntPipe) idTicket: number, @Body() resolveTicketDto: ResolveTicketDto) {
-    return this.ticketService.resolve(idTicket, resolveTicketDto);
+  resolve(@Param('id_ticket', ParseIntPipe) idTicket: number, @Body() resolveTicketDto: ResolveTicketDto, @Req() request: AuthenticatedRequest) {
+    return this.ticketService.resolve(idTicket, resolveTicketDto, request.user.sub);
   }
 
   @Patch(':id_ticket/status')

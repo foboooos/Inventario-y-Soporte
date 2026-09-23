@@ -1,0 +1,123 @@
+.ticket-log-modal {
+  width: min(100%, 720px);
+  padding: 20px 24px 24px;
+  border: 1px solid #e7e7e2;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 28px 64px -20px rgba(12, 12, 9, 0.35);
+}
+
+.ticket-log-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.ticket-log-toolbar button {
+  margin: 0;
+}
+
+.ticket-log-document {
+  color: var(--minimal-text);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.ticket-log-title {
+  margin: 0 0 20px;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-align: center;
+}
+
+.ticket-log-fields {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 20px;
+}
+
+.ticket-log-fields > div {
+  display: grid;
+  grid-template-columns: 170px 1fr;
+  gap: 8px;
+}
+
+.ticket-log-fields dt {
+  font-weight: 600;
+}
+
+.ticket-log-fields dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.ticket-log-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+}
+
+.ticket-log-check {
+  white-space: nowrap;
+}
+
+.ticket-log-check-label {
+  font-weight: 600;
+}
+
+.ticket-log-document h2 {
+  margin: 22px 0 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #ecece6;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.ticket-log-document p {
+  margin: 0 0 6px;
+}
+
+.ticket-log-solution {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.ticket-log-solution li {
+  margin-bottom: 4px;
+}
+
+@media print {
+  body > :not(.ticket-log-backdrop) {
+    display: none !important;
+  }
+
+  .ticket-log-backdrop {
+    position: static;
+    display: block;
+    padding: 0;
+    background: #fff;
+    overflow: visible;
+  }
+
+  .ticket-log-modal {
+    width: auto;
+    max-width: none;
+    max-height: none;
+    padding: 0;
+    border: 0;
+    box-shadow: none;
+    overflow: visible;
+  }
+
+  .ticket-log-document {
+    margin: 0;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+}

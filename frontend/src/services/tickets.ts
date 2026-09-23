@@ -1,4 +1,4 @@
-import type { CreateTicketInput, DeviceOption, ResolveTicketInput, Ticket, TicketStatus } from '../types/ticket'
+import type { CreateTicketInput, DeviceOption, ResolveTicketInput, Ticket, TicketBitacora, TicketStatus } from '../types/ticket'
 import { apiFetch, readApiJson } from './http'
 
 export async function getDeviceOptions(accessToken: string): Promise<DeviceOption[]> {
@@ -38,6 +38,11 @@ export async function updateTicketStatus(accessToken: string, ticketId: number, 
     body: JSON.stringify({ estado }),
   })
   return readApiJson<Ticket>(response, 'No se pudo actualizar el estado del ticket')
+}
+
+export async function getTicketBitacora(accessToken: string, ticketId: number): Promise<TicketBitacora> {
+  const response = await apiFetch(`/tickets/${ticketId}/bitacora`, accessToken)
+  return readApiJson<TicketBitacora>(response, 'No se pudo cargar la bitácora del ticket')
 }
 
 export async function createTicket(accessToken: string, input: CreateTicketInput): Promise<Ticket> {

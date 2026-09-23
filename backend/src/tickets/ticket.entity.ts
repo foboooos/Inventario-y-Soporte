@@ -1,4 +1,5 @@
 import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { DeviceStatus } from '../inventory/device-status.enum.js';
 import { TicketStatus } from './ticket-status.enum.js';
 
 @Entity({ name: 'tickets_soporte' })
@@ -29,6 +30,15 @@ export class Ticket {
 
   @Column({ type: 'enum', enum: TicketStatus, enumName: 'ticket_status', default: TicketStatus.ABIERTO })
   estado!: TicketStatus;
+
+  @Column({ name: 'fecha_resolucion', type: 'timestamp', nullable: true })
+  fecha_resolucion!: Date | null;
+
+  @Column({ name: 'tecnico_nombre', type: 'varchar', length: 100, nullable: true })
+  tecnico_nombre!: string | null;
+
+  @Column({ type: 'enum', enum: DeviceStatus, enumName: 'device_status', nullable: true })
+  estado_final!: DeviceStatus | null;
 
   @CreateDateColumn({ name: 'fecha_creacion', type: 'timestamp' })
   fecha_creacion!: Date;
