@@ -3,6 +3,7 @@ import type { Repository } from 'typeorm';
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { Device } from '../inventory/device.entity.js';
 import { CreateTicketDto } from './dto/create-ticket.dto.js';
+import { ResolveTicketDto } from './dto/resolve-ticket.dto.js';
 import { Ticket } from './ticket.entity.js';
 import { TicketService } from './ticket.service.js';
 import { TicketSequence } from './ticket-sequence.entity.js';
@@ -60,6 +61,38 @@ describe('TicketService', () => {
     const service = new TicketService({ delete: deleteTicket } as unknown as Repository<Ticket>);
 
     await expect(service.remove(7, '12345678-9')).rejects.toThrow(NotFoundException);
+  });
+
+  it('stores the resolution and marks the ticket as resolved', async () => {
+    const ticket = { id_ticket: 7, estado: TicketStatus.EN_PROCESO } as Ticket;
+    const findOneBy = vi.fn().mockResolvedValue(ticket);
+    const save = vi.fn().mockResolvedValue(ticket);
+    const service = new TicketService({ findOneBy, save } as unknown as Repository<Ticket>);
+    const input = {
+      causa_raiz: 'Falla en la fuente de poder',
+      solucion_aplicada: 'Se reemplazó la fuente y se verificó el encendido',
+    } as ResolveTicketDto;
+
+    const result = await service.resolve(7, input);
+
+    expect(findOneBy).toHaveBeenCalledWith({ id_ticket: 7 });
+    expect(ticket).toMatchObject({
+      causa_raiz: input.causa_raiz,
+      solucion_aplicada: input.solucion_aplicada,
+      estado: TicketStatus.RESUELTO,
+    });
+    expect(save).toHaveBeenCalledWith(ticket);
+    expect(result).toBe(ticket);
+  });
+
+  it('rejects resolving a ticket that does not exist', async () => {
+    const findOneBy = vi.fn().mockResolvedValue(null);
+    const service = new TicketService({ findOneBy } as unknown as Repository<Ticket>);
+
+    await expect(service.resolve(7, {
+      causa_raiz: 'Falla',
+      solucion_aplicada: 'Reparación',
+    })).rejects.toThrow(NotFoundException);
   });
 
   it('creates a ticket with the next yearly correlativo inside a transaction', async () => {

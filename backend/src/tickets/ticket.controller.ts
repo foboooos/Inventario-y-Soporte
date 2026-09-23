@@ -1,10 +1,11 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseIntPipe, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseIntPipe, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { Roles } from '../auth/guards/roles.decorator.js';
 import { RolesGuard } from '../auth/guards/roles.guard.js';
 import { UserRole } from '../users/user-role.enum.js';
 import { CreateTicketDto } from './dto/create-ticket.dto.js';
+import { ResolveTicketDto } from './dto/resolve-ticket.dto.js';
 import { TicketService } from './ticket.service.js';
 
 type AuthenticatedRequest = Request & { user: { sub: string; rol: string } };
@@ -31,6 +32,12 @@ export class TicketController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async remove(@Param('id_ticket', ParseIntPipe) idTicket: number, @Req() request: AuthenticatedRequest) {
     await this.ticketService.remove(idTicket, request.user.sub);
+  }
+
+  @Patch(':id_ticket')
+  @Roles(UserRole.ADMIN, UserRole.TECNICO)
+  resolve(@Param('id_ticket', ParseIntPipe) idTicket: number, @Body() resolveTicketDto: ResolveTicketDto) {
+    return this.ticketService.resolve(idTicket, resolveTicketDto);
   }
 
   @Post()

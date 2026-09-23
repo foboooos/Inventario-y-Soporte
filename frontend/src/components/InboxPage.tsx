@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { getTicketInbox } from '../services/tickets'
 import { isSessionExpired } from '../services/http'
 import type { AuthUser } from '../types/auth'
 import type { Ticket, TicketStatus } from '../types/ticket'
 import { DashboardLayout } from './DashboardLayout'
+import { TicketResolutionForm } from './TicketResolutionForm'
 import { TicketSymptomPreview } from './TicketSymptomPreview'
 import type { RouteKey } from './Sidebar'
 
@@ -51,7 +52,7 @@ function formatTicketDate(value?: string) {
   return Number.isNaN(date.getTime()) ? value : dateFormatter.format(date)
 }
 
-function InboxTable({ tickets }: { tickets: Ticket[] }) {
+function InboxTable({ tickets, onSelectTicket }: { tickets: Ticket[]; onSelectTicket: (ticket: Ticket, trigger: HTMLButtonElement) => void }) {
   return (
     <div className="table-scroll inbox-table-scroll" role="region" tabIndex={0} aria-label="Tabla de tickets pendientes">
       <table className="inbox-table">
@@ -69,7 +70,16 @@ function InboxTable({ tickets }: { tickets: Ticket[] }) {
         <tbody>
           {tickets.map((ticket) => (
             <tr key={ticket.id_ticket}>
-              <td className="inbox-code">{ticket.codigo_ticket}</td>
+              <td className="inbox-code">
+                <button
+                  className="device-code-button ticket-code-button"
+                  type="button"
+                  aria-label={`Abrir formulario de cierre para ${ticket.codigo_ticket}`}
+                  onClick={(event) => onSelectTicket(ticket, event.currentTarget)}
+                >
+                  {ticket.codigo_ticket}
+                </button>
+              </td>
               <td>
                 <span className={`ticket-status ticket-status-${ticket.estado.toLowerCase().replace('_', '-')}`}>
                   {statusLabels[ticket.estado] ?? ticket.estado}
@@ -99,6 +109,8 @@ export function InboxPage({ user, accessToken, onLogout, activeRoute, onNavigate
   const [error, setError] = useState('')
   const [reloadKey, setReloadKey] = useState(0)
   const [currentPage, setCurrentPage] = useState(1)
+  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null)
+  const resolutionTriggerRef = useRef<HTMLButtonElement | null>(null)
 
   useEffect(() => {
     let isMounted = true
@@ -169,7 +181,13 @@ export function InboxPage({ user, accessToken, onLogout, activeRoute, onNavigate
 
             {!loading && !error && tickets.length > 0 && (
               <>
-                <InboxTable tickets={pagedTickets} />
+                <InboxTable
+                  tickets={pagedTickets}
+                  onSelectTicket={(ticket, trigger) => {
+                    resolutionTriggerRef.current = trigger
+                    setSelectedTicket(ticket)
+                  }}
+                />
                 <footer className="table-footer">
                   <span>Mostrando {pageStart + 1}–{Math.min(pageStart + PAGE_SIZE, tickets.length)} de {tickets.length} tickets</span>
                   <nav className="pagination" aria-label="Paginación de la bandeja de entrada">
@@ -184,6 +202,22 @@ export function InboxPage({ user, accessToken, onLogout, activeRoute, onNavigate
             )}
           </div>
         </section>
+        {selectedTicket && (
+          <TicketResolutionForm
+            accessToken={accessToken}
+            ticket={selectedTicket}
+            onResolved={() => {
+              setSelectedTicket(null)
+              resolutionTriggerRef.current = null
+              setReloadKey((key) => key + 1)
+            }}
+            onCancel={() => {
+              setSelectedTicket(null)
+              requestAnimationFrame(() => resolutionTriggerRef.current?.focus())
+            }}
+            onSessionExpired={onLogout}
+          />
+        )}
       </main>
     </DashboardLayout>
   )

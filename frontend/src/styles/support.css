@@ -423,6 +423,88 @@
   background: #e9e9e4;
 }
 
+.ticket-resolution-modal {
+  padding: 24px;
+  border: 1px solid #e7e7e2;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(12, 12, 9, 0.12);
+}
+
+.ticket-resolution-description {
+  margin: -8px 0 20px;
+  color: var(--minimal-muted);
+  line-height: 1.5;
+}
+
+.ticket-resolution-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0 0 20px;
+  padding: 12px;
+  border: 1px solid #ecece6;
+  border-radius: 6px;
+  background: #fafaf8;
+}
+
+.ticket-resolution-summary div {
+  min-width: 0;
+}
+
+.ticket-resolution-summary dt {
+  color: var(--minimal-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ticket-resolution-summary dd {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.ticket-resolution-form {
+  display: grid;
+  gap: 16px;
+}
+
+.ticket-resolution-form label {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.ticket-resolution-form label > span {
+  color: var(--minimal-muted);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.ticket-resolution-form textarea {
+  min-height: 104px;
+  resize: none;
+}
+
+.ticket-resolution-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.ticket-resolution-actions button {
+  margin: 0;
+}
+
+@media (max-width: 560px) {
+  .ticket-resolution-summary {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .ticket-history-table tbody tr {
     transition: none;

@@ -4,6 +4,7 @@ import { In, Repository } from 'typeorm';
 
 import { Device } from '../inventory/device.entity.js';
 import { CreateTicketDto } from './dto/create-ticket.dto.js';
+import { ResolveTicketDto } from './dto/resolve-ticket.dto.js';
 import { formatTicketCode } from './ticket-code.js';
 import { Ticket } from './ticket.entity.js';
 import { TicketSequence } from './ticket-sequence.entity.js';
@@ -36,6 +37,20 @@ export class TicketService {
     if (!result.affected) {
       throw new NotFoundException('El ticket no existe o no pertenece al usuario');
     }
+  }
+
+  async resolve(idTicket: number, resolveTicketDto: ResolveTicketDto) {
+    const ticket = await this.tickets.findOneBy({ id_ticket: idTicket });
+
+    if (!ticket) {
+      throw new NotFoundException('El ticket no existe');
+    }
+
+    ticket.causa_raiz = resolveTicketDto.causa_raiz.trim();
+    ticket.solucion_aplicada = resolveTicketDto.solucion_aplicada.trim();
+    ticket.estado = TicketStatus.RESUELTO;
+
+    return this.tickets.save(ticket);
   }
 
   async create(createTicketDto: CreateTicketDto, requesterRut: string) {

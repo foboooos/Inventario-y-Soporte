@@ -12,6 +12,11 @@ export type CreateTicketInput = {
 
 export type TicketStatus = 'ABIERTO' | 'EN_PROCESO' | 'RESUELTO' | 'CERRADO'
 
+export type ResolveTicketInput = {
+  causa_raiz: string
+  solucion_aplicada: string
+}
+
 export type Ticket = {
   id_ticket: number
   codigo_ticket: string
@@ -20,5 +25,7 @@ export type Ticket = {
   estado: TicketStatus
   ubicacion: string
   sintoma: string
+  causa_raiz?: string | null
+  solucion_aplicada?: string | null
   fecha_creacion?: string
 }

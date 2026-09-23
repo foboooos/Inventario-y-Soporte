@@ -1,0 +1,152 @@
+import { useEffect, useRef, useState } from 'react'
+import type { FormEvent } from 'react'
+import { isSessionExpired } from '../services/http'
+import { resolveTicket } from '../services/tickets'
+import type { Ticket } from '../types/ticket'
+
+type TicketResolutionFormProps = {
+  accessToken: string
+  ticket: Ticket
+  onResolved: (ticket: Ticket) => void
+  onCancel: () => void
+  onSessionExpired: () => void
+}
+
+export function TicketResolutionForm({ accessToken, ticket, onResolved, onCancel, onSessionExpired }: TicketResolutionFormProps) {
+  const [cause, setCause] = useState('')
+  const [solution, setSolution] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const closeRef = useRef<HTMLButtonElement | null>(null)
+  const causeRef = useRef<HTMLTextAreaElement | null>(null)
+  const solutionRef = useRef<HTMLTextAreaElement | null>(null)
+  const cancelRef = useRef<HTMLButtonElement | null>(null)
+  const saveRef = useRef<HTMLButtonElement | null>(null)
+
+  useEffect(() => {
+    causeRef.current?.focus()
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape' && !saving) {
+        onCancel()
+        return
+      }
+
+      if (event.key !== 'Tab') return
+
+      const focusableElements = [closeRef.current, causeRef.current, solutionRef.current, cancelRef.current, saveRef.current]
+        .filter((element): element is HTMLButtonElement | HTMLTextAreaElement => element !== null && !element.disabled)
+      const firstElement = focusableElements[0]
+      const lastElement = focusableElements[focusableElements.length - 1]
+
+      if (event.shiftKey && document.activeElement === firstElement) {
+        event.preventDefault()
+        lastElement?.focus()
+      } else if (!event.shiftKey && document.activeElement === lastElement) {
+        event.preventDefault()
+        firstElement?.focus()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [onCancel, saving])
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setError('')
+    setSaving(true)
+
+    try {
+      const resolvedTicket = await resolveTicket(accessToken, ticket.id_ticket, {
+        causa_raiz: cause.trim(),
+        solucion_aplicada: solution.trim(),
+      })
+      onResolved(resolvedTicket)
+    } catch (exception: unknown) {
+      if (isSessionExpired(exception)) {
+        onSessionExpired()
+        return
+      }
+      setError(exception instanceof Error ? exception.message : 'No se pudo guardar la resolución del ticket')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div
+      className="modal-backdrop ticket-resolution-backdrop"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget && !saving) onCancel()
+      }}
+    >
+      <section
+        className="modal-card ticket-resolution-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="ticket-resolution-title"
+        aria-describedby="ticket-resolution-description"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <div className="form-heading">
+          <div>
+            <span className="eyebrow">Cierre de ticket</span>
+            <h2 id="ticket-resolution-title">Resolver {ticket.codigo_ticket}</h2>
+          </div>
+          <button ref={closeRef} className="icon-button" type="button" aria-label="Cerrar formulario de resolución" disabled={saving} onClick={onCancel}>×</button>
+        </div>
+
+        <p id="ticket-resolution-description" className="ticket-resolution-description">
+          Registra la causa raíz y la solución aplicada para cerrar este incidente.
+        </p>
+
+        <dl className="ticket-resolution-summary">
+          <div>
+            <dt>Solicitante</dt>
+            <dd>{ticket.id_solicitante ?? 'No disponible'}</dd>
+          </div>
+          <div>
+            <dt>Ubicación</dt>
+            <dd>{ticket.ubicacion}</dd>
+          </div>
+        </dl>
+
+        <form className="ticket-resolution-form" onSubmit={handleSubmit}>
+          <label>
+            <span>Causa raíz</span>
+            <textarea
+              ref={causeRef}
+              value={cause}
+              onChange={(event) => setCause(event.target.value)}
+              maxLength={2000}
+              rows={4}
+              required
+              aria-invalid={Boolean(error) || undefined}
+            />
+          </label>
+          <label>
+            <span>Solución aplicada</span>
+            <textarea
+              ref={solutionRef}
+              value={solution}
+              onChange={(event) => setSolution(event.target.value)}
+              maxLength={2000}
+              rows={4}
+              required
+              aria-invalid={Boolean(error) || undefined}
+            />
+          </label>
+          {error && <p className="error" role="alert">{error}</p>}
+          <div className="ticket-resolution-actions">
+            <button ref={cancelRef} className="secondary-button" type="button" disabled={saving} onClick={onCancel}>Cancelar</button>
+            <button ref={saveRef} className="primary-action" type="submit" disabled={saving || !cause.trim() || !solution.trim()}>
+              {saving ? 'Guardando…' : 'Cerrar ticket'}
+            </button>
+          </div>
+        </form>
+      </section>
+    </div>
+  )
+}

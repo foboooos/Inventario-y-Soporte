@@ -21,6 +21,12 @@ export class Ticket {
   @Column({ type: 'text' })
   sintoma!: string;
 
+  @Column({ type: 'text', nullable: true })
+  causa_raiz!: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  solucion_aplicada!: string | null;
+
   @Column({ type: 'enum', enum: TicketStatus, enumName: 'ticket_status', default: TicketStatus.ABIERTO })
   estado!: TicketStatus;
 
