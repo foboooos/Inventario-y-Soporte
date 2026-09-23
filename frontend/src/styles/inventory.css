@@ -20,25 +20,6 @@
   position: relative;
 }
 
-.page-heading {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: end;
-  gap: 16px 24px;
-  margin-bottom: 16px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--minimal-border);
-}
-
-.page-heading .eyebrow {
-  margin-bottom: 6px;
-}
-
-.page-heading h1 {
-  margin: 0 0 8px;
-  font-size: clamp(28px, 3.2vw, 36px);
-}
-
 .inventory-actions {
   display: flex;
   justify-content: flex-start;

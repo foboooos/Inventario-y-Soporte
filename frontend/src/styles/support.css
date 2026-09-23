@@ -19,10 +19,6 @@
   padding: 24px 0;
 }
 
-.support-page-heading {
-  grid-template-columns: 1fr;
-}
-
 .support-card {
   margin-top: 0;
   padding: 24px;
