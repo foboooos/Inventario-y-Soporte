@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
-import { getTicketInbox } from '../services/tickets'
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { getTicketInbox, updateTicketStatus } from '../services/tickets'
 import { isSessionExpired } from '../services/http'
 import type { AuthUser } from '../types/auth'
 import type { Ticket, TicketStatus } from '../types/ticket'
@@ -16,14 +16,22 @@ type InboxPageProps = {
   onNavigate: (route: RouteKey) => void
 }
 
+type StatusFilter = 'ALL' | TicketStatus
+
 const PAGE_SIZE = 10
 
 const statusLabels: Record<TicketStatus, string> = {
   ABIERTO: 'Abierto',
   EN_PROCESO: 'En proceso',
   RESUELTO: 'Resuelto',
-  CERRADO: 'Cerrado',
 }
+
+const statusOptions: Array<{ value: StatusFilter; label: string }> = [
+  { value: 'ALL', label: 'Todos' },
+  { value: 'ABIERTO', label: 'Abiertos' },
+  { value: 'EN_PROCESO', label: 'En proceso' },
+  { value: 'RESUELTO', label: 'Resueltos' },
+]
 
 const dateFormatter = new Intl.DateTimeFormat('es-CL', {
   dateStyle: 'medium',
@@ -52,11 +60,16 @@ function formatTicketDate(value?: string) {
   return Number.isNaN(date.getTime()) ? value : dateFormatter.format(date)
 }
 
-function InboxTable({ tickets, onSelectTicket }: { tickets: Ticket[]; onSelectTicket: (ticket: Ticket, trigger: HTMLButtonElement) => void }) {
+function InboxTable({ tickets, startingId, onSelectTicket, onStartTicket }: {
+  tickets: Ticket[]
+  startingId: number | null
+  onSelectTicket: (ticket: Ticket, trigger: HTMLButtonElement) => void
+  onStartTicket: (ticket: Ticket) => void
+}) {
   return (
-    <div className="table-scroll inbox-table-scroll" role="region" tabIndex={0} aria-label="Tabla de tickets pendientes">
+    <div className="table-scroll inbox-table-scroll" role="region" tabIndex={0} aria-label="Tabla de tickets">
       <table className="inbox-table">
-        <caption className="sr-only">Tickets pendientes ordenados por fecha de creación</caption>
+        <caption className="sr-only">Tickets de soporte ordenados por fecha de creación</caption>
         <thead>
           <tr>
             <th scope="col">Código</th>
@@ -65,38 +78,60 @@ function InboxTable({ tickets, onSelectTicket }: { tickets: Ticket[]; onSelectTi
             <th scope="col">Ubicación</th>
             <th scope="col">Síntoma</th>
             <th scope="col">Fecha de creación</th>
+            <th scope="col"><span className="sr-only">Acciones</span></th>
           </tr>
         </thead>
         <tbody>
-          {tickets.map((ticket) => (
-            <tr key={ticket.id_ticket}>
-              <td className="inbox-code">
-                <button
-                  className="device-code-button ticket-code-button"
-                  type="button"
-                  aria-label={`Abrir formulario de cierre para ${ticket.codigo_ticket}`}
-                  onClick={(event) => onSelectTicket(ticket, event.currentTarget)}
-                >
-                  {ticket.codigo_ticket}
-                </button>
-              </td>
-              <td>
-                <span className={`ticket-status ticket-status-${ticket.estado.toLowerCase().replace('_', '-')}`}>
-                  {statusLabels[ticket.estado] ?? ticket.estado}
-                </span>
-              </td>
-              <td>{ticket.id_solicitante ?? 'No disponible'}</td>
-              <td>{ticket.ubicacion}</td>
-              <td className="inbox-symptom"><TicketSymptomPreview ticket={ticket} /></td>
-              <td className="inbox-date">
-                {ticket.fecha_creacion ? (
-                  <time dateTime={ticket.fecha_creacion}>{formatTicketDate(ticket.fecha_creacion)}</time>
-                ) : (
-                  'No disponible'
-                )}
-              </td>
-            </tr>
-          ))}
+          {tickets.map((ticket) => {
+            const canResolve = ticket.estado === 'EN_PROCESO'
+
+            return (
+              <tr key={ticket.id_ticket}>
+                <td className="inbox-code">
+                  {canResolve ? (
+                    <button
+                      className="device-code-button ticket-code-button"
+                      type="button"
+                      aria-label={`Abrir formulario de cierre para ${ticket.codigo_ticket}`}
+                      onClick={(event) => onSelectTicket(ticket, event.currentTarget)}
+                    >
+                      {ticket.codigo_ticket}
+                    </button>
+                  ) : (
+                    <span className="inbox-code-disabled">{ticket.codigo_ticket}</span>
+                  )}
+                </td>
+                <td>
+                  <span className={`ticket-status ticket-status-${ticket.estado.toLowerCase().replace('_', '-')}`}>
+                    {statusLabels[ticket.estado] ?? ticket.estado}
+                  </span>
+                </td>
+                <td>{ticket.id_solicitante ?? 'No disponible'}</td>
+                <td>{ticket.ubicacion}</td>
+                <td className="inbox-symptom"><TicketSymptomPreview ticket={ticket} /></td>
+                <td className="inbox-date">
+                  {ticket.fecha_creacion ? (
+                    <time dateTime={ticket.fecha_creacion}>{formatTicketDate(ticket.fecha_creacion)}</time>
+                  ) : (
+                    'No disponible'
+                  )}
+                </td>
+                <td className="inbox-actions">
+                  {ticket.estado === 'ABIERTO' && (
+                    <button
+                      className="text-button"
+                      type="button"
+                      disabled={startingId === ticket.id_ticket}
+                      aria-label={`Iniciar ticket ${ticket.codigo_ticket}`}
+                      onClick={() => onStartTicket(ticket)}
+                    >
+                      {startingId === ticket.id_ticket ? 'Iniciando…' : 'Iniciar'}
+                    </button>
+                  )}
+                </td>
+              </tr>
+            )
+          })}
         </tbody>
       </table>
     </div>
@@ -108,9 +143,13 @@ export function InboxPage({ user, accessToken, onLogout, activeRoute, onNavigate
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [reloadKey, setReloadKey] = useState(0)
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL')
   const [currentPage, setCurrentPage] = useState(1)
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null)
   const resolutionTriggerRef = useRef<HTMLButtonElement | null>(null)
+  const statusTabRefs = useRef<Array<HTMLButtonElement | null>>([])
+  const [startingId, setStartingId] = useState<number | null>(null)
+  const [actionError, setActionError] = useState('')
 
   useEffect(() => {
     let isMounted = true
@@ -138,10 +177,13 @@ export function InboxPage({ user, accessToken, onLogout, activeRoute, onNavigate
     }
   }, [accessToken, onLogout, reloadKey])
 
-  const totalPages = Math.max(1, Math.ceil(tickets.length / PAGE_SIZE))
+  const visibleTickets = statusFilter === 'ALL'
+    ? tickets
+    : tickets.filter((ticket) => ticket.estado === statusFilter)
+  const totalPages = Math.max(1, Math.ceil(visibleTickets.length / PAGE_SIZE))
   const activePage = Math.min(currentPage, totalPages)
   const pageStart = (activePage - 1) * PAGE_SIZE
-  const pagedTickets = tickets.slice(pageStart, pageStart + PAGE_SIZE)
+  const pagedTickets = visibleTickets.slice(pageStart, pageStart + PAGE_SIZE)
   const pageNumbers = getPageNumbers(activePage, totalPages)
 
   function retryLoad() {
@@ -150,11 +192,78 @@ export function InboxPage({ user, accessToken, onLogout, activeRoute, onNavigate
     setReloadKey((key) => key + 1)
   }
 
+  function changeStatusFilter(nextStatus: StatusFilter) {
+    setStatusFilter(nextStatus)
+    setCurrentPage(1)
+  }
+
+  function handleStatusTabKeyDown(event: KeyboardEvent<HTMLButtonElement>, index: number) {
+    let nextIndex = index
+
+    if (event.key === 'ArrowRight') nextIndex = (index + 1) % statusOptions.length
+    if (event.key === 'ArrowLeft') nextIndex = (index - 1 + statusOptions.length) % statusOptions.length
+    if (event.key === 'Home') nextIndex = 0
+    if (event.key === 'End') nextIndex = statusOptions.length - 1
+    if (nextIndex === index) return
+
+    event.preventDefault()
+    changeStatusFilter(statusOptions[nextIndex].value)
+    statusTabRefs.current[nextIndex]?.focus()
+  }
+
+  async function startTicket(ticket: Ticket) {
+    setStartingId(ticket.id_ticket)
+    setActionError('')
+
+    try {
+      const updatedTicket = await updateTicketStatus(accessToken, ticket.id_ticket, 'EN_PROCESO')
+      setTickets((current) => current.map((item) => (item.id_ticket === updatedTicket.id_ticket ? updatedTicket : item)))
+    } catch (exception: unknown) {
+      if (isSessionExpired(exception)) {
+        onLogout()
+        return
+      }
+      setActionError(exception instanceof Error ? exception.message : 'No se pudo iniciar el ticket')
+    } finally {
+      setStartingId(null)
+    }
+  }
+
   return (
     <DashboardLayout user={user} activeRoute={activeRoute} onNavigate={onNavigate} onLogout={onLogout}>
       <main className="inventory-shell">
         <section className="inventory-content inbox-content" aria-label="Bandeja de entrada de tickets">
-          <div className="table-card inbox-table-card">
+          <div className="inventory-status-tabs" role="tablist" aria-label="Filtrar tickets por estado">
+            {statusOptions.map((option, index) => {
+              const selected = statusFilter === option.value
+              const tabId = `inbox-tab-${option.value.toLowerCase()}`
+
+              return (
+                <button
+                  className={`inventory-status-tab${selected ? ' active' : ''}`}
+                  id={tabId}
+                  key={option.value}
+                  type="button"
+                  role="tab"
+                  aria-selected={selected}
+                  aria-controls="inbox-results-panel"
+                  tabIndex={selected ? 0 : -1}
+                  ref={(element) => { statusTabRefs.current[index] = element }}
+                  onClick={() => changeStatusFilter(option.value)}
+                  onKeyDown={(event) => handleStatusTabKeyDown(event, index)}
+                >
+                  {option.label}
+                </button>
+              )
+            })}
+          </div>
+
+          <div
+            className="table-card inbox-table-card"
+            id="inbox-results-panel"
+            role="tabpanel"
+            aria-labelledby={`inbox-tab-${statusFilter.toLowerCase()}`}
+          >
             {loading && (
               <div className="skeleton-block" role="status" aria-live="polite" aria-label="Cargando bandeja de tickets">
                 <span className="sr-only">Cargando bandeja de tickets…</span>
@@ -173,23 +282,38 @@ export function InboxPage({ user, accessToken, onLogout, activeRoute, onNavigate
               </div>
             )}
 
-            {!loading && !error && tickets.length === 0 && (
-              <div className="empty-state-block" role="status">
-                <p>No hay tickets pendientes en la bandeja.</p>
+            {!loading && !error && actionError && (
+              <div className="banner-error" role="alert">
+                <span>{actionError}</span>
+                <button className="text-button" type="button" onClick={() => setActionError('')}>Cerrar</button>
               </div>
             )}
 
-            {!loading && !error && tickets.length > 0 && (
+            {!loading && !error && tickets.length === 0 && (
+              <div className="empty-state-block" role="status">
+                <p>No hay tickets registrados.</p>
+              </div>
+            )}
+
+            {!loading && !error && tickets.length > 0 && visibleTickets.length === 0 && (
+              <div className="empty-state-block" role="status">
+                <p>No hay tickets con este estado.</p>
+              </div>
+            )}
+
+            {!loading && !error && visibleTickets.length > 0 && (
               <>
                 <InboxTable
                   tickets={pagedTickets}
+                  startingId={startingId}
+                  onStartTicket={startTicket}
                   onSelectTicket={(ticket, trigger) => {
                     resolutionTriggerRef.current = trigger
                     setSelectedTicket(ticket)
                   }}
                 />
                 <footer className="table-footer">
-                  <span>Mostrando {pageStart + 1}–{Math.min(pageStart + PAGE_SIZE, tickets.length)} de {tickets.length} tickets</span>
+                  <span>Mostrando {pageStart + 1}–{Math.min(pageStart + PAGE_SIZE, visibleTickets.length)} de {visibleTickets.length} tickets</span>
                   <nav className="pagination" aria-label="Paginación de la bandeja de entrada">
                     <button className="pagination-button" type="button" disabled={activePage === 1} onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}>Anterior</button>
                     {pageNumbers.map((page, index) => page === 'ellipsis'

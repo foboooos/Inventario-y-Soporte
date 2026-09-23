@@ -10,7 +10,7 @@ export type CreateTicketInput = {
   id_dispositivo?: number
 }
 
-export type TicketStatus = 'ABIERTO' | 'EN_PROCESO' | 'RESUELTO' | 'CERRADO'
+export type TicketStatus = 'ABIERTO' | 'EN_PROCESO' | 'RESUELTO'
 
 export type ResolveTicketInput = {
   causa_raiz: string

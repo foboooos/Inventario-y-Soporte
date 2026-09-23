@@ -364,8 +364,7 @@
   background: #fef3c7;
 }
 
-.ticket-status-resuelto,
-.ticket-status-cerrado {
+.ticket-status-resuelto {
   color: var(--minimal-success);
   background: #dcfce7;
 }

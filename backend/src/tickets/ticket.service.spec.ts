@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 import type { Repository } from 'typeorm';
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { Device } from '../inventory/device.entity.js';
@@ -20,15 +20,15 @@ describe('TicketService', () => {
     vi.useRealTimers();
   });
 
-  it('returns pending tickets ordered from oldest to newest for the technical inbox', async () => {
+  it('returns every ticket ordered from newest to oldest for the technical inbox', async () => {
     const find = vi.fn().mockResolvedValue([]);
     const service = new TicketService({ find } as unknown as Repository<Ticket>);
 
     await service.findInbox();
 
-    const [options] = find.mock.calls[0] as [{ where: { estado: { value: unknown } }; order: unknown }];
-    expect(options.where.estado.value).toEqual([TicketStatus.ABIERTO, TicketStatus.EN_PROCESO]);
-    expect(options.order).toEqual({ fecha_creacion: 'ASC', id_ticket: 'ASC' });
+    expect(find).toHaveBeenCalledWith({
+      order: { fecha_creacion: 'DESC', id_ticket: 'DESC' },
+    });
   });
 
   it('filters ticket history by requester for a teacher', async () => {
@@ -93,6 +93,68 @@ describe('TicketService', () => {
       causa_raiz: 'Falla',
       solucion_aplicada: 'Reparación',
     })).rejects.toThrow(NotFoundException);
+  });
+
+  it('rejects resolving a ticket that is already resolved', async () => {
+    const ticket = { id_ticket: 7, estado: TicketStatus.RESUELTO } as Ticket;
+    const findOneBy = vi.fn().mockResolvedValue(ticket);
+    const service = new TicketService({ findOneBy } as unknown as Repository<Ticket>);
+
+    await expect(service.resolve(7, {
+      causa_raiz: 'Falla',
+      solucion_aplicada: 'Reparación',
+    })).rejects.toThrow(ConflictException);
+  });
+
+  it('moves an open ticket to in progress with a conditional update', async () => {
+    const ticket = { id_ticket: 7, estado: TicketStatus.ABIERTO } as Ticket;
+    const findOneBy = vi.fn().mockResolvedValue(ticket);
+    const update = vi.fn().mockResolvedValue({ affected: 1 });
+    const service = new TicketService({ findOneBy, update } as unknown as Repository<Ticket>);
+
+    const result = await service.changeStatus(7, TicketStatus.EN_PROCESO);
+
+    expect(update).toHaveBeenCalledWith(
+      { id_ticket: 7, estado: TicketStatus.ABIERTO },
+      { estado: TicketStatus.EN_PROCESO },
+    );
+    expect(result).toEqual({ ...ticket, estado: TicketStatus.EN_PROCESO });
+  });
+
+  it('keeps an in-progress ticket unchanged when it is started again', async () => {
+    const ticket = { id_ticket: 7, estado: TicketStatus.EN_PROCESO } as Ticket;
+    const findOneBy = vi.fn().mockResolvedValue(ticket);
+    const update = vi.fn();
+    const service = new TicketService({ findOneBy, update } as unknown as Repository<Ticket>);
+
+    const result = await service.changeStatus(7, TicketStatus.EN_PROCESO);
+
+    expect(update).not.toHaveBeenCalled();
+    expect(result).toBe(ticket);
+  });
+
+  it('rejects an invalid status transition', async () => {
+    const ticket = { id_ticket: 7, estado: TicketStatus.RESUELTO } as Ticket;
+    const findOneBy = vi.fn().mockResolvedValue(ticket);
+    const service = new TicketService({ findOneBy } as unknown as Repository<Ticket>);
+
+    await expect(service.changeStatus(7, TicketStatus.EN_PROCESO)).rejects.toThrow(ConflictException);
+  });
+
+  it('rejects changing the status of a ticket that does not exist', async () => {
+    const findOneBy = vi.fn().mockResolvedValue(null);
+    const service = new TicketService({ findOneBy } as unknown as Repository<Ticket>);
+
+    await expect(service.changeStatus(7, TicketStatus.EN_PROCESO)).rejects.toThrow(NotFoundException);
+  });
+
+  it('reports a conflict when the ticket changed while updating', async () => {
+    const ticket = { id_ticket: 7, estado: TicketStatus.ABIERTO } as Ticket;
+    const findOneBy = vi.fn().mockResolvedValue(ticket);
+    const update = vi.fn().mockResolvedValue({ affected: 0 });
+    const service = new TicketService({ findOneBy, update } as unknown as Repository<Ticket>);
+
+    await expect(service.changeStatus(7, TicketStatus.EN_PROCESO)).rejects.toThrow(ConflictException);
   });
 
   it('creates a ticket with the next yearly correlativo inside a transaction', async () => {

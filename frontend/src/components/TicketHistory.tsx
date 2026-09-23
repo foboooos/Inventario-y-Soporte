@@ -16,7 +16,6 @@ const statusLabels: Record<TicketStatus, string> = {
   ABIERTO: 'Abierto',
   EN_PROCESO: 'En proceso',
   RESUELTO: 'Resuelto',
-  CERRADO: 'Cerrado',
 }
 
 function getPageNumbers(currentPage: number, totalPages: number): Array<number | 'ellipsis'> {

@@ -1,6 +1,6 @@
-import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 
 import { Device } from '../inventory/device.entity.js';
 import { CreateTicketDto } from './dto/create-ticket.dto.js';
@@ -9,6 +9,7 @@ import { formatTicketCode } from './ticket-code.js';
 import { Ticket } from './ticket.entity.js';
 import { TicketSequence } from './ticket-sequence.entity.js';
 import { TicketStatus } from './ticket-status.enum.js';
+import { canTransition } from './ticket-status-transitions.js';
 
 @Injectable()
 export class TicketService {
@@ -16,8 +17,7 @@ export class TicketService {
 
   async findInbox() {
     return this.tickets.find({
-      where: { estado: In([TicketStatus.ABIERTO, TicketStatus.EN_PROCESO]) },
-      order: { fecha_creacion: 'ASC', id_ticket: 'ASC' },
+      order: { fecha_creacion: 'DESC', id_ticket: 'DESC' },
     });
   }
 
@@ -46,11 +46,42 @@ export class TicketService {
       throw new NotFoundException('El ticket no existe');
     }
 
+    if (!canTransition(ticket.estado, TicketStatus.RESUELTO)) {
+      throw new ConflictException('Transición de estado no permitida');
+    }
+
     ticket.causa_raiz = resolveTicketDto.causa_raiz.trim();
     ticket.solucion_aplicada = resolveTicketDto.solucion_aplicada.trim();
     ticket.estado = TicketStatus.RESUELTO;
 
     return this.tickets.save(ticket);
+  }
+
+  async changeStatus(idTicket: number, nextStatus: TicketStatus) {
+    const ticket = await this.tickets.findOneBy({ id_ticket: idTicket });
+
+    if (!ticket) {
+      throw new NotFoundException('El ticket no existe');
+    }
+
+    if (ticket.estado === nextStatus) {
+      return ticket;
+    }
+
+    if (!canTransition(ticket.estado, nextStatus)) {
+      throw new ConflictException('Transición de estado no permitida');
+    }
+
+    const result = await this.tickets.update(
+      { id_ticket: idTicket, estado: ticket.estado },
+      { estado: nextStatus },
+    );
+
+    if (!result.affected) {
+      throw new ConflictException('El ticket fue modificado mientras se actualizaba');
+    }
+
+    return { ...ticket, estado: nextStatus };
   }
 
   async create(createTicketDto: CreateTicketDto, requesterRut: string) {

@@ -16,7 +16,6 @@ const statusLabels: Record<TicketStatus, string> = {
   ABIERTO: 'Abierto',
   EN_PROCESO: 'En proceso',
   RESUELTO: 'Resuelto',
-  CERRADO: 'Cerrado',
 }
 
 export function TicketResolutionForm({ accessToken, ticket, onResolved, onCancel, onSessionExpired }: TicketResolutionFormProps) {

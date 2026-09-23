@@ -6,6 +6,7 @@ import { RolesGuard } from '../auth/guards/roles.guard.js';
 import { UserRole } from '../users/user-role.enum.js';
 import { CreateTicketDto } from './dto/create-ticket.dto.js';
 import { ResolveTicketDto } from './dto/resolve-ticket.dto.js';
+import { UpdateTicketStatusDto } from './dto/update-ticket-status.dto.js';
 import { TicketService } from './ticket.service.js';
 
 type AuthenticatedRequest = Request & { user: { sub: string; rol: string } };
@@ -38,6 +39,12 @@ export class TicketController {
   @Roles(UserRole.ADMIN, UserRole.TECNICO)
   resolve(@Param('id_ticket', ParseIntPipe) idTicket: number, @Body() resolveTicketDto: ResolveTicketDto) {
     return this.ticketService.resolve(idTicket, resolveTicketDto);
+  }
+
+  @Patch(':id_ticket/status')
+  @Roles(UserRole.ADMIN, UserRole.TECNICO)
+  changeStatus(@Param('id_ticket', ParseIntPipe) idTicket: number, @Body() updateTicketStatusDto: UpdateTicketStatusDto) {
+    return this.ticketService.changeStatus(idTicket, updateTicketStatusDto.estado);
   }
 
   @Post()

@@ -1,4 +1,4 @@
-import type { CreateTicketInput, DeviceOption, ResolveTicketInput, Ticket } from '../types/ticket'
+import type { CreateTicketInput, DeviceOption, ResolveTicketInput, Ticket, TicketStatus } from '../types/ticket'
 import { apiFetch, readApiJson } from './http'
 
 export async function getDeviceOptions(accessToken: string): Promise<DeviceOption[]> {
@@ -29,6 +29,15 @@ export async function resolveTicket(accessToken: string, ticketId: number, input
     body: JSON.stringify(input),
   })
   return readApiJson<Ticket>(response, 'No se pudo guardar la resolución del ticket')
+}
+
+export async function updateTicketStatus(accessToken: string, ticketId: number, estado: TicketStatus): Promise<Ticket> {
+  const response = await apiFetch(`/tickets/${ticketId}/status`, accessToken, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ estado }),
+  })
+  return readApiJson<Ticket>(response, 'No se pudo actualizar el estado del ticket')
 }
 
 export async function createTicket(accessToken: string, input: CreateTicketInput): Promise<Ticket> {
