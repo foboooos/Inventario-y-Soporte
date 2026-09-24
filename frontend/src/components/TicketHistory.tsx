@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
-import { deleteTicket, getTickets } from '../services/tickets'
+import { useEffect, useState } from 'react'
+import { getTickets } from '../services/tickets'
 import { isSessionExpired } from '../services/http'
 import { TicketSymptomPreview } from './TicketSymptomPreview'
 import type { Ticket, TicketStatus } from '../types/ticket'
@@ -46,16 +46,13 @@ function formatTicketDate(value?: string) {
 }
 
 
-function TicketHistoryTable({ tickets, onDelete }: { tickets: Ticket[]; onDelete: (ticket: Ticket) => void }) {
+function TicketHistoryTable({ tickets }: { tickets: Ticket[] }) {
   return (
     <div className="ticket-history-table-scroll" role="region" tabIndex={0} aria-label="Tabla de historial de tickets">
       <table className="ticket-history-table">
         <caption className="sr-only">Historial de tickets de soporte</caption>
         <thead>
           <tr>
-            <th className="ticket-history-actions-column" scope="col">
-              <span className="sr-only">Acciones</span>
-            </th>
             <th className="ticket-history-code-column" scope="col">Código</th>
             <th className="ticket-history-status-column" scope="col">Estado</th>
             <th className="ticket-history-location-column" scope="col">Ubicación</th>
@@ -66,13 +63,6 @@ function TicketHistoryTable({ tickets, onDelete }: { tickets: Ticket[]; onDelete
         <tbody>
           {tickets.map((ticket) => (
             <tr key={ticket.id_ticket}>
-              <td className="ticket-history-actions">
-                <button className="ticket-delete-button" type="button" onClick={() => onDelete(ticket)} aria-label={`Eliminar ticket ${ticket.codigo_ticket}`}>
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M5 7h14M10 11v6M14 11v6M9 7l1-2h4l1 2M7 7l1 14h8l1-14" />
-                  </svg>
-                </button>
-              </td>
               <td className="ticket-history-code">{ticket.codigo_ticket}</td>
               <td>
                 <span className={`ticket-status ticket-status-${ticket.estado.toLowerCase().replace('_', '-')}`}>
@@ -102,11 +92,6 @@ export function TicketHistory({ accessToken, onSessionExpired, refreshKey }: Tic
   const [error, setError] = useState('')
   const [reloadKey, setReloadKey] = useState(0)
   const [currentPage, setCurrentPage] = useState(1)
-  const [pendingDeletion, setPendingDeletion] = useState<Ticket | null>(null)
-  const [deletingId, setDeletingId] = useState<number | null>(null)
-  const [deleteError, setDeleteError] = useState('')
-  const cancelDeleteRef = useRef<HTMLButtonElement | null>(null)
-  const confirmDeleteRef = useRef<HTMLButtonElement | null>(null)
 
   useEffect(() => {
     let isMounted = true
@@ -142,54 +127,6 @@ export function TicketHistory({ accessToken, onSessionExpired, refreshKey }: Tic
     }
   }, [accessToken, onSessionExpired, refreshKey, reloadKey])
 
-  useEffect(() => {
-    if (!pendingDeletion) return
-
-    cancelDeleteRef.current?.focus()
-    function handleEscape(event: KeyboardEvent) {
-      if (event.key === 'Escape' && deletingId === null) {
-        setPendingDeletion(null)
-        return
-      }
-
-      if (event.key === 'Tab') {
-        const activeElement = document.activeElement
-        if (event.shiftKey && activeElement === cancelDeleteRef.current) {
-          event.preventDefault()
-          confirmDeleteRef.current?.focus()
-        } else if (!event.shiftKey && activeElement === confirmDeleteRef.current) {
-          event.preventDefault()
-          cancelDeleteRef.current?.focus()
-        }
-      }
-    }
-
-    window.addEventListener('keydown', handleEscape)
-    return () => window.removeEventListener('keydown', handleEscape)
-  }, [deletingId, pendingDeletion])
-
-  async function confirmDeletion() {
-    if (!pendingDeletion || deletingId !== null) return
-
-    const ticketId = pendingDeletion.id_ticket
-    setDeletingId(ticketId)
-    setDeleteError('')
-
-    try {
-      await deleteTicket(accessToken, ticketId)
-      setPendingDeletion(null)
-      setReloadKey((key) => key + 1)
-    } catch (exception: unknown) {
-      if (isSessionExpired(exception)) {
-        onSessionExpired()
-        return
-      }
-      setDeleteError(exception instanceof Error ? exception.message : 'No se pudo eliminar el ticket')
-    } finally {
-      setDeletingId(null)
-    }
-  }
-
   const totalPages = Math.max(1, Math.ceil(tickets.length / PAGE_SIZE))
   const activePage = Math.min(currentPage, totalPages)
   const pageStart = (activePage - 1) * PAGE_SIZE
@@ -199,86 +136,46 @@ export function TicketHistory({ accessToken, onSessionExpired, refreshKey }: Tic
   return (
     <section className="ticket-history-section" aria-label="Historial de tickets">
       <section className="support-card ticket-history-card">
-        <header className="ticket-history-header">
-          <h2 id="ticket-history-list-title">Historial de tickets</h2>
-        </header>
-
-            {loading && (
-              <div className="ticket-history-state" role="status" aria-live="polite">
-                <p>Cargando historial de tickets…</p>
-                <div className="ticket-history-loading-lines" aria-hidden="true">
-                  <span />
-                  <span />
-                  <span />
-                </div>
-              </div>
-            )}
-
-            {!loading && error && (
-              <div className="ticket-history-state">
-                <p className="error" role="alert">{error}</p>
-                <button type="button" onClick={() => setReloadKey((key) => key + 1)}>Reintentar</button>
-              </div>
-            )}
-
-            {!loading && !error && tickets.length === 0 && (
-              <div className="ticket-history-state" role="status">
-                <p>Aún no hay tickets registrados.</p>
-              </div>
-            )}
-
-            {!loading && !error && tickets.length > 0 && (
-              <>
-                <TicketHistoryTable tickets={pagedTickets} onDelete={(ticket) => {
-                  setDeleteError('')
-                  setPendingDeletion(ticket)
-                }} />
-                <footer className="table-footer">
-                  <span>Mostrando {pageStart + 1}–{Math.min(pageStart + PAGE_SIZE, tickets.length)} de {tickets.length} tickets</span>
-                  <nav className="pagination" aria-label="Paginación del historial de tickets">
-                    <button className="pagination-button" type="button" disabled={activePage === 1} onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}>Anterior</button>
-                    {pageNumbers.map((page, index) => page === 'ellipsis'
-                      ? <span className="pagination-ellipsis" key={`ellipsis-${index}`} aria-hidden="true">…</span>
-                      : <button className={`pagination-button page-number${page === activePage ? ' active' : ''}`} type="button" key={page} aria-current={page === activePage ? 'page' : undefined} onClick={() => setCurrentPage(page)}>{page}</button>)}
-                    <button className="pagination-button" type="button" disabled={activePage === totalPages} onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}>Siguiente</button>
-                  </nav>
-                </footer>
-              </>
-            )}
-      </section>
-
-      {pendingDeletion && (
-        <div
-          className="modal-backdrop ticket-delete-backdrop"
-          role="presentation"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget && deletingId === null) setPendingDeletion(null)
-          }}
-        >
-          <section
-            className="modal-card ticket-delete-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="delete-ticket-title"
-            aria-describedby="delete-ticket-description"
-            onMouseDown={(event) => event.stopPropagation()}
-          >
-            <h2 id="delete-ticket-title">Eliminar ticket</h2>
-            <p id="delete-ticket-description">
-              ¿Quieres eliminar el ticket <strong>{pendingDeletion.codigo_ticket}</strong>? Esta acción no se puede deshacer.
-            </p>
-            {deleteError && <p className="error" role="alert">{deleteError}</p>}
-            <div className="ticket-delete-actions">
-              <button ref={cancelDeleteRef} className="secondary-button" type="button" disabled={deletingId !== null} onClick={() => setPendingDeletion(null)}>
-                Cancelar
-              </button>
-              <button ref={confirmDeleteRef} className="primary-action" type="button" disabled={deletingId !== null} onClick={confirmDeletion}>
-                {deletingId !== null ? 'Eliminando…' : 'Eliminar ticket'}
-              </button>
+        {loading && (
+          <div className="ticket-history-state" role="status" aria-live="polite">
+            <p>Cargando historial de tickets…</p>
+            <div className="ticket-history-loading-lines" aria-hidden="true">
+              <span />
+              <span />
+              <span />
             </div>
-          </section>
-        </div>
-      )}
+          </div>
+        )}
+
+        {!loading && error && (
+          <div className="ticket-history-state">
+            <p className="error" role="alert">{error}</p>
+            <button type="button" onClick={() => setReloadKey((key) => key + 1)}>Reintentar</button>
+          </div>
+        )}
+
+        {!loading && !error && tickets.length === 0 && (
+          <div className="ticket-history-state" role="status">
+            <p>Aún no hay tickets registrados.</p>
+          </div>
+        )}
+
+        {!loading && !error && tickets.length > 0 && (
+          <>
+            <TicketHistoryTable tickets={pagedTickets} />
+            <footer className="table-footer">
+              <span>Mostrando {pageStart + 1}–{Math.min(pageStart + PAGE_SIZE, tickets.length)} de {tickets.length} tickets</span>
+              <nav className="pagination" aria-label="Paginación del historial de tickets">
+                <button className="pagination-button" type="button" disabled={activePage === 1} onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}>Anterior</button>
+                {pageNumbers.map((page, index) => page === 'ellipsis'
+                  ? <span className="pagination-ellipsis" key={`ellipsis-${index}`} aria-hidden="true">…</span>
+                  : <button className={`pagination-button page-number${page === activePage ? ' active' : ''}`} type="button" key={page} aria-current={page === activePage ? 'page' : undefined} onClick={() => setCurrentPage(page)}>{page}</button>)}
+                <button className="pagination-button" type="button" disabled={activePage === totalPages} onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}>Siguiente</button>
+              </nav>
+            </footer>
+          </>
+        )}
+      </section>
     </section>
   )
 }

@@ -33,17 +33,6 @@ export class TicketService {
     });
   }
 
-  async remove(idTicket: number, requesterRut: string) {
-    const result = await this.tickets.delete({
-      id_ticket: idTicket,
-      id_solicitante: requesterRut,
-    });
-
-    if (!result.affected) {
-      throw new NotFoundException('El ticket no existe o no pertenece al usuario');
-    }
-  }
-
   async resolve(idTicket: number, resolveTicketDto: ResolveTicketDto, tecnicoRut: string) {
     const ticket = await this.tickets.findOneBy({ id_ticket: idTicket });
 

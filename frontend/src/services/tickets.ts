@@ -16,13 +16,6 @@ export async function getTicketInbox(accessToken: string): Promise<Ticket[]> {
   return readApiJson<Ticket[]>(response, 'No se pudo cargar la bandeja de tickets')
 }
 
-export async function deleteTicket(accessToken: string, ticketId: number): Promise<void> {
-  const response = await apiFetch(`/tickets/${ticketId}`, accessToken, { method: 'DELETE' })
-  if (!response.ok) {
-    await readApiJson<never>(response, 'No se pudo eliminar el ticket')
-  }
-}
-
 export async function resolveTicket(accessToken: string, ticketId: number, input: ResolveTicketInput): Promise<Ticket> {
   const response = await apiFetch(`/tickets/${ticketId}`, accessToken, {
     method: 'PATCH',

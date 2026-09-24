@@ -87,7 +87,7 @@ export function CreateTicketForm({ accessToken, onSessionExpired, onTicketCreate
       <div className="form-heading">
         <div>
           <h2 id="new-ticket-title">Reportar un problema</h2>
-          <p>Cuéntanos qué está fallando y en qué equipo. Tu solicitud llegará al área de soporte.</p>
+          <p>Cuéntanos qué está fallando y en qué equipo.</p>
         </div>
       </div>
       <form className="ticket-form" onSubmit={handleSubmit}>
@@ -107,7 +107,7 @@ export function CreateTicketForm({ accessToken, onSessionExpired, onTicketCreate
         )}
         <label>
           <span>Equipo afectado <em>(opcional)</em></span>
-          <select value={deviceId} onChange={(event) => setDeviceId(event.target.value)} disabled={loadingDevices}>
+          <select value={deviceId} onChange={(event) => setDeviceId(event.target.value)} disabled={loadingDevices || !resolvedLocation}>
             <option value="">No corresponde o no lo sé</option>
             {locationDevices.map((device) => <option key={device.id_dispositivo} value={device.id_dispositivo}>{device.codigo_inventario} · {device.ubicacion}</option>)}
           </select>

@@ -59,25 +59,6 @@ describe('TicketService', () => {
   });
 
 
-  it('deletes only a ticket owned by the authenticated teacher', async () => {
-    const deleteTicket = vi.fn().mockResolvedValue({ affected: 1 });
-    const service = createService({ delete: deleteTicket });
-
-    await service.remove(7, '12345678-9');
-
-    expect(deleteTicket).toHaveBeenCalledWith({
-      id_ticket: 7,
-      id_solicitante: '12345678-9',
-    });
-  });
-
-  it('rejects deletion when the ticket is not owned by the teacher', async () => {
-    const deleteTicket = vi.fn().mockResolvedValue({ affected: 0 });
-    const service = createService({ delete: deleteTicket });
-
-    await expect(service.remove(7, '12345678-9')).rejects.toThrow(NotFoundException);
-  });
-
   it('stores the resolution with the technician, date and final status', async () => {
     const ticket = { id_ticket: 7, estado: TicketStatus.EN_PROCESO } as Ticket;
     const findOneBy = vi.fn().mockResolvedValue(ticket);
