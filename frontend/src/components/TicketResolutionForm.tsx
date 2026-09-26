@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { isSessionExpired } from '../services/http'
 import { resolveTicket } from '../services/tickets'
-import type { DeviceStatus } from '../types/inventory'
+import type { DeviceStatus, DeviceType } from '../types/inventory'
 import type { Ticket, TicketStatus } from '../types/ticket'
 
 type TicketResolutionFormProps = {
@@ -17,6 +17,13 @@ const statusLabels: Record<TicketStatus, string> = {
   ABIERTO: 'Abierto',
   EN_PROCESO: 'En proceso',
   RESUELTO: 'Resuelto',
+}
+
+const deviceTypeLabels: Record<DeviceType, string> = {
+  PC: 'PC',
+  PROYECTOR: 'Proyector',
+  IMPRESORA: 'Impresora',
+  RED: 'Red',
 }
 
 const finalStatusOptions: Array<{ value: DeviceStatus; label: string }> = [
@@ -120,6 +127,14 @@ export function TicketResolutionForm({ accessToken, ticket, onResolved, onCancel
             <div>
               <dt>Ubicación</dt>
               <dd>{ticket.ubicacion}</dd>
+            </div>
+            <div>
+              <dt>Dispositivo</dt>
+              <dd>
+                {ticket.codigo_inventario
+                  ? `${ticket.dispositivo_tipo ? `${deviceTypeLabels[ticket.dispositivo_tipo]} · ` : ''}${ticket.codigo_inventario}`
+                  : 'No asociado'}
+              </dd>
             </div>
           </dl>
 

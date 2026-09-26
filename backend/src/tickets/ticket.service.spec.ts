@@ -46,6 +46,24 @@ describe('TicketService', () => {
     });
   });
 
+  it('adds the device type and inventory code to the technical inbox tickets', async () => {
+    const tickets = [
+      { id_ticket: 1, id_dispositivo: 5 } as Ticket,
+      { id_ticket: 2, id_dispositivo: null } as Ticket,
+    ];
+    const find = vi.fn().mockResolvedValue(tickets);
+    const findBy = vi.fn().mockResolvedValue([
+      { id_dispositivo: 5, tipo: 'PC', codigo_inventario: 'PC-LAB-01' } as Device,
+    ]);
+    const service = createService({ find }, { findBy });
+
+    const result = await service.findInbox();
+
+    expect(findBy).toHaveBeenCalledOnce();
+    expect(result[0]).toMatchObject({ dispositivo_tipo: 'PC', codigo_inventario: 'PC-LAB-01' });
+    expect(result[1]).toMatchObject({ dispositivo_tipo: null, codigo_inventario: null });
+  });
+
   it('filters ticket history by requester for a teacher', async () => {
     const find = vi.fn().mockResolvedValue([]);
     const service = createService({ find });

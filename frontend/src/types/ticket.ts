@@ -3,6 +3,9 @@ import type { DeviceStatus, DeviceType } from './inventory'
 export type DeviceOption = {
   id_dispositivo: number
   codigo_inventario: string
+  tipo: DeviceType
+  marca: string | null
+  modelo: string | null
   ubicacion: string
 }
 
@@ -25,6 +28,8 @@ export type Ticket = {
   codigo_ticket: string
   id_solicitante?: string
   id_dispositivo?: number | null
+  dispositivo_tipo?: DeviceType | null
+  codigo_inventario?: string | null
   estado: TicketStatus
   ubicacion: string
   sintoma: string

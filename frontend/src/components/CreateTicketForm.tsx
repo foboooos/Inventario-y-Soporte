@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { createTicket, getDeviceOptions } from '../services/tickets'
 import { isSessionExpired } from '../services/http'
+import type { DeviceType } from '../types/inventory'
 import type { DeviceOption } from '../types/ticket'
 
 type CreateTicketFormProps = {
@@ -10,6 +11,20 @@ type CreateTicketFormProps = {
 }
 
 const OTHER_LOCATION = '__OTHER__'
+
+const typeLabels: Record<DeviceType, string> = {
+  PC: 'PC',
+  PROYECTOR: 'Proyector',
+  IMPRESORA: 'Impresora',
+  RED: 'Equipo de red',
+}
+
+function formatDeviceLabel(device: DeviceOption): string {
+  const type = device.tipo ? typeLabels[device.tipo] : ''
+  const details = [device.marca, device.modelo].filter(Boolean).join(' ')
+  const description = [type, details].filter(Boolean).join(' ')
+  return description ? `${description} (${device.codigo_inventario})` : device.codigo_inventario
+}
 
 export function CreateTicketForm({ accessToken, onSessionExpired, onTicketCreated }: CreateTicketFormProps) {
   const [devices, setDevices] = useState<DeviceOption[]>([])
@@ -109,7 +124,7 @@ export function CreateTicketForm({ accessToken, onSessionExpired, onTicketCreate
           <span>Equipo afectado <em>(opcional)</em></span>
           <select value={deviceId} onChange={(event) => setDeviceId(event.target.value)} disabled={loadingDevices || !resolvedLocation}>
             <option value="">No corresponde o no lo sé</option>
-            {locationDevices.map((device) => <option key={device.id_dispositivo} value={device.id_dispositivo}>{device.codigo_inventario} · {device.ubicacion}</option>)}
+            {locationDevices.map((device) => <option key={device.id_dispositivo} value={device.id_dispositivo}>{formatDeviceLabel(device)}</option>)}
           </select>
         </label>
         <label className="ticket-form-wide">

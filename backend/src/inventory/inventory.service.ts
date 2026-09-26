@@ -20,6 +20,9 @@ export class InventoryService {
       select: {
         id_dispositivo: true,
         codigo_inventario: true,
+        tipo: true,
+        marca: true,
+        modelo: true,
         ubicacion: true,
       },
       order: { codigo_inventario: 'ASC' },

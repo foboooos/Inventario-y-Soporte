@@ -1,6 +1,6 @@
 import { ConflictException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 
 import { Device } from '../inventory/device.entity.js';
 import { User } from '../users/user.entity.js';
@@ -21,8 +21,25 @@ export class TicketService {
   ) {}
 
   async findInbox() {
-    return this.tickets.find({
+    const tickets = await this.tickets.find({
       order: { fecha_creacion: 'DESC', id_ticket: 'DESC' },
+    });
+
+    const deviceIds = [
+      ...new Set(tickets.map((ticket) => ticket.id_dispositivo).filter((id): id is number => id !== null)),
+    ];
+    const devices = deviceIds.length
+      ? await this.devices.findBy({ id_dispositivo: In(deviceIds) })
+      : [];
+    const devicesById = new Map(devices.map((device) => [device.id_dispositivo, device]));
+
+    return tickets.map((ticket) => {
+      const device = ticket.id_dispositivo !== null ? devicesById.get(ticket.id_dispositivo) : undefined;
+      return {
+        ...ticket,
+        dispositivo_tipo: device?.tipo ?? null,
+        codigo_inventario: device?.codigo_inventario ?? null,
+      };
     });
   }
 
