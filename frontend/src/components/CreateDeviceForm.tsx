@@ -63,6 +63,18 @@ export function CreateDeviceForm({ accessToken, onCreated, onCancel, onSessionEx
     setForm((current) => ({ ...current, [field]: value }))
   }
 
+  const globalLocations = locations
+    .filter((item) => item.padreId === null)
+    .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }))
+  const currentLocation = locations.find((item) => item.nombre === form.ubicacion)
+  const parentName = currentLocation && currentLocation.padreId !== null
+    ? locations.find((item) => item.id === currentLocation.padreId)?.nombre ?? ''
+    : form.ubicacion
+  const subName = currentLocation && currentLocation.padreId !== null ? form.ubicacion : ''
+  const subLocations = currentLocation && currentLocation.padreId !== null
+    ? locations.filter((item) => item.padreId === currentLocation.padreId)
+    : []
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError('')
@@ -110,11 +122,21 @@ export function CreateDeviceForm({ accessToken, onCreated, onCancel, onSessionEx
             </label>
             <label>
               <span>Ubicación</span>
-              <select value={form.ubicacion} onChange={(event) => updateField('ubicacion', event.target.value)} disabled={loadingLocations} required>
+              <select value={parentName} onChange={(event) => updateField('ubicacion', event.target.value)} disabled={loadingLocations} required>
                 <option value="">Selecciona una ubicación</option>
-                {locations.map((item) => <option key={item.id} value={item.nombre}>{item.nombre}</option>)}
+                {parentName && !globalLocations.some((item) => item.nombre === parentName) && <option value={parentName}>{parentName}</option>}
+                {globalLocations.map((item) => <option key={item.id} value={item.nombre}>{item.nombre}</option>)}
               </select>
             </label>
+            {subLocations.length > 0 && (
+              <label>
+                <span>Curso / Sub-ubicación</span>
+                <select value={subName} onChange={(event) => updateField('ubicacion', event.target.value || parentName)}>
+                  <option value="">Toda la ubicación</option>
+                  {subLocations.map((item) => <option key={item.id} value={item.nombre}>{item.nombre}</option>)}
+                </select>
+              </label>
+            )}
             <label>
               <span>Estado</span>
               <select value={form.estado} onChange={(event) => updateField('estado', event.target.value as DeviceStatus)}>

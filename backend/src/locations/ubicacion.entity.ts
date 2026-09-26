@@ -7,4 +7,7 @@ export class Ubicacion {
 
   @Column({ type: 'varchar', length: 100, unique: true })
   nombre!: string;
+
+  @Column({ name: 'padre_id', type: 'int', nullable: true })
+  padre_id!: number | null;
 }

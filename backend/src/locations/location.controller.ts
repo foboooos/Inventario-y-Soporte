@@ -4,6 +4,7 @@ import { Roles } from '../auth/guards/roles.decorator.js';
 import { RolesGuard } from '../auth/guards/roles.guard.js';
 import { UserRole } from '../users/user-role.enum.js';
 import { CreateLocationDto } from './dto/create-location.dto.js';
+import { GenerateCoursesDto } from './dto/generate-courses.dto.js';
 import { UpdateLocationDto } from './dto/update-location.dto.js';
 import { LocationService } from './location.service.js';
 
@@ -22,6 +23,12 @@ export class LocationController {
   @Roles(UserRole.ADMIN)
   create(@Body() createLocationDto: CreateLocationDto) {
     return this.locationService.create(createLocationDto);
+  }
+
+  @Post('courses')
+  @Roles(UserRole.ADMIN)
+  generateCourses(@Body() generateCoursesDto: GenerateCoursesDto) {
+    return this.locationService.generateCourses(generateCoursesDto.padre_id);
   }
 
   @Patch(':id')

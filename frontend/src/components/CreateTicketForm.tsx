@@ -30,6 +30,7 @@ export function CreateTicketForm({ accessToken, onSessionExpired, onTicketCreate
   const [devices, setDevices] = useState<DeviceOption[]>([])
   const [locations, setLocations] = useState<Location[]>([])
   const [location, setLocation] = useState('')
+  const [subLocation, setSubLocation] = useState('')
   const [deviceId, setDeviceId] = useState('')
   const [symptom, setSymptom] = useState('')
   const [loadingDevices, setLoadingDevices] = useState(true)
@@ -79,13 +80,32 @@ export function CreateTicketForm({ accessToken, onSessionExpired, onTicketCreate
     return () => { active = false }
   }, [accessToken, onSessionExpired])
 
+  const globalLocations = useMemo(
+    () => locations
+      .filter((item) => item.padreId === null)
+      .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' })),
+    [locations],
+  )
+
+  const subLocations = useMemo(() => {
+    const parent = locations.find((item) => item.padreId === null && item.nombre === location)
+    return parent ? locations.filter((item) => item.padreId === parent.id) : []
+  }, [locations, location])
+
+  const allowedLocations = useMemo(() => {
+    if (subLocation) return new Set([subLocation])
+    return new Set([location, ...subLocations.map((item) => item.nombre)])
+  }, [location, subLocation, subLocations])
+
   const locationDevices = useMemo(
-    () => (location ? devices.filter((device) => device.ubicacion === location) : []),
-    [devices, location],
+    () => (location ? devices.filter((device) => allowedLocations.has(device.ubicacion)) : []),
+    [devices, location, allowedLocations],
   )
   const effectiveDeviceId = locationDevices.some((device) => String(device.id_dispositivo) === deviceId)
     ? deviceId
     : ''
+
+  const resolvedLocation = subLocation || location
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -94,11 +114,12 @@ export function CreateTicketForm({ accessToken, onSessionExpired, onTicketCreate
 
     try {
       await createTicket(accessToken, {
-        ubicacion: location,
+        ubicacion: resolvedLocation,
         sintoma: symptom.trim(),
         ...(effectiveDeviceId ? { id_dispositivo: Number(effectiveDeviceId) } : {}),
       })
       setLocation('')
+      setSubLocation('')
       setDeviceId('')
       setSymptom('')
       onTicketCreated()
@@ -125,11 +146,20 @@ export function CreateTicketForm({ accessToken, onSessionExpired, onTicketCreate
       <form className="ticket-form" onSubmit={handleSubmit}>
         <label>
           <span>Ubicación</span>
-          <select value={location} onChange={(event) => { setLocation(event.target.value); setDeviceId('') }} required disabled={loadingLocations}>
+          <select value={location} onChange={(event) => { setLocation(event.target.value); setSubLocation(''); setDeviceId('') }} required disabled={loadingLocations}>
             <option value="">Selecciona una ubicación</option>
-            {locations.map((item) => <option key={item.id} value={item.nombre}>{item.nombre}</option>)}
+            {globalLocations.map((item) => <option key={item.id} value={item.nombre}>{item.nombre}</option>)}
           </select>
         </label>
+        {subLocations.length > 0 && (
+          <label>
+            <span>Curso / Sub-ubicación</span>
+            <select value={subLocation} onChange={(event) => { setSubLocation(event.target.value); setDeviceId('') }}>
+              <option value="">Toda la ubicación</option>
+              {subLocations.map((item) => <option key={item.id} value={item.nombre}>{item.nombre}</option>)}
+            </select>
+          </label>
+        )}
         <label>
           <span>Equipo afectado <em>(opcional)</em></span>
           <select value={deviceId} onChange={(event) => setDeviceId(event.target.value)} disabled={loadingDevices || !location}>
@@ -142,7 +172,7 @@ export function CreateTicketForm({ accessToken, onSessionExpired, onTicketCreate
           <textarea value={symptom} onChange={(event) => setSymptom(event.target.value)} placeholder="Cuéntanos qué está ocurriendo…" maxLength={2000} rows={6} required />
         </label>
         {error && <p className="error" role="alert">{error}</p>}
-        <button className="primary-action" type="submit" disabled={submitting || !location || !symptom.trim()}>{submitting ? 'Enviando…' : 'Enviar solicitud'}</button>
+        <button className="primary-action" type="submit" disabled={submitting || !resolvedLocation || !symptom.trim()}>{submitting ? 'Enviando…' : 'Enviar solicitud'}</button>
       </form>
     </section>
   )
