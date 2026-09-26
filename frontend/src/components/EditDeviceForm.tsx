@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { updateInventoryDevice, type UpdateDeviceInput } from '../services/inventory'
+import { getLocations } from '../services/locations'
 import { isSessionExpired } from '../services/http'
 import type { Device, DeviceStatus, DeviceType } from '../types/inventory'
+import type { Location } from '../types/location'
 
 type EditDeviceFormProps = {
   accessToken: string
@@ -25,6 +27,8 @@ function deviceToForm(device: Device): UpdateDeviceInput {
 
 export function EditDeviceForm({ accessToken, device, onUpdated, onCancel, onSessionExpired }: EditDeviceFormProps) {
   const [form, setForm] = useState(() => deviceToForm(device))
+  const [locations, setLocations] = useState<Location[]>([])
+  const [loadingLocations, setLoadingLocations] = useState(true)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
 
@@ -36,6 +40,31 @@ export function EditDeviceForm({ accessToken, device, onUpdated, onCancel, onSes
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [onCancel, saving])
+
+  useEffect(() => {
+    let active = true
+
+    getLocations(accessToken)
+      .then((loaded) => {
+        if (active) setLocations(loaded)
+      })
+      .catch((exception: unknown) => {
+        if (!active) return
+        if (isSessionExpired(exception)) {
+          onSessionExpired()
+          return
+        }
+        setError(exception instanceof Error ? exception.message : 'No se pudieron cargar las ubicaciones')
+      })
+      .finally(() => {
+        if (active) setLoadingLocations(false)
+      })
+
+    return () => { active = false }
+  }, [accessToken, onSessionExpired])
+
+  const locationNames = locations.map((item) => item.nombre)
+  const legacyLocation = form.ubicacion && !locationNames.includes(form.ubicacion) ? form.ubicacion : null
 
   function updateField<K extends keyof UpdateDeviceInput>(field: K, value: UpdateDeviceInput[K]) {
     setForm((current) => ({ ...current, [field]: value }))
@@ -88,7 +117,10 @@ export function EditDeviceForm({ accessToken, device, onUpdated, onCancel, onSes
             </label>
             <label>
               <span>Ubicación</span>
-              <input value={form.ubicacion} onChange={(event) => updateField('ubicacion', event.target.value)} required maxLength={100} />
+              <select value={form.ubicacion} onChange={(event) => updateField('ubicacion', event.target.value)} disabled={loadingLocations} required>
+                {legacyLocation && <option value={legacyLocation}>{legacyLocation}</option>}
+                {locations.map((item) => <option key={item.id} value={item.nombre}>{item.nombre}</option>)}
+              </select>
             </label>
             <label>
               <span>Estado</span>

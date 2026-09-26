@@ -602,3 +602,139 @@
     transition: none;
   }
 }
+
+.settings-content {
+  justify-content: flex-start;
+}
+
+.settings-card {
+  width: 100%;
+  max-width: 640px;
+  box-sizing: border-box;
+}
+
+.locations-form {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.locations-form label {
+  display: grid;
+  gap: 8px;
+  flex: 1 1 auto;
+  margin: 0;
+}
+
+.locations-form label > span {
+  color: var(--minimal-muted);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.locations-form input {
+  border-color: #e7e7e2;
+  font-size: 13px;
+}
+
+.locations-form button {
+  margin: 0;
+}
+
+.locations-state {
+  margin: 16px 0 0;
+  color: var(--minimal-muted);
+  font-size: 14px;
+}
+
+.locations-list {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.locations-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid #ecece6;
+  border-radius: 8px;
+  background: #fafaf8;
+}
+
+.locations-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--minimal-text);
+  overflow-wrap: anywhere;
+}
+
+.locations-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.locations-confirm {
+  color: var(--minimal-danger);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.locations-edit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.locations-edit input {
+  flex: 1 1 auto;
+  min-width: 0;
+  border-color: #e7e7e2;
+  font-size: 13px;
+}
+
+.locations-edit button {
+  margin: 0;
+}
+
+.text-button-danger {
+  color: var(--minimal-danger);
+}
+
+.text-button-danger:hover:not(:disabled) {
+  color: var(--minimal-danger);
+  background: #fdeaea;
+}
+
+@media (max-width: 560px) {
+  .locations-form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .locations-form button {
+    width: 100%;
+  }
+
+  .locations-item {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .locations-actions {
+    justify-content: flex-end;
+  }
+
+  .locations-edit {
+    flex-wrap: wrap;
+  }
+}

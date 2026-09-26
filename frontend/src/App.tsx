@@ -153,7 +153,7 @@ function App() {
 
 
   if (activeRoute === 'settings') {
-    return <ConfigurationPage user={user} activeRoute={activeRoute} onNavigate={(route) => navigate(routePaths[route])} onLogout={handleLogout} />
+    return <ConfigurationPage user={user} accessToken={accessToken} activeRoute={activeRoute} onNavigate={(route) => navigate(routePaths[route])} onLogout={handleLogout} />
   }
 
   if (activeRoute === 'inbox') {

@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { createTicket, getDeviceOptions } from '../services/tickets'
+import { getLocations } from '../services/locations'
 import { isSessionExpired } from '../services/http'
 import type { DeviceType } from '../types/inventory'
+import type { Location } from '../types/location'
 import type { DeviceOption } from '../types/ticket'
 
 type CreateTicketFormProps = {
@@ -9,8 +11,6 @@ type CreateTicketFormProps = {
   onSessionExpired: () => void
   onTicketCreated: () => void
 }
-
-const OTHER_LOCATION = '__OTHER__'
 
 const typeLabels: Record<DeviceType, string> = {
   PC: 'PC',
@@ -28,11 +28,12 @@ function formatDeviceLabel(device: DeviceOption): string {
 
 export function CreateTicketForm({ accessToken, onSessionExpired, onTicketCreated }: CreateTicketFormProps) {
   const [devices, setDevices] = useState<DeviceOption[]>([])
+  const [locations, setLocations] = useState<Location[]>([])
   const [location, setLocation] = useState('')
-  const [customLocation, setCustomLocation] = useState('')
   const [deviceId, setDeviceId] = useState('')
   const [symptom, setSymptom] = useState('')
   const [loadingDevices, setLoadingDevices] = useState(true)
+  const [loadingLocations, setLoadingLocations] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
@@ -57,13 +58,30 @@ export function CreateTicketForm({ accessToken, onSessionExpired, onTicketCreate
     return () => { active = false }
   }, [accessToken, onSessionExpired])
 
-  const locations = useMemo(() => [...new Set(devices.map((device) => device.ubicacion))].sort(), [devices])
-  const resolvedLocation = location === OTHER_LOCATION ? customLocation.trim() : location
+  useEffect(() => {
+    let active = true
+    getLocations(accessToken)
+      .then((loaded) => {
+        if (active) setLocations(loaded)
+      })
+      .catch((exception: unknown) => {
+        if (!active) return
+        if (isSessionExpired(exception)) {
+          onSessionExpired()
+          return
+        }
+        setError(exception instanceof Error ? exception.message : 'No se pudieron cargar las ubicaciones')
+      })
+      .finally(() => {
+        if (active) setLoadingLocations(false)
+      })
+
+    return () => { active = false }
+  }, [accessToken, onSessionExpired])
+
   const locationDevices = useMemo(
-    () => resolvedLocation && location !== OTHER_LOCATION
-      ? devices.filter((device) => device.ubicacion === resolvedLocation)
-      : devices,
-    [devices, location, resolvedLocation],
+    () => (location ? devices.filter((device) => device.ubicacion === location) : []),
+    [devices, location],
   )
   const effectiveDeviceId = locationDevices.some((device) => String(device.id_dispositivo) === deviceId)
     ? deviceId
@@ -76,12 +94,11 @@ export function CreateTicketForm({ accessToken, onSessionExpired, onTicketCreate
 
     try {
       await createTicket(accessToken, {
-        ubicacion: resolvedLocation,
+        ubicacion: location,
         sintoma: symptom.trim(),
         ...(effectiveDeviceId ? { id_dispositivo: Number(effectiveDeviceId) } : {}),
       })
       setLocation('')
-      setCustomLocation('')
       setDeviceId('')
       setSymptom('')
       onTicketCreated()
@@ -108,21 +125,14 @@ export function CreateTicketForm({ accessToken, onSessionExpired, onTicketCreate
       <form className="ticket-form" onSubmit={handleSubmit}>
         <label>
           <span>Ubicación</span>
-          <select value={location} onChange={(event) => { setLocation(event.target.value); setDeviceId('') }} required>
+          <select value={location} onChange={(event) => { setLocation(event.target.value); setDeviceId('') }} required disabled={loadingLocations}>
             <option value="">Selecciona una ubicación</option>
-            {locations.map((option) => <option key={option} value={option}>{option}</option>)}
-            <option value={OTHER_LOCATION}>Otra ubicación</option>
+            {locations.map((item) => <option key={item.id} value={item.nombre}>{item.nombre}</option>)}
           </select>
         </label>
-        {location === OTHER_LOCATION && (
-          <label>
-            <span>Indica la ubicación</span>
-            <input value={customLocation} onChange={(event) => setCustomLocation(event.target.value)} maxLength={100} required />
-          </label>
-        )}
         <label>
           <span>Equipo afectado <em>(opcional)</em></span>
-          <select value={deviceId} onChange={(event) => setDeviceId(event.target.value)} disabled={loadingDevices || !resolvedLocation}>
+          <select value={deviceId} onChange={(event) => setDeviceId(event.target.value)} disabled={loadingDevices || !location}>
             <option value="">No corresponde o no lo sé</option>
             {locationDevices.map((device) => <option key={device.id_dispositivo} value={device.id_dispositivo}>{formatDeviceLabel(device)}</option>)}
           </select>
@@ -132,7 +142,7 @@ export function CreateTicketForm({ accessToken, onSessionExpired, onTicketCreate
           <textarea value={symptom} onChange={(event) => setSymptom(event.target.value)} placeholder="Cuéntanos qué está ocurriendo…" maxLength={2000} rows={6} required />
         </label>
         {error && <p className="error" role="alert">{error}</p>}
-        <button className="primary-action" type="submit" disabled={submitting || !resolvedLocation || !symptom.trim()}>{submitting ? 'Enviando…' : 'Enviar solicitud'}</button>
+        <button className="primary-action" type="submit" disabled={submitting || !location || !symptom.trim()}>{submitting ? 'Enviando…' : 'Enviar solicitud'}</button>
       </form>
     </section>
   )

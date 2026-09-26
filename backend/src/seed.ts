@@ -7,6 +7,7 @@ import { UserRole } from './users/user-role.enum.js';
 import { Device } from './inventory/device.entity.js';
 import { DeviceStatus } from './inventory/device-status.enum.js';
 import { DeviceType } from './inventory/device-type.enum.js';
+import { Ubicacion } from './locations/ubicacion.entity.js';
 
 type SeedUser = {
   rut: string;
@@ -75,6 +76,7 @@ async function bootstrap() {
   const dataSource = app.get(DataSource);
   const users = dataSource.getRepository(User);
   const devices = dataSource.getRepository(Device);
+  const locations = dataSource.getRepository(Ubicacion);
 
   const seedDevices: SeedDevice[] = [
     { code: 'DV-PC-001', type: DeviceType.PC, brand: 'Dell', model: 'OptiPlex 7010', location: 'Laboratorio 1', status: DeviceStatus.ACTIVO },
@@ -87,6 +89,15 @@ async function bootstrap() {
 
   for (const device of seedDevices) {
     await seedDevice(devices, device);
+  }
+
+  for (const nombre of new Set(seedDevices.map((device) => device.location))) {
+    const existingLocation = await locations.findOneBy({ nombre });
+
+    if (!existingLocation) {
+      await locations.save(locations.create({ nombre }));
+      console.log(`Created location ${nombre}`);
+    }
   }
 
   const seedUsers: SeedUser[] = [

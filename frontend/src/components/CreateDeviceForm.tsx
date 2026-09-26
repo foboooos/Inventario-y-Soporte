@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { createInventoryDevice, type CreateDeviceInput } from '../services/inventory'
+import { getLocations } from '../services/locations'
 import { isSessionExpired } from '../services/http'
 import type { Device, DeviceStatus, DeviceType } from '../types/inventory'
+import type { Location } from '../types/location'
 
 type CreateDeviceFormProps = {
   accessToken: string
@@ -21,6 +23,8 @@ const initialForm: CreateDeviceInput = {
 
 export function CreateDeviceForm({ accessToken, onCreated, onCancel, onSessionExpired }: CreateDeviceFormProps) {
   const [form, setForm] = useState(initialForm)
+  const [locations, setLocations] = useState<Location[]>([])
+  const [loadingLocations, setLoadingLocations] = useState(true)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
 
@@ -32,6 +36,28 @@ export function CreateDeviceForm({ accessToken, onCreated, onCancel, onSessionEx
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [onCancel, saving])
+
+  useEffect(() => {
+    let active = true
+
+    getLocations(accessToken)
+      .then((loaded) => {
+        if (active) setLocations(loaded)
+      })
+      .catch((exception: unknown) => {
+        if (!active) return
+        if (isSessionExpired(exception)) {
+          onSessionExpired()
+          return
+        }
+        setError(exception instanceof Error ? exception.message : 'No se pudieron cargar las ubicaciones')
+      })
+      .finally(() => {
+        if (active) setLoadingLocations(false)
+      })
+
+    return () => { active = false }
+  }, [accessToken, onSessionExpired])
 
   function updateField<K extends keyof CreateDeviceInput>(field: K, value: CreateDeviceInput[K]) {
     setForm((current) => ({ ...current, [field]: value }))
@@ -84,7 +110,10 @@ export function CreateDeviceForm({ accessToken, onCreated, onCancel, onSessionEx
             </label>
             <label>
               <span>Ubicación</span>
-              <input value={form.ubicacion} onChange={(event) => updateField('ubicacion', event.target.value)} placeholder="Laboratorio 1" required maxLength={100} />
+              <select value={form.ubicacion} onChange={(event) => updateField('ubicacion', event.target.value)} disabled={loadingLocations} required>
+                <option value="">Selecciona una ubicación</option>
+                {locations.map((item) => <option key={item.id} value={item.nombre}>{item.nombre}</option>)}
+              </select>
             </label>
             <label>
               <span>Estado</span>
