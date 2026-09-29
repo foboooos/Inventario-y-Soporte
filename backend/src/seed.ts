@@ -2,6 +2,8 @@ import { NestFactory } from '@nestjs/core';
 import { DataSource, Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { AppModule } from './app.module.js';
+import { buildEducationalLevelNames } from './academics/educational-level-names.js';
+import { NivelEducativo } from './academics/nivel-educativo.entity.js';
 import { User } from './users/user.entity.js';
 import { UserRole } from './users/user-role.enum.js';
 import { Device } from './inventory/device.entity.js';
@@ -77,6 +79,7 @@ async function bootstrap() {
   const users = dataSource.getRepository(User);
   const devices = dataSource.getRepository(Device);
   const locations = dataSource.getRepository(Ubicacion);
+  const levels = dataSource.getRepository(NivelEducativo);
 
   const seedDevices: SeedDevice[] = [
     { code: 'DV-PC-001', type: DeviceType.PC, brand: 'Dell', model: 'OptiPlex 7010', location: 'Laboratorio 1', status: DeviceStatus.ACTIVO },
@@ -97,6 +100,15 @@ async function bootstrap() {
     if (!existingLocation) {
       await locations.save(locations.create({ nombre }));
       console.log(`Created location ${nombre}`);
+    }
+  }
+
+  for (const nombre of buildEducationalLevelNames()) {
+    const existingLevel = await levels.findOneBy({ nombre });
+
+    if (!existingLevel) {
+      await levels.save(levels.create({ nombre }));
+      console.log(`Created educational level ${nombre}`);
     }
   }
 

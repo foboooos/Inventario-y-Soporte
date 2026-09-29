@@ -15,6 +15,7 @@ import { InventoryPage } from './components/InventoryPage'
 import { LoginForm } from './components/LoginForm'
 import { NotFoundPage } from './components/NotFoundPage'
 import { SupportPage } from './components/SupportPage'
+import { SubjectsPage } from './components/SubjectsPage'
 
 import type { RouteKey } from './components/Sidebar'
 import type { AuthUser } from './types/auth'
@@ -25,6 +26,7 @@ const routePaths: Record<RouteKey, string> = {
   inventory: '/inventario',
   inbox: '/bandeja',
   settings: '/config',
+  subjects: '/asignaturas',
 }
 
 const routeTitles: Record<RouteKey, string> = {
@@ -32,6 +34,7 @@ const routeTitles: Record<RouteKey, string> = {
   inventory: 'Inventario',
   inbox: 'Bandeja de entrada',
   settings: 'Configuración',
+  subjects: 'Asignaturas y niveles educativos',
 }
 
 const LOGIN_TITLE = 'Iniciar sesión'
@@ -153,7 +156,11 @@ function App() {
 
 
   if (activeRoute === 'settings') {
-    return <ConfigurationPage user={user} accessToken={accessToken} activeRoute={activeRoute} onNavigate={(route) => navigate(routePaths[route])} onLogout={handleLogout} />
+    return <ConfigurationPage user={user} activeRoute={activeRoute} onNavigate={(route) => navigate(routePaths[route])} onLogout={handleLogout} />
+  }
+
+  if (activeRoute === 'subjects') {
+    return <SubjectsPage user={user} accessToken={accessToken} activeRoute={activeRoute} onNavigate={(route) => navigate(routePaths[route])} onLogout={handleLogout} />
   }
 
   if (activeRoute === 'inbox') {

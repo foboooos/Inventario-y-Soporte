@@ -3,6 +3,10 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
+import { AcademicModule } from './academics/academic.module.js';
+import { Asignatura } from './academics/asignatura.entity.js';
+import { AsignaturaNivel } from './academics/asignatura-nivel.entity.js';
+import { NivelEducativo } from './academics/nivel-educativo.entity.js';
 import { AuthModule } from './auth/auth.module.js';
 import { InventoryModule } from './inventory/inventory.module.js';
 import { LocationModule } from './locations/location.module.js';
@@ -16,6 +20,7 @@ import { User } from './users/user.entity.js';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    AcademicModule,
     AuthModule,
     InventoryModule,
     LocationModule,
@@ -29,7 +34,7 @@ import { User } from './users/user.entity.js';
         username: config.get<string>('DB_USERNAME', 'postgres'),
         password: config.get<string>('DB_PASSWORD', ''),
         database: config.get<string>('DB_DATABASE', 'backend'),
-        entities: [User, Device, Ubicacion, Ticket, TicketSequence],
+        entities: [User, Device, Ubicacion, Ticket, TicketSequence, NivelEducativo, Asignatura, AsignaturaNivel],
         autoLoadEntities: true,
         synchronize: config.get<string>('DB_SYNCHRONIZE', 'false') === 'true',
       }),
