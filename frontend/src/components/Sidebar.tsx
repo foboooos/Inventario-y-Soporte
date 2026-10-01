@@ -1,6 +1,6 @@
 import type { AuthUser } from '../types/auth'
 
-export type RouteKey = 'support' | 'inventory' | 'inbox' | 'settings' | 'subjects'
+export type RouteKey = 'support' | 'inventory' | 'inbox' | 'settings' | 'subjects' | 'software'
 
 type SidebarProps = {
   user: AuthUser
@@ -22,6 +22,7 @@ const routes: RouteDefinition[] = [
   { key: 'inbox', label: 'Bandeja de entrada', roles: ['ADMIN', 'TECNICO'] },
   { key: 'settings', label: 'Configuración', roles: ['ADMIN'] },
   { key: 'subjects', label: 'Asignaturas y niveles', roles: ['ADMIN'] },
+  { key: 'software', label: 'Software educativo', roles: ['ADMIN'] },
 ]
 
 function RoleIcon({ role }: { role: string }) {
@@ -51,6 +52,10 @@ function RouteIcon({ route }: { route: RouteKey }) {
 
   if (route === 'subjects') {
     return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H12v18H6.5A2.5 2.5 0 0 1 4 18.5v-13Z" /><path d="M12 3h5.5A2.5 2.5 0 0 1 20 5.5v13a2.5 2.5 0 0 1-2.5 2.5H12" /><path d="M8 7h1.5M8 10.5h1.5M14.5 7H16M14.5 10.5H16" /></svg>
+  }
+
+  if (route === 'software') {
+    return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v13A2.5 2.5 0 0 1 17.5 21h-11A2.5 2.5 0 0 1 4 18.5v-13Z" /><path d="M4 8h16M8 5.5h.01M11 5.5h.01" /></svg>
   }
 
   return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5a2 2 0 0 1 2 2v.38a6.8 6.8 0 0 1 1.55.9l.33-.19a2 2 0 1 1 2 3.46l-.33.19c.08.36.12.73.12 1.11s-.04.75-.12 1.11l.33.19a2 2 0 1 1-2 3.46l-.33-.19a6.8 6.8 0 0 1-1.55.9v.38a2 2 0 1 1-4 0v-.38a6.8 6.8 0 0 1-1.55-.9l-.33.19a2 2 0 1 1-2-3.46l.33-.19A5.7 5.7 0 0 1 6.33 12c0-.38.04-.75.12-1.11l-.33-.19a2 2 0 1 1 2-3.46l.33.19A6.8 6.8 0 0 1 10 5.88V5.5a2 2 0 0 1 2-2Z" /><circle cx="12" cy="11.35" r="2.5" /></svg>

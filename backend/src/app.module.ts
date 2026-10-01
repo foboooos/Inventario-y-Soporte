@@ -7,6 +7,9 @@ import { AcademicModule } from './academics/academic.module.js';
 import { Asignatura } from './academics/asignatura.entity.js';
 import { AsignaturaNivel } from './academics/asignatura-nivel.entity.js';
 import { NivelEducativo } from './academics/nivel-educativo.entity.js';
+import { SoftwareAsignatura } from './software/software-asignatura.entity.js';
+import { SoftwareEducativo } from './software/software-educativo.entity.js';
+import { SoftwareModule } from './software/software.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { InventoryModule } from './inventory/inventory.module.js';
 import { LocationModule } from './locations/location.module.js';
@@ -24,6 +27,7 @@ import { User } from './users/user.entity.js';
     AuthModule,
     InventoryModule,
     LocationModule,
+    SoftwareModule,
     TicketModule,
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
@@ -34,7 +38,7 @@ import { User } from './users/user.entity.js';
         username: config.get<string>('DB_USERNAME', 'postgres'),
         password: config.get<string>('DB_PASSWORD', ''),
         database: config.get<string>('DB_DATABASE', 'backend'),
-        entities: [User, Device, Ubicacion, Ticket, TicketSequence, NivelEducativo, Asignatura, AsignaturaNivel],
+        entities: [User, Device, Ubicacion, Ticket, TicketSequence, NivelEducativo, Asignatura, AsignaturaNivel, SoftwareEducativo, SoftwareAsignatura],
         autoLoadEntities: true,
         synchronize: config.get<string>('DB_SYNCHRONIZE', 'false') === 'true',
       }),

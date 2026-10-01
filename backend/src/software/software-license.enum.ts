@@ -1,0 +1,7 @@
+export enum SoftwareLicense {
+  LIBRE = 'LIBRE',
+  GRATUITA = 'GRATUITA',
+  COMERCIAL = 'COMERCIAL',
+  SUSCRIPCION = 'SUSCRIPCION',
+  FREEMIUM = 'FREEMIUM',
+}

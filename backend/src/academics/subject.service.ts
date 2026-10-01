@@ -7,6 +7,7 @@ import { AsignaturaNivel } from './asignatura-nivel.entity.js';
 import { CreateSubjectDto } from './dto/create-subject.dto.js';
 import { UpdateSubjectDto } from './dto/update-subject.dto.js';
 import { NivelEducativo } from './nivel-educativo.entity.js';
+import { SoftwareAsignatura } from '../software/software-asignatura.entity.js';
 
 type SubjectResponse = {
   id_asignatura: number;
@@ -111,6 +112,7 @@ export class SubjectService {
 
     await this.subjects.manager.transaction(async (manager) => {
       await manager.getRepository(AsignaturaNivel).delete({ id_asignatura: id });
+      await manager.getRepository(SoftwareAsignatura).delete({ id_asignatura: id });
       await manager.getRepository(Asignatura).delete({ id_asignatura: id });
     });
   }

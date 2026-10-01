@@ -143,12 +143,15 @@ describe('SubjectService', () => {
     expect(result).toEqual({ id_asignatura: 5, nombre: 'Matemática', nivel_ids: [10] });
   });
 
-  it('deletes a subject and its level assignments', async () => {
+  it('deletes a subject and its level and software assignments', async () => {
     const subjectDelete = vi.fn().mockResolvedValue({ affected: 1 });
     const assignmentDelete = vi.fn().mockResolvedValue({ affected: 2 });
-    const { transaction } = createManager((entity) =>
-      entity === Asignatura ? { delete: subjectDelete } : { delete: assignmentDelete },
-    );
+    const softwareDelete = vi.fn().mockResolvedValue({ affected: 1 });
+    const { transaction } = createManager((entity) => {
+      if (entity === Asignatura) return { delete: subjectDelete };
+      if (entity === AsignaturaNivel) return { delete: assignmentDelete };
+      return { delete: softwareDelete };
+    });
     const service = createService({
       findOneBy: vi.fn().mockResolvedValue({ id_asignatura: 5, nombre: 'Matemática' } as Asignatura),
       manager: { transaction },
@@ -157,6 +160,7 @@ describe('SubjectService', () => {
     await service.remove(5);
 
     expect(assignmentDelete).toHaveBeenCalledWith({ id_asignatura: 5 });
+    expect(softwareDelete).toHaveBeenCalledWith({ id_asignatura: 5 });
     expect(subjectDelete).toHaveBeenCalledWith({ id_asignatura: 5 });
   });
 
