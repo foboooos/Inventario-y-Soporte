@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import type { AuthUser } from '../types/auth'
-import { Sidebar, type RouteKey } from './Sidebar'
+import { Sidebar } from './Sidebar'
+import type { RouteKey } from '../routes'
 
 type DashboardLayoutProps = {
   children: ReactNode

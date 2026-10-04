@@ -9,60 +9,28 @@ import './styles/dialogs.css'
 import './styles/support.css'
 import './styles/print.css'
 import './styles/responsive.css'
+import { DashboardLayout } from './components/DashboardLayout'
 import { ConfigurationPage } from './components/ConfigurationPage'
 import { InboxPage } from './components/InboxPage'
 import { InventoryPage } from './components/InventoryPage'
 import { LoginForm } from './components/LoginForm'
 import { NotFoundPage } from './components/NotFoundPage'
-import { SupportPage } from './components/SupportPage'
-import { SubjectsPage } from './components/SubjectsPage'
 import { SoftwarePage } from './components/SoftwarePage'
-
-import type { RouteKey } from './components/Sidebar'
+import { SubjectsPage } from './components/SubjectsPage'
+import { SupportPage } from './components/SupportPage'
+import {
+  canAccessRoute,
+  defaultRouteForRole,
+  normalizePath,
+  routeFromPath,
+  routePaths,
+  routes,
+  type RouteKey,
+} from './routes'
 import type { AuthUser } from './types/auth'
-
-const routePaths: Record<RouteKey, string> = {
-  support: '/soporte',
-
-  inventory: '/inventario',
-  inbox: '/bandeja',
-  settings: '/config',
-  subjects: '/asignaturas',
-  software: '/software',
-}
-
-const routeTitles: Record<RouteKey, string> = {
-  support: 'Soporte',
-  inventory: 'Inventario',
-  inbox: 'Bandeja de entrada',
-  settings: 'Configuración',
-  subjects: 'Asignaturas y niveles educativos',
-  software: 'Software educativo',
-}
 
 const LOGIN_TITLE = 'Iniciar sesión'
 const NOT_FOUND_TITLE = 'Página no encontrada'
-
-function normalizePath(pathname: string) {
-  const path = pathname.replace(/\/+$/, '')
-  return path || '/login'
-}
-
-function routeFromPath(pathname: string): RouteKey | null {
-  const entry = Object.entries(routePaths).find(([, path]) => path === pathname)
-  return entry ? entry[0] as RouteKey : null
-}
-
-function defaultRouteForRole(role: string): RouteKey {
-  return role === 'DOCENTE' ? 'support' : 'inventory'
-}
-
-function canAccessRoute(role: string, route: RouteKey) {
-  if (route === 'support') return role === 'DOCENTE'
-
-  if (route === 'inventory' || route === 'inbox') return role === 'ADMIN' || role === 'TECNICO'
-  return role === 'ADMIN'
-}
 
 function getStoredUser(): AuthUser | null {
   const storedUser = localStorage.getItem('auth_user')
@@ -75,6 +43,10 @@ function getStoredUser(): AuthUser | null {
     localStorage.removeItem('auth_user')
     return null
   }
+}
+
+function titleForRoute(key: RouteKey): string {
+  return routes.find((route) => route.key === key)?.title ?? NOT_FOUND_TITLE
 }
 
 function App() {
@@ -104,14 +76,16 @@ function App() {
     })
   }, [])
 
+  const navigateToRoute = useCallback(
+    (key: RouteKey) => navigate(routePaths[key]),
+    [navigate],
+  )
+
   const activeRoute = routeFromPath(pathname)
 
-  let pageTitle = NOT_FOUND_TITLE
-  if (!user) {
-    pageTitle = pathname !== '/login' && !activeRoute ? NOT_FOUND_TITLE : LOGIN_TITLE
-  } else if (activeRoute && canAccessRoute(user.rol, activeRoute)) {
-    pageTitle = routeTitles[activeRoute]
-  }
+  const pageTitle = !user
+    ? pathname !== '/login' && !activeRoute ? NOT_FOUND_TITLE : LOGIN_TITLE
+    : activeRoute && canAccessRoute(user.rol, activeRoute) ? titleForRoute(activeRoute) : NOT_FOUND_TITLE
 
   useEffect(() => {
     document.title = pageTitle
@@ -153,28 +127,40 @@ function App() {
     return <NotFoundPage onBack={() => navigate(routePaths[defaultRouteForRole(user.rol)])} />
   }
 
-  if (activeRoute === 'support') {
-    return <SupportPage user={user} accessToken={accessToken} activeRoute={activeRoute} onNavigate={(route) => navigate(routePaths[route])} onLogout={handleLogout} />
+  function renderPage(user: AuthUser, accessToken: string, onSessionExpired: () => void) {
+    if (activeRoute === 'support') {
+      return <SupportPage accessToken={accessToken} onSessionExpired={onSessionExpired} />
+    }
+
+    if (activeRoute === 'settings') {
+      return <ConfigurationPage />
+    }
+
+    if (activeRoute === 'subjects') {
+      return <SubjectsPage accessToken={accessToken} onSessionExpired={onSessionExpired} />
+    }
+
+    if (activeRoute === 'software') {
+      return <SoftwarePage accessToken={accessToken} onSessionExpired={onSessionExpired} />
+    }
+
+    if (activeRoute === 'inbox') {
+      return <InboxPage accessToken={accessToken} onSessionExpired={onSessionExpired} />
+    }
+
+    return <InventoryPage user={user} accessToken={accessToken} onSessionExpired={onSessionExpired} />
   }
 
-
-  if (activeRoute === 'settings') {
-    return <ConfigurationPage user={user} activeRoute={activeRoute} onNavigate={(route) => navigate(routePaths[route])} onLogout={handleLogout} />
-  }
-
-  if (activeRoute === 'subjects') {
-    return <SubjectsPage user={user} accessToken={accessToken} activeRoute={activeRoute} onNavigate={(route) => navigate(routePaths[route])} onLogout={handleLogout} />
-  }
-
-  if (activeRoute === 'software') {
-    return <SoftwarePage user={user} accessToken={accessToken} activeRoute={activeRoute} onNavigate={(route) => navigate(routePaths[route])} onLogout={handleLogout} />
-  }
-
-  if (activeRoute === 'inbox') {
-    return <InboxPage user={user} accessToken={accessToken} activeRoute={activeRoute} onNavigate={(route) => navigate(routePaths[route])} onLogout={handleLogout} />
-  }
-
-  return <InventoryPage user={user} accessToken={accessToken} activeRoute={activeRoute} onNavigate={(route) => navigate(routePaths[route])} onLogout={handleLogout} />
+  return (
+    <DashboardLayout
+      user={user}
+      activeRoute={activeRoute}
+      onNavigate={navigateToRoute}
+      onLogout={handleLogout}
+    >
+      {renderPage(user, accessToken, handleLogout)}
+    </DashboardLayout>
+  )
 }
 
 export default App

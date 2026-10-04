@@ -4,25 +4,19 @@ import { getSubjects } from '../services/academics'
 import { isSessionExpired } from '../services/http'
 import { createSoftware, deleteSoftware, getSoftware, updateSoftware } from '../services/software'
 import type { Subject } from '../types/academic'
-import type { AuthUser } from '../types/auth'
 import { SOFTWARE_LICENSES, softwareLicenseLabel } from '../types/software'
 import type { SoftwareLicense, SoftwareProgram } from '../types/software'
-import { DashboardLayout } from './DashboardLayout'
-import type { RouteKey } from './Sidebar'
 
 type SoftwarePageProps = {
-  user: AuthUser
   accessToken: string
-  activeRoute: RouteKey
-  onNavigate: (route: RouteKey) => void
-  onLogout: () => void
+  onSessionExpired: () => void
 }
 
 function toggleId(current: number[], id: number): number[] {
   return current.includes(id) ? current.filter((item) => item !== id) : [...current, id]
 }
 
-export function SoftwarePage({ user, accessToken, activeRoute, onNavigate, onLogout }: SoftwarePageProps) {
+export function SoftwarePage({ accessToken, onSessionExpired }: SoftwarePageProps) {
   const [programs, setPrograms] = useState<SoftwareProgram[]>([])
   const [subjects, setSubjects] = useState<Subject[]>([])
   const [loading, setLoading] = useState(true)
@@ -58,7 +52,7 @@ export function SoftwarePage({ user, accessToken, activeRoute, onNavigate, onLog
       .catch((exception: unknown) => {
         if (!active) return
         if (isSessionExpired(exception)) {
-          onLogout()
+          onSessionExpired()
           return
         }
         setError(exception instanceof Error ? exception.message : 'No se pudo cargar el software educativo')
@@ -70,7 +64,7 @@ export function SoftwarePage({ user, accessToken, activeRoute, onNavigate, onLog
     return () => {
       active = false
     }
-  }, [accessToken, onLogout, reloadKey])
+  }, [accessToken, onSessionExpired, reloadKey])
 
   const subjectNameById = new Map(subjects.map((subject) => [subject.id, subject.nombre]))
 
@@ -82,7 +76,7 @@ export function SoftwarePage({ user, accessToken, activeRoute, onNavigate, onLog
 
   function reportError(exception: unknown, fallback: string) {
     if (isSessionExpired(exception)) {
-      onLogout()
+      onSessionExpired()
       return
     }
     setError(exception instanceof Error ? exception.message : fallback)
@@ -221,9 +215,8 @@ export function SoftwarePage({ user, accessToken, activeRoute, onNavigate, onLog
   }
 
   return (
-    <DashboardLayout user={user} activeRoute={activeRoute} onNavigate={onNavigate} onLogout={onLogout}>
-      <main className="support-shell">
-        <section className="support-content subjects-content" aria-label="Catálogo de software educativo">
+    <main className="support-shell">
+      <section className="support-content subjects-content" aria-label="Catálogo de software educativo">
           {error && (
             <div className="banner-error" role="alert">
               <span>{error}</span>
@@ -377,7 +370,6 @@ export function SoftwarePage({ user, accessToken, activeRoute, onNavigate, onLog
             </section>
           </div>
         </section>
-      </main>
-    </DashboardLayout>
+    </main>
   )
 }

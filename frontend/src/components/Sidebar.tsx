@@ -1,6 +1,6 @@
+import type { MouseEvent } from 'react'
 import type { AuthUser } from '../types/auth'
-
-export type RouteKey = 'support' | 'inventory' | 'inbox' | 'settings' | 'subjects' | 'software'
+import { routesForRole, type RouteKey } from '../routes'
 
 type SidebarProps = {
   user: AuthUser
@@ -8,22 +8,6 @@ type SidebarProps = {
   onNavigate: (route: RouteKey) => void
   onLogout: () => void
 }
-
-type RouteDefinition = {
-  key: RouteKey
-  label: string
-  roles: string[]
-}
-
-const routes: RouteDefinition[] = [
-  { key: 'support', label: 'Soporte', roles: ['DOCENTE'] },
-
-  { key: 'inventory', label: 'Inventario', roles: ['ADMIN', 'TECNICO'] },
-  { key: 'inbox', label: 'Bandeja de entrada', roles: ['ADMIN', 'TECNICO'] },
-  { key: 'settings', label: 'Configuración', roles: ['ADMIN'] },
-  { key: 'subjects', label: 'Asignaturas y niveles', roles: ['ADMIN'] },
-  { key: 'software', label: 'Software educativo', roles: ['ADMIN'] },
-]
 
 function RoleIcon({ role }: { role: string }) {
   if (role === 'DOCENTE') {
@@ -58,11 +42,11 @@ function RouteIcon({ route }: { route: RouteKey }) {
     return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v13A2.5 2.5 0 0 1 17.5 21h-11A2.5 2.5 0 0 1 4 18.5v-13Z" /><path d="M4 8h16M8 5.5h.01M11 5.5h.01" /></svg>
   }
 
-  return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5a2 2 0 0 1 2 2v.38a6.8 6.8 0 0 1 1.55.9l.33-.19a2 2 0 1 1 2 3.46l-.33.19c.08.36.12.73.12 1.11s-.04.75-.12 1.11l.33.19a2 2 0 1 1-2 3.46l-.33-.19a6.8 6.8 0 0 1-1.55.9v.38a2 2 0 1 1-4 0v-.38a6.8 6.8 0 0 1-1.55-.9l-.33.19a2 2 0 1 1-2-3.46l.33-.19A5.7 5.7 0 0 1 6.33 12c0-.38.04-.75.12-1.11l-.33-.19a2 2 0 1 1 2-3.46l.33.19A6.8 6.8 0 0 1 10 5.88V5.5a2 2 0 0 1 2-2Z" /><circle cx="12" cy="11.35" r="2.5" /></svg>
+  return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5a2 2 0 0 1 2 2v.38a6.8 6.8 0 0 1 1.55.9l.33-.19a2 2 0 1 1 2 3.46l-.33.19c.08.36.12.73.12 1.11s-.04.75-.12 1.11l.33.19a2 2 0 1 1-2 3.46l-.33-.19a6.8 6.8 0 0 1-1.55.9v.38a2 2 0 1 1-4 0v-.38a6.8 6.8 0 0 1-1.55-.9l.33.19a2 2 0 1 1-2-3.46l.33-.19A5.7 5.7 0 0 1 6.33 12c0-.38.04-.75.12-1.11l-.33-.19a2 2 0 1 1 2-3.46l.33.19A6.8 6.8 0 0 1 10 5.88V5.5a2 2 0 0 1 2-2Z" /><circle cx="12" cy="11.35" r="2.5" /></svg>
 }
 
 export function Sidebar({ user, activeRoute, onNavigate, onLogout }: SidebarProps) {
-  const visibleRoutes = routes.filter((route) => route.roles.includes(user.rol))
+  const visibleRoutes = routesForRole(user.rol)
   const roleLabels: Record<string, string> = {
     ADMIN: 'Administrador',
     TECNICO: 'Técnico',
@@ -70,20 +54,29 @@ export function Sidebar({ user, activeRoute, onNavigate, onLogout }: SidebarProp
   }
   const roleLabel = roleLabels[user.rol] ?? user.rol
 
+  function handleLinkClick(event: MouseEvent<HTMLAnchorElement>, key: RouteKey) {
+    if (event.defaultPrevented) return
+    if (event.button !== 0) return
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+
+    event.preventDefault()
+    onNavigate(key)
+  }
+
   return (
     <aside className="sidebar">
       <nav className="sidebar-nav" aria-label="Navegación principal">
         {visibleRoutes.map((route) => (
-          <button
+          <a
             className={`sidebar-link${activeRoute === route.key ? ' active' : ''}`}
             key={route.key}
-            type="button"
+            href={route.path}
             aria-current={activeRoute === route.key ? 'page' : undefined}
-            onClick={() => onNavigate(route.key)}
+            onClick={(event) => handleLinkClick(event, route.key)}
           >
             <RouteIcon route={route.key} />
             <span>{route.label}</span>
-          </button>
+          </a>
         ))}
       </nav>
 

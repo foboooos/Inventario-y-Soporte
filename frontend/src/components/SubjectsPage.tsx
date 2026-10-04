@@ -12,23 +12,17 @@ import {
 } from '../services/academics'
 import { isSessionExpired } from '../services/http'
 import type { EducationalLevel, Subject } from '../types/academic'
-import type { AuthUser } from '../types/auth'
-import { DashboardLayout } from './DashboardLayout'
-import type { RouteKey } from './Sidebar'
 
 type SubjectsPageProps = {
-  user: AuthUser
   accessToken: string
-  activeRoute: RouteKey
-  onNavigate: (route: RouteKey) => void
-  onLogout: () => void
+  onSessionExpired: () => void
 }
 
 function toggleLevel(current: number[], id: number): number[] {
   return current.includes(id) ? current.filter((item) => item !== id) : [...current, id]
 }
 
-export function SubjectsPage({ user, accessToken, activeRoute, onNavigate, onLogout }: SubjectsPageProps) {
+export function SubjectsPage({ accessToken, onSessionExpired }: SubjectsPageProps) {
   const [levels, setLevels] = useState<EducationalLevel[]>([])
   const [subjects, setSubjects] = useState<Subject[]>([])
   const [loading, setLoading] = useState(true)
@@ -66,7 +60,7 @@ export function SubjectsPage({ user, accessToken, activeRoute, onNavigate, onLog
       .catch((exception: unknown) => {
         if (!active) return
         if (isSessionExpired(exception)) {
-          onLogout()
+          onSessionExpired()
           return
         }
         setError(exception instanceof Error ? exception.message : 'No se pudieron cargar las asignaturas y niveles')
@@ -78,7 +72,7 @@ export function SubjectsPage({ user, accessToken, activeRoute, onNavigate, onLog
     return () => {
       active = false
     }
-  }, [accessToken, onLogout, reloadKey])
+  }, [accessToken, onSessionExpired, reloadKey])
 
   const levelNameById = new Map(levels.map((level) => [level.id, level.nombre]))
 
@@ -90,7 +84,7 @@ export function SubjectsPage({ user, accessToken, activeRoute, onNavigate, onLog
 
   function reportError(exception: unknown, fallback: string) {
     if (isSessionExpired(exception)) {
-      onLogout()
+      onSessionExpired()
       return
     }
     setError(exception instanceof Error ? exception.message : fallback)
@@ -260,9 +254,8 @@ export function SubjectsPage({ user, accessToken, activeRoute, onNavigate, onLog
   }
 
   return (
-    <DashboardLayout user={user} activeRoute={activeRoute} onNavigate={onNavigate} onLogout={onLogout}>
-      <main className="support-shell">
-        <section className="support-content subjects-content" aria-label="Asignaturas y niveles educativos">
+    <main className="support-shell">
+      <section className="support-content subjects-content" aria-label="Asignaturas y niveles educativos">
           {error && (
             <div className="banner-error" role="alert">
               <span>{error}</span>
@@ -472,6 +465,5 @@ export function SubjectsPage({ user, accessToken, activeRoute, onNavigate, onLog
           </div>
         </section>
       </main>
-    </DashboardLayout>
   )
 }

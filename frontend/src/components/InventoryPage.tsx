@@ -5,15 +5,11 @@ import type { AuthUser } from '../types/auth'
 import type { Device, DeviceStatus, DeviceType } from '../types/inventory'
 import { CreateDeviceForm } from './CreateDeviceForm'
 import { EditDeviceForm } from './EditDeviceForm'
-import { DashboardLayout } from './DashboardLayout'
-import type { RouteKey } from './Sidebar'
 
 type InventoryPageProps = {
   user: AuthUser
   accessToken: string
-  onLogout: () => void
-  activeRoute: RouteKey
-  onNavigate: (route: RouteKey) => void
+  onSessionExpired: () => void
 }
 
 type StatusFilter = 'ALL' | DeviceStatus
@@ -123,7 +119,7 @@ function SortButton({ label, sortKey, activeKey, dir, onToggle }: {
   )
 }
 
-export function InventoryPage({ user, accessToken, onLogout, activeRoute, onNavigate }: InventoryPageProps) {
+export function InventoryPage({ user, accessToken, onSessionExpired }: InventoryPageProps) {
   const [initial] = useState<StoredFilters>(() => loadStoredFilters())
 
   const [devices, setDevices] = useState<Device[]>([])
@@ -162,7 +158,7 @@ export function InventoryPage({ user, accessToken, onLogout, activeRoute, onNavi
       .catch((exception: unknown) => {
         if (!active) return
         if (isSessionExpired(exception)) {
-          onLogout()
+          onSessionExpired()
           return
         }
         const message = exception instanceof Error ? exception.message : 'No se pudo cargar el inventario'
@@ -181,7 +177,7 @@ export function InventoryPage({ user, accessToken, onLogout, activeRoute, onNavi
     return () => {
       active = false
     }
-  }, [accessToken, onLogout, reloadKey])
+  }, [accessToken, onSessionExpired, reloadKey])
 
 
   useEffect(() => {
@@ -290,193 +286,180 @@ export function InventoryPage({ user, accessToken, onLogout, activeRoute, onNavi
   }
 
   return (
-    <DashboardLayout user={user} activeRoute={activeRoute} onNavigate={onNavigate} onLogout={onLogout}>
-      <main className="inventory-shell">
-        <section className="inventory-content" aria-label="Inventario">
-          {canManageInventory && (
-            <div className="inventory-actions" ref={actionsRef}>
-              <button className="primary-action" type="button" onClick={() => setModal({ kind: 'create' })}>
-                <svg viewBox="0 0 24 24" aria-hidden="true" className="button-icon"><path d="M12 5v14M5 12h14" /></svg>
-                Nuevo dispositivo
-              </button>
-            </div>
-          )}
-
-          <section className="inventory-summary" aria-label="Resumen del inventario" ref={summaryRef}>
-            <article className="inventory-summary-card" data-status="total">
-              <span className="summary-label">Total</span>
-              <strong className="summary-value">{deviceSummary.total}</strong>
-            </article>
-            <article className="inventory-summary-card" data-status="activo">
-              <span className="summary-label">Activos</span>
-              <strong className="summary-value">{deviceSummary.active}</strong>
-            </article>
-            <article className="inventory-summary-card" data-status="inactivo">
-              <span className="summary-label">Inactivos</span>
-              <strong className="summary-value">{deviceSummary.inactive}</strong>
-            </article>
-            <article className="inventory-summary-card" data-status="baja-tecnica">
-              <span className="summary-label">Baja técnica</span>
-              <strong className="summary-value">{deviceSummary.technicalRetirement}</strong>
-            </article>
-          </section>
-
-          <div className="inventory-status-tabs" role="tablist" aria-label="Filtrar por estado" ref={tabsRef}>
-            {statusOptions.map((option, index) => {
-              const selected = statusFilter === option.value
-              const tabId = `inventory-tab-${option.value.toLowerCase()}`
-
-              return (
-                <button
-                  className={`inventory-status-tab${selected ? ' active' : ''}`}
-                  id={tabId}
-                  key={option.value}
-                  type="button"
-                  role="tab"
-                  aria-selected={selected}
-                  aria-controls="inventory-results-panel"
-                  tabIndex={selected ? 0 : -1}
-                  ref={(element) => { statusTabRefs.current[index] = element }}
-                  onClick={() => changeStatusFilter(option.value)}
-                  onKeyDown={(event) => handleStatusTabKeyDown(event, index)}
-                >
-                  {option.label}
-                </button>
-              )
-            })}
+    <main className="inventory-shell">
+      <section className="inventory-content" aria-label="Inventario">
+    {canManageInventory && (
+    <div className="inventory-actions" ref={actionsRef}>
+      <button className="primary-action" type="button" onClick={() => setModal({ kind: 'create' })}>
+        <svg viewBox="0 0 24 24" aria-hidden="true" className="button-icon"><path d="M12 5v14M5 12h14" /></svg>
+        Nuevo dispositivo
+      </button>
+    </div>
+  )}
+  <section className="inventory-summary" aria-label="Resumen del inventario" ref={summaryRef}>
+    <article className="inventory-summary-card" data-status="total">
+      <span className="summary-label">Total</span>
+      <strong className="summary-value">{deviceSummary.total}</strong>
+    </article>
+    <article className="inventory-summary-card" data-status="activo">
+      <span className="summary-label">Activos</span>
+      <strong className="summary-value">{deviceSummary.active}</strong>
+    </article>
+    <article className="inventory-summary-card" data-status="inactivo">
+      <span className="summary-label">Inactivos</span>
+      <strong className="summary-value">{deviceSummary.inactive}</strong>
+    </article>
+    <article className="inventory-summary-card" data-status="baja-tecnica">
+      <span className="summary-label">Baja técnica</span>
+      <strong className="summary-value">{deviceSummary.technicalRetirement}</strong>
+    </article>
+  </section>
+  <div className="inventory-status-tabs" role="tablist" aria-label="Filtrar por estado" ref={tabsRef}>
+    {statusOptions.map((option, index) => {
+      const selected = statusFilter === option.value
+      const tabId = `inventory-tab-${option.value.toLowerCase()}`
+      return (
+        <button
+          className={`inventory-status-tab${selected ? ' active' : ''}`}
+          id={tabId}
+          key={option.value}
+          type="button"
+          role="tab"
+          aria-selected={selected}
+          aria-controls="inventory-results-panel"
+          tabIndex={selected ? 0 : -1}
+          ref={(element) => { statusTabRefs.current[index] = element }}
+          onClick={() => changeStatusFilter(option.value)}
+          onKeyDown={(event) => handleStatusTabKeyDown(event, index)}
+        >
+          {option.label}
+        </button>
+      )
+    })}
+  </div>
+{modal?.kind === 'edit' && canManageInventory && (
+      <EditDeviceForm
+        key={modal.device.id}
+        accessToken={accessToken}
+        device={modal.device}
+        onCancel={() => setModal(null)}
+        onSessionExpired={onSessionExpired}
+        onUpdated={(updatedDevice) => {
+          setDevices((current) => current.map((device) => device.id === updatedDevice.id ? updatedDevice : device))
+          setModal(null)
+        }}
+      />
+    )}
+    {modal?.kind === 'create' && canManageInventory && (
+      <CreateDeviceForm
+        accessToken={accessToken}
+        onCancel={() => setModal(null)}
+        onSessionExpired={onSessionExpired}
+        onCreated={(createdDevice) => {
+          setDevices((current) => [...current, createdDevice].sort((a, b) => a.id - b.id))
+          setModal(null)
+        }}
+      />
+    )}
+  <div
+    className="table-card"
+    id="inventory-results-panel"
+    role="tabpanel"
+    aria-labelledby={`inventory-tab-${statusFilter.toLowerCase()}`}
+  >
+    {loading && (
+      <div className="skeleton-block" role="status" aria-label="Cargando inventario">
+        <span className="sr-only">Cargando inventario…</span>
+        <div className="skeleton-row" aria-hidden="true" />
+        <div className="skeleton-row" aria-hidden="true" />
+        <div className="skeleton-row" aria-hidden="true" />
+        <div className="skeleton-row" aria-hidden="true" />
+        <div className="skeleton-row" aria-hidden="true" />
+      </div>
+    )}
+    {!loading && error && devices.length === 0 && (
+      <div className="empty-state-block">
+        <p className="error" role="alert">{error}</p>
+        <button type="button" onClick={retryLoad}>Reintentar</button>
+      </div>
+    )}
+    {!loading && !error && (
+      <>
+        {refreshError && (
+          <div className="banner-error" role="alert">
+            <span>{refreshError}. Se muestran los datos anteriores.</span>
+            <button className="text-button" type="button" onClick={retryLoad}>Reintentar</button>
           </div>
-
-          {modal?.kind === 'edit' && canManageInventory && (
-            <EditDeviceForm
-              key={modal.device.id}
-              accessToken={accessToken}
-              device={modal.device}
-              onCancel={() => setModal(null)}
-              onSessionExpired={onLogout}
-              onUpdated={(updatedDevice) => {
-                setDevices((current) => current.map((device) => device.id === updatedDevice.id ? updatedDevice : device))
-                setModal(null)
-              }}
-            />
-          )}
-
-          {modal?.kind === 'create' && canManageInventory && (
-            <CreateDeviceForm
-              accessToken={accessToken}
-              onCancel={() => setModal(null)}
-              onSessionExpired={onLogout}
-              onCreated={(createdDevice) => {
-                setDevices((current) => [...current, createdDevice].sort((a, b) => a.id - b.id))
-                setModal(null)
-              }}
-            />
-          )}
-
-
-          <div
-            className="table-card"
-            id="inventory-results-panel"
-            role="tabpanel"
-            aria-labelledby={`inventory-tab-${statusFilter.toLowerCase()}`}
-          >
-            {loading && (
-              <div className="skeleton-block" role="status" aria-label="Cargando inventario">
-                <span className="sr-only">Cargando inventario…</span>
-                <div className="skeleton-row" aria-hidden="true" />
-                <div className="skeleton-row" aria-hidden="true" />
-                <div className="skeleton-row" aria-hidden="true" />
-                <div className="skeleton-row" aria-hidden="true" />
-                <div className="skeleton-row" aria-hidden="true" />
-              </div>
-            )}
-
-            {!loading && error && devices.length === 0 && (
-              <div className="empty-state-block">
-                <p className="error" role="alert">{error}</p>
-                <button type="button" onClick={retryLoad}>Reintentar</button>
-              </div>
-            )}
-
-            {!loading && !error && (
-              <>
-                {refreshError && (
-                  <div className="banner-error" role="alert">
-                    <span>{refreshError}. Se muestran los datos anteriores.</span>
-                    <button className="text-button" type="button" onClick={retryLoad}>Reintentar</button>
-                  </div>
-                )}
-
-                {devices.length === 0 ? (
-                  <div className="empty-state-block">
-                    <p>Aún no hay dispositivos registrados.</p>
-                    {canManageInventory && (
-                      <button className="primary-action" type="button" onClick={() => setModal({ kind: 'create' })}>Registrar el primero</button>
-                    )}
-                  </div>
-                ) : visibleDevices.length === 0 ? (
-                  <div className="empty-state-block">
-                    <p role="status">No encontramos dispositivos con esos filtros.</p>
-                    <button className="secondary-button" type="button" onClick={() => changeStatusFilter('ALL')}>Ver todos</button>
-                  </div>
-                ) : (
-                  <div className="table-scroll">
-                    <table>
-                      <caption className="sr-only">Listado de dispositivos del inventario</caption>
-                      <thead>
-                        <tr>
-
-                          <th scope="col" aria-sort={sortKey === 'code' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
-                            <SortButton label="Código" sortKey="code" activeKey={sortKey} dir={sortDir} onToggle={toggleSort} />
-                          </th>
-                          <th scope="col">Tipo</th>
-                          <th scope="col">Marca y modelo</th>
-                          <th scope="col" aria-sort={sortKey === 'location' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
-                            <SortButton label="Ubicación" sortKey="location" activeKey={sortKey} dir={sortDir} onToggle={toggleSort} />
-                          </th>
-                          <th scope="col" aria-sort={sortKey === 'status' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
-                            <SortButton label="Estado" sortKey="status" activeKey={sortKey} dir={sortDir} onToggle={toggleSort} />
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {pagedDevices.map((device) => (
-                          <tr key={device.id}>
-                            <td className="device-code">
-                              {canManageInventory ? (
-                                <button className="device-code-button" type="button" aria-label={`Editar ${device.code}`} title={`Editar ${device.code}`} onClick={() => setModal({ kind: 'edit', device })}>
-                                  {device.code}
-                                </button>
-                              ) : (
-                                device.code
-                              )}
-                            </td>
-                            <td>{typeLabels[device.type]}</td>
-                            <td>{renderBrandModel(device)}</td>
-                            <td>{device.location}</td>
-                            <td><span className={`status status-${device.status.toLowerCase().replace('_', '-')}`}>{statusLabels[device.status]}</span></td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-                {visibleDevices.length > 0 && (
-                  <footer className="table-footer">
-                    <span>Mostrando {pageStart + 1}–{Math.min(pageStart + pageSize, visibleDevices.length)} de {visibleDevices.length} dispositivos</span>
-                    <nav className="pagination" aria-label="Paginación del inventario">
-                      <button className="pagination-button" type="button" disabled={activePage === 1} onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}>Anterior</button>
-                      {pageNumbers.map((page, index) => page === 'ellipsis'
-                        ? <span className="pagination-ellipsis" key={`ellipsis-${index}`} aria-hidden="true">…</span>
-                        : <button className={`pagination-button page-number${page === activePage ? ' active' : ''}`} type="button" key={page} aria-current={page === activePage ? 'page' : undefined} onClick={() => setCurrentPage(page)}>{page}</button>)}
-                      <button className="pagination-button" type="button" disabled={activePage === totalPages} onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}>Siguiente</button>
-                    </nav>
-                  </footer>
-                )}
-              </>
+        )}
+        {devices.length === 0 ? (
+          <div className="empty-state-block">
+            <p>Aún no hay dispositivos registrados.</p>
+            {canManageInventory && (
+              <button className="primary-action" type="button" onClick={() => setModal({ kind: 'create' })}>Registrar el primero</button>
             )}
           </div>
-        </section>
-      </main>
-    </DashboardLayout>
+        ) : visibleDevices.length === 0 ? (
+          <div className="empty-state-block">
+            <p role="status">No encontramos dispositivos con esos filtros.</p>
+            <button className="secondary-button" type="button" onClick={() => changeStatusFilter('ALL')}>Ver todos</button>
+          </div>
+        ) : (
+          <div className="table-scroll">
+            <table>
+              <caption className="sr-only">Listado de dispositivos del inventario</caption>
+              <thead>
+                <tr>
+                  <th scope="col" aria-sort={sortKey === 'code' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
+                    <SortButton label="Código" sortKey="code" activeKey={sortKey} dir={sortDir} onToggle={toggleSort} />
+                  </th>
+                  <th scope="col">Tipo</th>
+                  <th scope="col">Marca y modelo</th>
+                  <th scope="col" aria-sort={sortKey === 'location' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
+                    <SortButton label="Ubicación" sortKey="location" activeKey={sortKey} dir={sortDir} onToggle={toggleSort} />
+                  </th>
+                  <th scope="col" aria-sort={sortKey === 'status' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
+                    <SortButton label="Estado" sortKey="status" activeKey={sortKey} dir={sortDir} onToggle={toggleSort} />
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {pagedDevices.map((device) => (
+                  <tr key={device.id}>
+                    <td className="device-code">
+                      {canManageInventory ? (
+                        <button className="device-code-button" type="button" aria-label={`Editar ${device.code}`} title={`Editar ${device.code}`} onClick={() => setModal({ kind: 'edit', device })}>
+                          {device.code}
+                        </button>
+                      ) : (
+                        device.code
+                      )}
+                    </td>
+                    <td>{typeLabels[device.type]}</td>
+                    <td>{renderBrandModel(device)}</td>
+                    <td>{device.location}</td>
+                    <td><span className={`status status-${device.status.toLowerCase().replace('_', '-')}`}>{statusLabels[device.status]}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {visibleDevices.length > 0 && (
+          <footer className="table-footer">
+            <span>Mostrando {pageStart + 1}–{Math.min(pageStart + pageSize, visibleDevices.length)} de {visibleDevices.length} dispositivos</span>
+            <nav className="pagination" aria-label="Paginación del inventario">
+              <button className="pagination-button" type="button" disabled={activePage === 1} onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}>Anterior</button>
+              {pageNumbers.map((page, index) => page === 'ellipsis'
+                ? <span className="pagination-ellipsis" key={`ellipsis-${index}`} aria-hidden="true">…</span>
+                : <button className={`pagination-button page-number${page === activePage ? ' active' : ''}`} type="button" key={page} aria-current={page === activePage ? 'page' : undefined} onClick={() => setCurrentPage(page)}>{page}</button>)}
+              <button className="pagination-button" type="button" disabled={activePage === totalPages} onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}>Siguiente</button>
+            </nav>
+          </footer>
+        )}
+      </>
+    )}
+    </div>
+    </section>
+    </main>
   )
 }

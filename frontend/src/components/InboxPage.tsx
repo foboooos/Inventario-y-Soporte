@@ -1,20 +1,14 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { getTicketBitacora, getTicketInbox, updateTicketStatus } from '../services/tickets'
 import { isSessionExpired } from '../services/http'
-import type { AuthUser } from '../types/auth'
 import type { Ticket, TicketBitacora, TicketStatus } from '../types/ticket'
-import { DashboardLayout } from './DashboardLayout'
 import { TicketLogDocument } from './TicketLogDocument'
 import { TicketResolutionForm } from './TicketResolutionForm'
 import { TicketSymptomPreview } from './TicketSymptomPreview'
-import type { RouteKey } from './Sidebar'
 
 type InboxPageProps = {
-  user: AuthUser
   accessToken: string
-  onLogout: () => void
-  activeRoute: RouteKey
-  onNavigate: (route: RouteKey) => void
+  onSessionExpired: () => void
 }
 
 type StatusFilter = 'ALL' | TicketStatus
@@ -152,7 +146,7 @@ function InboxTable({ tickets, startingId, bitacoraId, onSelectTicket, onStartTi
   )
 }
 
-export function InboxPage({ user, accessToken, onLogout, activeRoute, onNavigate }: InboxPageProps) {
+export function InboxPage({ accessToken, onSessionExpired }: InboxPageProps) {
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -179,7 +173,7 @@ export function InboxPage({ user, accessToken, onLogout, activeRoute, onNavigate
       .catch((exception: unknown) => {
         if (!isMounted) return
         if (isSessionExpired(exception)) {
-          onLogout()
+          onSessionExpired()
           return
         }
         setError(exception instanceof Error ? exception.message : 'No se pudo cargar la bandeja de tickets')
@@ -191,7 +185,7 @@ export function InboxPage({ user, accessToken, onLogout, activeRoute, onNavigate
     return () => {
       isMounted = false
     }
-  }, [accessToken, onLogout, reloadKey])
+  }, [accessToken, onSessionExpired, reloadKey])
 
   const visibleTickets = statusFilter === 'ALL'
     ? tickets
@@ -236,7 +230,7 @@ export function InboxPage({ user, accessToken, onLogout, activeRoute, onNavigate
       setTickets((current) => current.map((item) => (item.id_ticket === updatedTicket.id_ticket ? updatedTicket : item)))
     } catch (exception: unknown) {
       if (isSessionExpired(exception)) {
-        onLogout()
+        onSessionExpired()
         return
       }
       setActionError(exception instanceof Error ? exception.message : 'No se pudo iniciar el ticket')
@@ -254,7 +248,7 @@ export function InboxPage({ user, accessToken, onLogout, activeRoute, onNavigate
       setBitacora(record)
     } catch (exception: unknown) {
       if (isSessionExpired(exception)) {
-        onLogout()
+        onSessionExpired()
         return
       }
       setActionError(exception instanceof Error ? exception.message : 'No se pudo cargar la bitácora del ticket')
@@ -264,9 +258,8 @@ export function InboxPage({ user, accessToken, onLogout, activeRoute, onNavigate
   }
 
   return (
-    <DashboardLayout user={user} activeRoute={activeRoute} onNavigate={onNavigate} onLogout={onLogout}>
-      <main className="inventory-shell">
-        <section className="inventory-content inbox-content" aria-label="Bandeja de entrada de tickets">
+    <main className="inventory-shell">
+      <section className="inventory-content inbox-content" aria-label="Bandeja de entrada de tickets">
           <div className="inventory-status-tabs" role="tablist" aria-label="Filtrar tickets por estado">
             {statusOptions.map((option, index) => {
               const selected = statusFilter === option.value
@@ -375,13 +368,12 @@ export function InboxPage({ user, accessToken, onLogout, activeRoute, onNavigate
               setSelectedTicket(null)
               requestAnimationFrame(() => resolutionTriggerRef.current?.focus())
             }}
-            onSessionExpired={onLogout}
+            onSessionExpired={onSessionExpired}
           />
         )}
         {bitacora && (
           <TicketLogDocument bitacora={bitacora} onClose={() => setBitacora(null)} />
         )}
-      </main>
-    </DashboardLayout>
+    </main>
   )
 }
