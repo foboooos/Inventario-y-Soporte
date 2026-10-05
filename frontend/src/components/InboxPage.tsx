@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { getTicketBitacora, getTicketInbox, updateTicketStatus } from '../services/tickets'
+import { getLocations } from '../services/locations'
 import { isSessionExpired } from '../services/http'
 import type { Ticket, TicketBitacora, TicketStatus } from '../types/ticket'
+import type { Location } from '../types/location'
 import { TicketLogDocument } from './TicketLogDocument'
 import { TicketResolutionForm } from './TicketResolutionForm'
 import { TicketSymptomPreview } from './TicketSymptomPreview'
@@ -11,7 +13,7 @@ type InboxPageProps = {
   onSessionExpired: () => void
 }
 
-type StatusFilter = 'ALL' | TicketStatus
+type EstadoFilter = 'ALL' | 'EN_ESPERA' | 'EN_PROCESO' | 'OPERATIVO' | 'INACTIVO' | 'BAJA_TECNICA'
 
 const PAGE_SIZE = 10
 
@@ -21,11 +23,13 @@ const statusLabels: Record<TicketStatus, string> = {
   RESUELTO: 'Resuelto',
 }
 
-const statusOptions: Array<{ value: StatusFilter; label: string }> = [
+const estadoOptions: Array<{ value: EstadoFilter; label: string }> = [
   { value: 'ALL', label: 'Todos' },
-  { value: 'ABIERTO', label: 'Abiertos' },
+  { value: 'EN_ESPERA', label: 'En espera' },
   { value: 'EN_PROCESO', label: 'En proceso' },
-  { value: 'RESUELTO', label: 'Resueltos' },
+  { value: 'OPERATIVO', label: 'Operativo' },
+  { value: 'INACTIVO', label: 'Inactivo' },
+  { value: 'BAJA_TECNICA', label: 'Baja técnica' },
 ]
 
 const dateFormatter = new Intl.DateTimeFormat('es-CL', {
@@ -53,6 +57,25 @@ function formatTicketDate(value?: string) {
 
   const date = new Date(value)
   return Number.isNaN(date.getTime()) ? value : dateFormatter.format(date)
+}
+
+function matchesEstado(ticket: Ticket, filter: EstadoFilter): boolean {
+  switch (filter) {
+    case 'ALL':
+      return true
+    case 'EN_ESPERA':
+      return ticket.estado === 'ABIERTO'
+    case 'EN_PROCESO':
+      return ticket.estado === 'EN_PROCESO'
+    case 'OPERATIVO':
+      return ticket.estado === 'RESUELTO' && ticket.estado_final === 'ACTIVO'
+    case 'INACTIVO':
+      return ticket.estado === 'RESUELTO' && ticket.estado_final === 'INACTIVO'
+    case 'BAJA_TECNICA':
+      return ticket.estado === 'RESUELTO' && ticket.estado_final === 'BAJA_TECNICA'
+    default:
+      return false
+  }
 }
 
 function InboxTable({ tickets, startingId, bitacoraId, onSelectTicket, onStartTicket, onOpenBitacora }: {
@@ -151,11 +174,15 @@ export function InboxPage({ accessToken, onSessionExpired }: InboxPageProps) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [reloadKey, setReloadKey] = useState(0)
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL')
+  const [estadoFilter, setEstadoFilter] = useState<EstadoFilter>('ALL')
+  const [parentLocation, setParentLocation] = useState('')
+  const [subLocation, setSubLocation] = useState('')
+  const [desde, setDesde] = useState('')
+  const [hasta, setHasta] = useState('')
+  const [locations, setLocations] = useState<Location[]>([])
   const [currentPage, setCurrentPage] = useState(1)
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null)
   const resolutionTriggerRef = useRef<HTMLButtonElement | null>(null)
-  const statusTabRefs = useRef<Array<HTMLButtonElement | null>>([])
   const [startingId, setStartingId] = useState<number | null>(null)
   const [bitacoraId, setBitacoraId] = useState<number | null>(null)
   const [bitacora, setBitacora] = useState<TicketBitacora | null>(null)
@@ -187,9 +214,64 @@ export function InboxPage({ accessToken, onSessionExpired }: InboxPageProps) {
     }
   }, [accessToken, onSessionExpired, reloadKey])
 
-  const visibleTickets = statusFilter === 'ALL'
-    ? tickets
-    : tickets.filter((ticket) => ticket.estado === statusFilter)
+  useEffect(() => {
+    let isMounted = true
+
+    getLocations(accessToken)
+      .then((loadedLocations) => {
+        if (isMounted) setLocations(loadedLocations)
+      })
+      .catch((exception: unknown) => {
+        if (!isMounted) return
+        if (isSessionExpired(exception)) {
+          onSessionExpired()
+          return
+        }
+        setActionError(exception instanceof Error ? exception.message : 'No se pudieron cargar las ubicaciones')
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [accessToken, onSessionExpired])
+
+  const globalLocations = useMemo(
+    () => locations
+      .filter((item) => item.padreId === null)
+      .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' })),
+    [locations],
+  )
+
+  const subLocations = useMemo(() => {
+    const parent = locations.find((item) => item.padreId === null && item.nombre === parentLocation)
+    return parent ? locations.filter((item) => item.padreId === parent.id) : []
+  }, [locations, parentLocation])
+
+  const locationFilterNames = useMemo<Set<string> | null>(() => {
+    if (subLocation) return new Set([subLocation])
+    if (parentLocation) return new Set([parentLocation, ...subLocations.map((item) => item.nombre)])
+    return null
+  }, [subLocation, parentLocation, subLocations])
+
+  const visibleTickets = useMemo(() => {
+    const desdeDate = desde ? new Date(`${desde}T00:00:00`) : null
+    const hastaDate = hasta ? new Date(`${hasta}T23:59:59.999`) : null
+
+    return tickets.filter((ticket) => {
+      if (!matchesEstado(ticket, estadoFilter)) return false
+      if (locationFilterNames && !locationFilterNames.has(ticket.ubicacion)) return false
+
+      if (desdeDate || hastaDate) {
+        const created = ticket.fecha_creacion ? new Date(ticket.fecha_creacion) : null
+        if (!created || Number.isNaN(created.getTime())) return false
+        if (desdeDate && created < desdeDate) return false
+        if (hastaDate && created > hastaDate) return false
+      }
+
+      return true
+    })
+  }, [tickets, estadoFilter, locationFilterNames, desde, hasta])
+
   const totalPages = Math.max(1, Math.ceil(visibleTickets.length / PAGE_SIZE))
   const activePage = Math.min(currentPage, totalPages)
   const pageStart = (activePage - 1) * PAGE_SIZE
@@ -202,23 +284,17 @@ export function InboxPage({ accessToken, onSessionExpired }: InboxPageProps) {
     setReloadKey((key) => key + 1)
   }
 
-  function changeStatusFilter(nextStatus: StatusFilter) {
-    setStatusFilter(nextStatus)
+  function resetPage() {
     setCurrentPage(1)
   }
 
-  function handleStatusTabKeyDown(event: KeyboardEvent<HTMLButtonElement>, index: number) {
-    let nextIndex = index
-
-    if (event.key === 'ArrowRight') nextIndex = (index + 1) % statusOptions.length
-    if (event.key === 'ArrowLeft') nextIndex = (index - 1 + statusOptions.length) % statusOptions.length
-    if (event.key === 'Home') nextIndex = 0
-    if (event.key === 'End') nextIndex = statusOptions.length - 1
-    if (nextIndex === index) return
-
-    event.preventDefault()
-    changeStatusFilter(statusOptions[nextIndex].value)
-    statusTabRefs.current[nextIndex]?.focus()
+  function clearFilters() {
+    setEstadoFilter('ALL')
+    setParentLocation('')
+    setSubLocation('')
+    setDesde('')
+    setHasta('')
+    setCurrentPage(1)
   }
 
   async function startTicket(ticket: Ticket) {
@@ -260,37 +336,41 @@ export function InboxPage({ accessToken, onSessionExpired }: InboxPageProps) {
   return (
     <main className="inventory-shell">
       <section className="inventory-content inbox-content" aria-label="Bandeja de entrada de tickets">
-          <div className="inventory-status-tabs" role="tablist" aria-label="Filtrar tickets por estado">
-            {statusOptions.map((option, index) => {
-              const selected = statusFilter === option.value
-              const tabId = `inbox-tab-${option.value.toLowerCase()}`
-
-              return (
-                <button
-                  className={`inventory-status-tab${selected ? ' active' : ''}`}
-                  id={tabId}
-                  key={option.value}
-                  type="button"
-                  role="tab"
-                  aria-selected={selected}
-                  aria-controls="inbox-results-panel"
-                  tabIndex={selected ? 0 : -1}
-                  ref={(element) => { statusTabRefs.current[index] = element }}
-                  onClick={() => changeStatusFilter(option.value)}
-                  onKeyDown={(event) => handleStatusTabKeyDown(event, index)}
-                >
-                  {option.label}
-                </button>
-              )
-            })}
+          <div className="inbox-filters">
+            <label>
+              <span>Estado</span>
+              <select value={estadoFilter} onChange={(event) => { setEstadoFilter(event.target.value as EstadoFilter); resetPage() }}>
+                {estadoOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+              </select>
+            </label>
+            <label>
+              <span>Ubicación</span>
+              <select value={parentLocation} onChange={(event) => { setParentLocation(event.target.value); setSubLocation(''); resetPage() }}>
+                <option value="">Todas las ubicaciones</option>
+                {globalLocations.map((item) => <option key={item.id} value={item.nombre}>{item.nombre}</option>)}
+              </select>
+            </label>
+            {subLocations.length > 0 && (
+              <label>
+                <span>Curso / Sala</span>
+                <select value={subLocation} onChange={(event) => { setSubLocation(event.target.value); resetPage() }}>
+                  <option value="">Toda la ubicación</option>
+                  {subLocations.map((item) => <option key={item.id} value={item.nombre}>{item.nombre}</option>)}
+                </select>
+              </label>
+            )}
+            <label>
+              <span>Desde</span>
+              <input type="date" value={desde} onChange={(event) => { setDesde(event.target.value); resetPage() }} />
+            </label>
+            <label>
+              <span>Hasta</span>
+              <input type="date" value={hasta} onChange={(event) => { setHasta(event.target.value); resetPage() }} />
+            </label>
+            <button className="text-button" type="button" onClick={clearFilters}>Limpiar filtros</button>
           </div>
 
-          <div
-            className="table-card inbox-table-card"
-            id="inbox-results-panel"
-            role="tabpanel"
-            aria-labelledby={`inbox-tab-${statusFilter.toLowerCase()}`}
-          >
+          <div className="table-card inbox-table-card" id="inbox-results-panel">
             {loading && (
               <div className="skeleton-block" role="status" aria-live="polite" aria-label="Cargando bandeja de tickets">
                 <span className="sr-only">Cargando bandeja de tickets…</span>
@@ -324,7 +404,7 @@ export function InboxPage({ accessToken, onSessionExpired }: InboxPageProps) {
 
             {!loading && !error && tickets.length > 0 && visibleTickets.length === 0 && (
               <div className="empty-state-block" role="status">
-                <p>No hay tickets con este estado.</p>
+                <p>No hay tickets que coincidan con los filtros.</p>
               </div>
             )}
 

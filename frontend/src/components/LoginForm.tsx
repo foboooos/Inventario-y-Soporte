@@ -36,7 +36,7 @@ export function LoginForm({ onAuthenticated }: LoginFormProps) {
       <section className="login-card">
         <form onSubmit={handleSubmit}>
           <label htmlFor="usuario">Usuario</label>
-          <input id="usuario" type="text" value={usuario} onChange={(event) => setUsuario(event.target.value)} required autoComplete="username" pattern="[a-z0-9._-]+\.[a-z0-9._-]+" title="Usa el formato nombre.apellido en minúsculas" />
+          <input id="usuario" type="text" value={usuario} onChange={(event) => setUsuario(event.target.value)} required autoComplete="username" pattern="[a-z0-9._\-]+\.[a-z0-9._\-]+" title="Usa el formato nombre.apellido en minúsculas" />
           <label htmlFor="password">Contraseña</label>
           <div className="password-field">
             <input id="password" type={showPassword ? 'text' : 'password'} value={password} onChange={(event) => setPassword(event.target.value)} required minLength={8} autoComplete="current-password" />
