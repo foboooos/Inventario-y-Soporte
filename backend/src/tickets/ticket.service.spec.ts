@@ -1,10 +1,12 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
-import type { Repository } from 'typeorm';
+import { FindOperator, type Repository } from 'typeorm';
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { DeviceStatus } from '../inventory/device-status.enum.js';
 import { Device } from '../inventory/device.entity.js';
+import { Ubicacion } from '../locations/ubicacion.entity.js';
 import { User } from '../users/user.entity.js';
 import { CreateTicketDto } from './dto/create-ticket.dto.js';
+import { EstadoFiltro } from './dto/query-tickets.dto.js';
 import { ResolveTicketDto } from './dto/resolve-ticket.dto.js';
 import { Ticket } from './ticket.entity.js';
 import { TicketService } from './ticket.service.js';
@@ -16,11 +18,13 @@ function createService(
   tickets: Partial<Repository<Ticket>>,
   devices: Partial<Repository<Device>> = {},
   users: Partial<Repository<User>> = {},
+  locations: Partial<Repository<Ubicacion>> = {},
 ) {
   return new TicketService(
     tickets as Repository<Ticket>,
     devices as Repository<Device>,
     users as Repository<User>,
+    locations as Repository<Ubicacion>,
   );
 }
 
@@ -42,6 +46,7 @@ describe('TicketService', () => {
     await service.findInbox();
 
     expect(find).toHaveBeenCalledWith({
+      where: {},
       order: { fecha_creacion: 'DESC', id_ticket: 'DESC' },
     });
   });
@@ -62,6 +67,85 @@ describe('TicketService', () => {
     expect(findBy).toHaveBeenCalledOnce();
     expect(result[0]).toMatchObject({ dispositivo_tipo: 'PC', codigo_inventario: 'PC-LAB-01' });
     expect(result[1]).toMatchObject({ dispositivo_tipo: null, codigo_inventario: null });
+  });
+
+  it('translates the operational state filter into resolved tickets with an active device', async () => {
+    const find = vi.fn().mockResolvedValue([]);
+    const service = createService({ find });
+
+    await service.findInbox({ estado: EstadoFiltro.OPERATIVO });
+
+    expect(find).toHaveBeenCalledWith(expect.objectContaining({
+      where: { estado: TicketStatus.RESUELTO, estado_final: DeviceStatus.ACTIVO },
+    }));
+  });
+
+  it('translates the waiting state filter into open tickets', async () => {
+    const find = vi.fn().mockResolvedValue([]);
+    const service = createService({ find });
+
+    await service.findInbox({ estado: EstadoFiltro.EN_ESPERA });
+
+    expect(find).toHaveBeenCalledWith(expect.objectContaining({
+      where: { estado: TicketStatus.ABIERTO },
+    }));
+  });
+
+  it('filters by a parent location including its sub-locations', async () => {
+    const find = vi.fn().mockResolvedValue([]);
+    const locations = {
+      findOneBy: vi.fn().mockResolvedValue({ id_ubicacion: 3, nombre: 'Laboratorio 1', padre_id: null } as Ubicacion),
+      find: vi.fn().mockResolvedValue([
+        { id_ubicacion: 10, nombre: 'Laboratorio 1 - A', padre_id: 3 } as Ubicacion,
+        { id_ubicacion: 11, nombre: 'Laboratorio 1 - B', padre_id: 3 } as Ubicacion,
+      ]),
+    };
+    const service = createService({ find }, {}, {}, locations);
+
+    await service.findInbox({ ubicacion: 'Laboratorio 1' });
+
+    const arg = find.mock.calls[0][0];
+    expect(arg.where.ubicacion).toBeInstanceOf(FindOperator);
+    expect(arg.where.ubicacion.value).toEqual(['Laboratorio 1', 'Laboratorio 1 - A', 'Laboratorio 1 - B']);
+  });
+
+  it('falls back to an exact location match when the location is not registered', async () => {
+    const find = vi.fn().mockResolvedValue([]);
+    const locations = { findOneBy: vi.fn().mockResolvedValue(null) };
+    const service = createService({ find }, {}, {}, locations);
+
+    await service.findInbox({ ubicacion: 'Pasillo segundo piso' });
+
+    expect(find).toHaveBeenCalledWith(expect.objectContaining({
+      where: { ubicacion: 'Pasillo segundo piso' },
+    }));
+  });
+
+  it('filters tickets created within a date range', async () => {
+    const find = vi.fn().mockResolvedValue([]);
+    const service = createService({ find });
+
+    await service.findInbox({ desde: '2026-01-01', hasta: '2026-01-31' });
+
+    const arg = find.mock.calls[0][0];
+    expect(arg.where.fecha_creacion).toBeInstanceOf(FindOperator);
+    expect(arg.where.fecha_creacion.value).toEqual([
+      new Date('2026-01-01T00:00:00'),
+      new Date('2026-01-31T23:59:59.999'),
+    ]);
+  });
+
+  it('combines state, location and date filters in a single query', async () => {
+    const find = vi.fn().mockResolvedValue([]);
+    const locations = { findOneBy: vi.fn().mockResolvedValue(null) };
+    const service = createService({ find }, {}, {}, locations);
+
+    await service.findInbox({ estado: EstadoFiltro.EN_ESPERA, ubicacion: 'Sala 5', desde: '2026-02-01' });
+
+    const arg = find.mock.calls[0][0];
+    expect(arg.where.estado).toBe(TicketStatus.ABIERTO);
+    expect(arg.where.ubicacion).toBe('Sala 5');
+    expect(arg.where.fecha_creacion).toBeInstanceOf(FindOperator);
   });
 
   it('filters ticket history by requester for a teacher', async () => {

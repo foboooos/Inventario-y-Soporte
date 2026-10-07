@@ -59,25 +59,6 @@ function formatTicketDate(value?: string) {
   return Number.isNaN(date.getTime()) ? value : dateFormatter.format(date)
 }
 
-function matchesEstado(ticket: Ticket, filter: EstadoFilter): boolean {
-  switch (filter) {
-    case 'ALL':
-      return true
-    case 'EN_ESPERA':
-      return ticket.estado === 'ABIERTO'
-    case 'EN_PROCESO':
-      return ticket.estado === 'EN_PROCESO'
-    case 'OPERATIVO':
-      return ticket.estado === 'RESUELTO' && ticket.estado_final === 'ACTIVO'
-    case 'INACTIVO':
-      return ticket.estado === 'RESUELTO' && ticket.estado_final === 'INACTIVO'
-    case 'BAJA_TECNICA':
-      return ticket.estado === 'RESUELTO' && ticket.estado_final === 'BAJA_TECNICA'
-    default:
-      return false
-  }
-}
-
 function InboxTable({ tickets, startingId, bitacoraId, onSelectTicket, onStartTicket, onOpenBitacora }: {
   tickets: Ticket[]
   startingId: number | null
@@ -191,10 +172,16 @@ export function InboxPage({ accessToken, onSessionExpired }: InboxPageProps) {
   useEffect(() => {
     let isMounted = true
 
-    getTicketInbox(accessToken)
+    getTicketInbox(accessToken, {
+      ...(estadoFilter !== 'ALL' ? { estado: estadoFilter } : {}),
+      ...((subLocation || parentLocation) ? { ubicacion: subLocation || parentLocation } : {}),
+      ...(desde ? { desde } : {}),
+      ...(hasta ? { hasta } : {}),
+    })
       .then((loadedTickets) => {
         if (!isMounted) return
         setTickets(loadedTickets)
+        setError('')
         setCurrentPage(1)
       })
       .catch((exception: unknown) => {
@@ -212,7 +199,7 @@ export function InboxPage({ accessToken, onSessionExpired }: InboxPageProps) {
     return () => {
       isMounted = false
     }
-  }, [accessToken, onSessionExpired, reloadKey])
+  }, [accessToken, onSessionExpired, reloadKey, estadoFilter, parentLocation, subLocation, desde, hasta])
 
   useEffect(() => {
     let isMounted = true
@@ -247,35 +234,12 @@ export function InboxPage({ accessToken, onSessionExpired }: InboxPageProps) {
     return parent ? locations.filter((item) => item.padreId === parent.id) : []
   }, [locations, parentLocation])
 
-  const locationFilterNames = useMemo<Set<string> | null>(() => {
-    if (subLocation) return new Set([subLocation])
-    if (parentLocation) return new Set([parentLocation, ...subLocations.map((item) => item.nombre)])
-    return null
-  }, [subLocation, parentLocation, subLocations])
+  const hasActiveFilters = estadoFilter !== 'ALL' || Boolean(subLocation || parentLocation) || Boolean(desde) || Boolean(hasta)
 
-  const visibleTickets = useMemo(() => {
-    const desdeDate = desde ? new Date(`${desde}T00:00:00`) : null
-    const hastaDate = hasta ? new Date(`${hasta}T23:59:59.999`) : null
-
-    return tickets.filter((ticket) => {
-      if (!matchesEstado(ticket, estadoFilter)) return false
-      if (locationFilterNames && !locationFilterNames.has(ticket.ubicacion)) return false
-
-      if (desdeDate || hastaDate) {
-        const created = ticket.fecha_creacion ? new Date(ticket.fecha_creacion) : null
-        if (!created || Number.isNaN(created.getTime())) return false
-        if (desdeDate && created < desdeDate) return false
-        if (hastaDate && created > hastaDate) return false
-      }
-
-      return true
-    })
-  }, [tickets, estadoFilter, locationFilterNames, desde, hasta])
-
-  const totalPages = Math.max(1, Math.ceil(visibleTickets.length / PAGE_SIZE))
+  const totalPages = Math.max(1, Math.ceil(tickets.length / PAGE_SIZE))
   const activePage = Math.min(currentPage, totalPages)
   const pageStart = (activePage - 1) * PAGE_SIZE
-  const pagedTickets = visibleTickets.slice(pageStart, pageStart + PAGE_SIZE)
+  const pagedTickets = tickets.slice(pageStart, pageStart + PAGE_SIZE)
   const pageNumbers = getPageNumbers(activePage, totalPages)
 
   function retryLoad() {
@@ -398,17 +362,11 @@ export function InboxPage({ accessToken, onSessionExpired }: InboxPageProps) {
 
             {!loading && !error && tickets.length === 0 && (
               <div className="empty-state-block" role="status">
-                <p>No hay tickets registrados.</p>
+                <p>{hasActiveFilters ? 'No hay tickets que coincidan con los filtros.' : 'No hay tickets registrados.'}</p>
               </div>
             )}
 
-            {!loading && !error && tickets.length > 0 && visibleTickets.length === 0 && (
-              <div className="empty-state-block" role="status">
-                <p>No hay tickets que coincidan con los filtros.</p>
-              </div>
-            )}
-
-            {!loading && !error && visibleTickets.length > 0 && (
+            {!loading && !error && tickets.length > 0 && (
               <>
                 <InboxTable
                   tickets={pagedTickets}
@@ -422,7 +380,7 @@ export function InboxPage({ accessToken, onSessionExpired }: InboxPageProps) {
                   }}
                 />
                 <footer className="table-footer">
-                  <span>Mostrando {pageStart + 1}–{Math.min(pageStart + PAGE_SIZE, visibleTickets.length)} de {visibleTickets.length} tickets</span>
+                  <span>Mostrando {pageStart + 1}–{Math.min(pageStart + PAGE_SIZE, tickets.length)} de {tickets.length} tickets</span>
                   <nav className="pagination" aria-label="Paginación de la bandeja de entrada">
                     <button className="pagination-button" type="button" disabled={activePage === 1} onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}>Anterior</button>
                     {pageNumbers.map((page, index) => page === 'ellipsis'

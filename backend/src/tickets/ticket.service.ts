@@ -1,10 +1,13 @@
 import { ConflictException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { Between, FindOptionsWhere, In, Repository } from 'typeorm';
 
+import { DeviceStatus } from '../inventory/device-status.enum.js';
 import { Device } from '../inventory/device.entity.js';
+import { Ubicacion } from '../locations/ubicacion.entity.js';
 import { User } from '../users/user.entity.js';
 import { CreateTicketDto } from './dto/create-ticket.dto.js';
+import { EstadoFiltro, QueryTicketsDto } from './dto/query-tickets.dto.js';
 import { ResolveTicketDto } from './dto/resolve-ticket.dto.js';
 import { formatTicketCode } from './ticket-code.js';
 import { Ticket } from './ticket.entity.js';
@@ -18,10 +21,47 @@ export class TicketService {
     @InjectRepository(Ticket) private readonly tickets: Repository<Ticket>,
     @InjectRepository(Device) private readonly devices: Repository<Device>,
     @InjectRepository(User) private readonly users: Repository<User>,
+    @InjectRepository(Ubicacion) private readonly locations: Repository<Ubicacion>,
   ) {}
 
-  async findInbox() {
+  async findInbox(filters: QueryTicketsDto = {}) {
+    // El filtro de estado es semántico: la UI envía una de las 5 vistas y aquí se
+    // traduce a las columnas reales del ticket.
+    //   EN_ESPERA     -> estado = ABIERTO
+    //   EN_PROCESO    -> estado = EN_PROCESO
+    //   OPERATIVO     -> estado = RESUELTO  AND estado_final = ACTIVO
+    //   INACTIVO      -> estado = RESUELTO  AND estado_final = INACTIVO
+    //   BAJA_TECNICA  -> estado = RESUELTO  AND estado_final = BAJA_TECNICA
+    const where: FindOptionsWhere<Ticket> = {};
+
+    if (filters.estado === EstadoFiltro.EN_ESPERA) {
+      where.estado = TicketStatus.ABIERTO;
+    } else if (filters.estado === EstadoFiltro.EN_PROCESO) {
+      where.estado = TicketStatus.EN_PROCESO;
+    } else if (filters.estado === EstadoFiltro.OPERATIVO) {
+      where.estado = TicketStatus.RESUELTO;
+      where.estado_final = DeviceStatus.ACTIVO;
+    } else if (filters.estado === EstadoFiltro.INACTIVO) {
+      where.estado = TicketStatus.RESUELTO;
+      where.estado_final = DeviceStatus.INACTIVO;
+    } else if (filters.estado === EstadoFiltro.BAJA_TECNICA) {
+      where.estado = TicketStatus.RESUELTO;
+      where.estado_final = DeviceStatus.BAJA_TECNICA;
+    }
+
+    if (filters.ubicacion) {
+      const names = await this.resolveLocationNames(filters.ubicacion);
+      where.ubicacion = names.length > 1 ? In(names) : names[0];
+    }
+
+    if (filters.desde || filters.hasta) {
+      const start = filters.desde ? new Date(`${filters.desde}T00:00:00`) : new Date('1970-01-01T00:00:00');
+      const end = filters.hasta ? new Date(`${filters.hasta}T23:59:59.999`) : new Date('9999-12-31T23:59:59.999');
+      where.fecha_creacion = Between(start, end);
+    }
+
     const tickets = await this.tickets.find({
+      where,
       order: { fecha_creacion: 'DESC', id_ticket: 'DESC' },
     });
 
@@ -41,6 +81,18 @@ export class TicketService {
         codigo_inventario: device?.codigo_inventario ?? null,
       };
     });
+  }
+
+  private async resolveLocationNames(nombre: string): Promise<string[]> {
+    const location = await this.locations.findOneBy({ nombre });
+
+    if (!location) {
+      return [nombre];
+    }
+
+    const children = await this.locations.find({ where: { padre_id: location.id_ubicacion } });
+
+    return [location.nombre, ...children.map((child) => child.nombre)];
   }
 
   async findAll(requesterRut: string) {

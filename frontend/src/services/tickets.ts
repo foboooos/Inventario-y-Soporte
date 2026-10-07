@@ -11,8 +11,22 @@ export async function getTickets(accessToken: string): Promise<Ticket[]> {
   return readApiJson<Ticket[]>(response, 'No se pudo cargar el historial de tickets')
 }
 
-export async function getTicketInbox(accessToken: string): Promise<Ticket[]> {
-  const response = await apiFetch('/tickets/inbox', accessToken)
+export type TicketInboxFilters = {
+  estado?: string
+  ubicacion?: string
+  desde?: string
+  hasta?: string
+}
+
+export async function getTicketInbox(accessToken: string, filters: TicketInboxFilters = {}): Promise<Ticket[]> {
+  const params = new URLSearchParams()
+  if (filters.estado) params.set('estado', filters.estado)
+  if (filters.ubicacion) params.set('ubicacion', filters.ubicacion)
+  if (filters.desde) params.set('desde', filters.desde)
+  if (filters.hasta) params.set('hasta', filters.hasta)
+
+  const query = params.toString()
+  const response = await apiFetch(`/tickets/inbox${query ? `?${query}` : ''}`, accessToken)
   return readApiJson<Ticket[]>(response, 'No se pudo cargar la bandeja de tickets')
 }
 

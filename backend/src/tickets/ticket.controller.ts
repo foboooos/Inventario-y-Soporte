@@ -1,10 +1,11 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { Roles } from '../auth/guards/roles.decorator.js';
 import { RolesGuard } from '../auth/guards/roles.guard.js';
 import { UserRole } from '../users/user-role.enum.js';
 import { CreateTicketDto } from './dto/create-ticket.dto.js';
+import { QueryTicketsDto } from './dto/query-tickets.dto.js';
 import { ResolveTicketDto } from './dto/resolve-ticket.dto.js';
 import { UpdateTicketStatusDto } from './dto/update-ticket-status.dto.js';
 import { TicketService } from './ticket.service.js';
@@ -18,8 +19,8 @@ export class TicketController {
 
   @Get('inbox')
   @Roles(UserRole.ADMIN, UserRole.TECNICO)
-  findInbox() {
-    return this.ticketService.findInbox();
+  findInbox(@Query() query: QueryTicketsDto) {
+    return this.ticketService.findInbox(query);
   }
 
   @Get(':id_ticket/bitacora')
