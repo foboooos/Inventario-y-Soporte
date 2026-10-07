@@ -56,9 +56,57 @@ export async function updateInventoryDevice(accessToken: string, id: number, inp
   return mapApiDevice(device)
 }
 
-export async function getInventory(accessToken: string): Promise<Device[]> {
-  const response = await apiFetch('/inventory', accessToken)
-  const devices = await readApiJson<InventoryApiDevice[]>(response, 'No se pudo cargar el inventario')
+export type InventoryQuery = {
+  search?: string
+  estado?: DeviceStatus
+  page?: number
+  limit?: number
+  sortBy?: 'code' | 'location' | 'status'
+  sortDir?: 'asc' | 'desc'
+}
 
-  return devices.map(mapApiDevice)
+export type InventorySummary = {
+  total: number
+  activo: number
+  inactivo: number
+  baja_tecnica: number
+}
+
+export type InventoryResult = {
+  devices: Device[]
+  total: number
+  page: number
+  totalPages: number
+  summary: InventorySummary
+}
+
+type InventoryResponse = {
+  data: InventoryApiDevice[]
+  total: number
+  page: number
+  limit: number
+  total_pages: number
+  summary: InventorySummary
+}
+
+export async function getInventory(accessToken: string, query: InventoryQuery = {}): Promise<InventoryResult> {
+  const params = new URLSearchParams()
+  if (query.search) params.set('search', query.search)
+  if (query.estado) params.set('estado', query.estado)
+  if (query.page) params.set('page', String(query.page))
+  if (query.limit) params.set('limit', String(query.limit))
+  if (query.sortBy) params.set('sortBy', query.sortBy)
+  if (query.sortDir) params.set('sortDir', query.sortDir)
+
+  const qs = params.toString()
+  const response = await apiFetch(`/inventory${qs ? `?${qs}` : ''}`, accessToken)
+  const result = await readApiJson<InventoryResponse>(response, 'No se pudo cargar el inventario')
+
+  return {
+    devices: result.data.map(mapApiDevice),
+    total: result.total,
+    page: result.page,
+    totalPages: result.total_pages,
+    summary: result.summary,
+  }
 }

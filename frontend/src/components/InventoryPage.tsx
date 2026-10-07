@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
-import { getInventory } from '../services/inventory'
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { getInventory, type InventorySummary } from '../services/inventory'
 import { isSessionExpired } from '../services/http'
 import type { AuthUser } from '../types/auth'
 import type { Device, DeviceStatus, DeviceType } from '../types/inventory'
@@ -36,12 +36,6 @@ const statusLabels: Record<DeviceStatus, string> = {
   ACTIVO: 'Activo',
   INACTIVO: 'Inactivo',
   BAJA_TECNICA: 'Baja técnica',
-}
-
-const statusOrder: Record<DeviceStatus, number> = {
-  ACTIVO: 0,
-  INACTIVO: 1,
-  BAJA_TECNICA: 2,
 }
 
 const typeLabels: Record<DeviceType, string> = {
@@ -123,6 +117,10 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
   const [initial] = useState<StoredFilters>(() => loadStoredFilters())
 
   const [devices, setDevices] = useState<Device[]>([])
+  const [searchInput, setSearchInput] = useState('')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [total, setTotal] = useState(0)
+  const [summary, setSummary] = useState<InventorySummary>({ total: 0, activo: 0, inactivo: 0, baja_tecnica: 0 })
   const [statusFilter, setStatusFilter] = useState<StatusFilter>(
     pickFilter(initial.status, ['ALL', 'ACTIVO', 'INACTIVO', 'BAJA_TECNICA'] as const, 'ALL'),
   )
@@ -137,6 +135,7 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
   const [modal, setModal] = useState<Modal>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(INITIAL_PAGE_SIZE)
+  const pageSizeRef = useRef(INITIAL_PAGE_SIZE)
   const hasDataRef = useRef(false)
   const actionsRef = useRef<HTMLDivElement | null>(null)
   const summaryRef = useRef<HTMLElement | null>(null)
@@ -147,11 +146,20 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
   useEffect(() => {
     let active = true
 
-    getInventory(accessToken)
-      .then((loadedDevices) => {
+    getInventory(accessToken, {
+      ...(searchTerm ? { search: searchTerm } : {}),
+      ...(statusFilter !== 'ALL' ? { estado: statusFilter } : {}),
+      page: currentPage,
+      limit: pageSize,
+      sortBy: sortKey,
+      sortDir,
+    })
+      .then((result) => {
         if (!active) return
         hasDataRef.current = true
-        setDevices(loadedDevices)
+        setDevices(result.devices)
+        setTotal(result.total)
+        setSummary(result.summary)
         setError('')
         setRefreshError('')
       })
@@ -177,7 +185,16 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
     return () => {
       active = false
     }
-  }, [accessToken, onSessionExpired, reloadKey])
+  }, [accessToken, onSessionExpired, reloadKey, searchTerm, statusFilter, sortKey, sortDir, currentPage, pageSize])
+
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      setSearchTerm(searchInput.trim())
+      setCurrentPage(1)
+    }, 350)
+
+    return () => clearTimeout(handle)
+  }, [searchInput])
 
 
   useEffect(() => {
@@ -201,7 +218,13 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
         CHROME_GAPS +
         CONTENT_PADDING
       const rows = Math.floor((window.innerHeight - chrome - TABLE_CHROME - BOTTOM_SAFETY) / ROW_HEIGHT)
-      setPageSize(Math.min(MAX_PAGE_SIZE, Math.max(MIN_PAGE_SIZE, rows)))
+      const next = Math.min(MAX_PAGE_SIZE, Math.max(MIN_PAGE_SIZE, rows))
+
+      if (next !== pageSizeRef.current) {
+        pageSizeRef.current = next
+        setPageSize(next)
+        setCurrentPage(1)
+      }
     }
 
     computePageSize()
@@ -222,35 +245,24 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
       setSortKey(key)
       setSortDir('asc')
     }
+    setCurrentPage(1)
   }
 
-  const visibleDevices = useMemo(() => {
-    const filtered = devices.filter((device) => statusFilter === 'ALL' || device.status === statusFilter)
-
-    const dir = sortDir === 'asc' ? 1 : -1
-    return [...filtered].sort((a, b) => {
-      if (sortKey === 'location') return a.location.localeCompare(b.location, 'es') * dir
-      if (sortKey === 'status') return (statusOrder[a.status] - statusOrder[b.status]) * dir
-      return a.code.localeCompare(b.code, 'es', { numeric: true }) * dir
-    })
-  }, [devices, statusFilter, sortKey, sortDir])
-
-  const deviceSummary = useMemo(() => devices.reduce((summary, device) => {
-    summary.total += 1
-    if (device.status === 'ACTIVO') summary.active += 1
-    if (device.status === 'INACTIVO') summary.inactive += 1
-    if (device.status === 'BAJA_TECNICA') summary.technicalRetirement += 1
-    return summary
-  }, { total: 0, active: 0, inactive: 0, technicalRetirement: 0 }), [devices])
-
-  const totalPages = Math.max(1, Math.ceil(visibleDevices.length / pageSize))
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
   const activePage = Math.min(currentPage, totalPages)
   const pageStart = (activePage - 1) * pageSize
-  const pagedDevices = visibleDevices.slice(pageStart, pageStart + pageSize)
   const pageNumbers = getPageNumbers(activePage, totalPages)
+  const hasQuery = Boolean(searchTerm) || statusFilter !== 'ALL'
 
   function changeStatusFilter(nextStatus: StatusFilter) {
     setStatusFilter(nextStatus)
+    setCurrentPage(1)
+  }
+
+  function clearQuery() {
+    setSearchInput('')
+    setSearchTerm('')
+    setStatusFilter('ALL')
     setCurrentPage(1)
   }
 
@@ -299,19 +311,19 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
   <section className="inventory-summary" aria-label="Resumen del inventario" ref={summaryRef}>
     <article className="inventory-summary-card" data-status="total">
       <span className="summary-label">Total</span>
-      <strong className="summary-value">{deviceSummary.total}</strong>
+      <strong className="summary-value">{summary.total}</strong>
     </article>
     <article className="inventory-summary-card" data-status="activo">
       <span className="summary-label">Activos</span>
-      <strong className="summary-value">{deviceSummary.active}</strong>
+      <strong className="summary-value">{summary.activo}</strong>
     </article>
     <article className="inventory-summary-card" data-status="inactivo">
       <span className="summary-label">Inactivos</span>
-      <strong className="summary-value">{deviceSummary.inactive}</strong>
+      <strong className="summary-value">{summary.inactivo}</strong>
     </article>
     <article className="inventory-summary-card" data-status="baja-tecnica">
       <span className="summary-label">Baja técnica</span>
-      <strong className="summary-value">{deviceSummary.technicalRetirement}</strong>
+      <strong className="summary-value">{summary.baja_tecnica}</strong>
     </article>
   </section>
   <div className="inventory-status-tabs" role="tablist" aria-label="Filtrar por estado" ref={tabsRef}>
@@ -344,9 +356,9 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
         device={modal.device}
         onCancel={() => setModal(null)}
         onSessionExpired={onSessionExpired}
-        onUpdated={(updatedDevice) => {
-          setDevices((current) => current.map((device) => device.id === updatedDevice.id ? updatedDevice : device))
+        onUpdated={() => {
           setModal(null)
+          setReloadKey((key) => key + 1)
         }}
       />
     )}
@@ -355,9 +367,9 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
         accessToken={accessToken}
         onCancel={() => setModal(null)}
         onSessionExpired={onSessionExpired}
-        onCreated={(createdDevice) => {
-          setDevices((current) => [...current, createdDevice].sort((a, b) => a.id - b.id))
+        onCreated={() => {
           setModal(null)
+          setReloadKey((key) => key + 1)
         }}
       />
     )}
@@ -367,6 +379,18 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
     role="tabpanel"
     aria-labelledby={`inventory-tab-${statusFilter.toLowerCase()}`}
   >
+    <div className="table-toolbar">
+      <label className="table-search">
+        <span className="sr-only">Buscar dispositivos</span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+        <input
+          type="search"
+          value={searchInput}
+          onChange={(event) => setSearchInput(event.target.value)}
+          placeholder="Buscar por código, marca, modelo o ubicación"
+        />
+      </label>
+    </div>
     {loading && (
       <div className="skeleton-block" role="status" aria-label="Cargando inventario">
         <span className="sr-only">Cargando inventario…</span>
@@ -391,18 +415,20 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
             <button className="text-button" type="button" onClick={retryLoad}>Reintentar</button>
           </div>
         )}
-        {devices.length === 0 ? (
-          <div className="empty-state-block">
-            <p>Aún no hay dispositivos registrados.</p>
-            {canManageInventory && (
-              <button className="primary-action" type="button" onClick={() => setModal({ kind: 'create' })}>Registrar el primero</button>
-            )}
-          </div>
-        ) : visibleDevices.length === 0 ? (
-          <div className="empty-state-block">
-            <p role="status">No encontramos dispositivos con esos filtros.</p>
-            <button className="secondary-button" type="button" onClick={() => changeStatusFilter('ALL')}>Ver todos</button>
-          </div>
+        {total === 0 ? (
+          hasQuery ? (
+            <div className="empty-state-block">
+              <p role="status">No encontramos dispositivos con esos filtros.</p>
+              <button className="secondary-button" type="button" onClick={clearQuery}>Limpiar filtros</button>
+            </div>
+          ) : (
+            <div className="empty-state-block">
+              <p>Aún no hay dispositivos registrados.</p>
+              {canManageInventory && (
+                <button className="primary-action" type="button" onClick={() => setModal({ kind: 'create' })}>Registrar el primero</button>
+              )}
+            </div>
+          )
         ) : (
           <div className="table-scroll">
             <table>
@@ -423,7 +449,7 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
                 </tr>
               </thead>
               <tbody>
-                {pagedDevices.map((device) => (
+                {devices.map((device) => (
                   <tr key={device.id}>
                     <td className="device-code">
                       {canManageInventory ? (
@@ -444,9 +470,9 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
             </table>
           </div>
         )}
-        {visibleDevices.length > 0 && (
+        {total > 0 && (
           <footer className="table-footer">
-            <span>Mostrando {pageStart + 1}–{Math.min(pageStart + pageSize, visibleDevices.length)} de {visibleDevices.length} dispositivos</span>
+            <span>Mostrando {pageStart + 1}–{Math.min(pageStart + pageSize, total)} de {total} dispositivos</span>
             <nav className="pagination" aria-label="Paginación del inventario">
               <button className="pagination-button" type="button" disabled={activePage === 1} onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}>Anterior</button>
               {pageNumbers.map((page, index) => page === 'ellipsis'

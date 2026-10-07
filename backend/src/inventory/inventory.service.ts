@@ -1,8 +1,10 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { FindOptionsOrder, FindOptionsWhere, ILike, Repository } from 'typeorm';
+import { DeviceStatus } from './device-status.enum.js';
 import { Device } from './device.entity.js';
 import { CreateDeviceDto } from './dto/create-device.dto.js';
+import { QueryInventoryDto } from './dto/query-inventory.dto.js';
 import { UpdateDeviceDto } from './dto/update-device.dto.js';
 
 @Injectable()
@@ -11,8 +13,75 @@ export class InventoryService {
     @InjectRepository(Device) private readonly devices: Repository<Device>,
   ) {}
 
-  findAll() {
-    return this.devices.find({ order: { id_dispositivo: 'ASC' } });
+  async findAll(query: QueryInventoryDto) {
+    const term = query.search?.trim();
+
+    const conditions: FindOptionsWhere<Device>[] = [];
+
+    if (term) {
+      const pattern = `%${term}%`;
+      const base = query.estado ? { estado: query.estado } : {};
+
+      conditions.push({ ...base, codigo_inventario: ILike(pattern) });
+      conditions.push({ ...base, marca: ILike(pattern) });
+      conditions.push({ ...base, modelo: ILike(pattern) });
+      conditions.push({ ...base, ubicacion: ILike(pattern) });
+    }
+
+    const where: FindOptionsWhere<Device> | FindOptionsWhere<Device>[] = conditions.length > 0
+      ? conditions
+      : (query.estado ? { estado: query.estado } : {});
+
+    const dir = query.sortDir === 'desc' ? 'DESC' : 'ASC';
+    const order: FindOptionsOrder<Device> =
+      query.sortBy === 'location' ? { ubicacion: dir, id_dispositivo: 'ASC' }
+        : query.sortBy === 'status' ? { estado: dir, id_dispositivo: 'ASC' }
+          : { codigo_inventario: dir, id_dispositivo: 'ASC' };
+
+    const [data, total] = await this.devices.findAndCount({
+      where,
+      order,
+      skip: (query.page - 1) * query.limit,
+      take: query.limit,
+    });
+
+    return {
+      data,
+      total,
+      page: query.page,
+      limit: query.limit,
+      total_pages: Math.max(1, Math.ceil(total / query.limit)),
+      summary: await this.buildSummary(term),
+    };
+  }
+
+  private async buildSummary(term?: string) {
+    const summaryQuery = this.devices
+      .createQueryBuilder('device')
+      .select('device.estado', 'estado')
+      .addSelect('COUNT(*)', 'count')
+      .groupBy('device.estado');
+
+    if (term) {
+      summaryQuery.where(
+        '(device.codigo_inventario ILIKE :pattern OR device.marca ILIKE :pattern OR device.modelo ILIKE :pattern OR device.ubicacion ILIKE :pattern)',
+        { pattern: `%${term}%` },
+      );
+    }
+
+    const rows = await summaryQuery.getRawMany<{ estado: DeviceStatus; count: string }>();
+    const summary = { total: 0, activo: 0, inactivo: 0, baja_tecnica: 0 };
+
+    for (const row of rows) {
+      const count = Number(row.count);
+      summary.total += count;
+
+      if (row.estado === DeviceStatus.ACTIVO) summary.activo = count;
+      else if (row.estado === DeviceStatus.INACTIVO) summary.inactivo = count;
+      else if (row.estado === DeviceStatus.BAJA_TECNICA) summary.baja_tecnica = count;
+    }
+
+    return summary;
   }
 
   findOptions() {

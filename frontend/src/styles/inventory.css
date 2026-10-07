@@ -689,3 +689,37 @@ tbody tr:hover {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+.table-toolbar {
+  flex: 0 0 auto;
+  padding: 10px 16px;
+  border-bottom: 1px solid #e4e4df;
+}
+
+.table-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.table-search svg {
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: var(--minimal-muted);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.table-search input {
+  border-color: #e7e7e2;
+  font-size: 13px;
+}
+
+.table-search input:focus-visible {
+  border-color: var(--minimal-secondary);
+  box-shadow: 0 0 0 3px rgba(49, 44, 133, 0.14);
+}
