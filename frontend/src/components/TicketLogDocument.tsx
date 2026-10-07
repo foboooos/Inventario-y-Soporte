@@ -62,59 +62,77 @@ export function TicketLogDocument({ bitacora, onClose }: TicketLogDocumentProps)
         </div>
 
         <article className="ticket-log-document">
-          <h1 className="ticket-log-title">REGISTRO DE ATENCIÓN DE INCIDENTES</h1>
+          <header className="ticket-log-header">
+            <h1 className="ticket-log-title">REGISTRO DE ATENCIÓN DE INCIDENTES</h1>
+            <dl className="ticket-log-meta">
+              <div>
+                <dt>Ticket</dt>
+                <dd>{bitacora.codigo_ticket}</dd>
+              </div>
+              <div>
+                <dt>Fecha de cierre</dt>
+                <dd>{formatDate(bitacora.fecha_resolucion)}</dd>
+              </div>
+            </dl>
+          </header>
 
-          <dl className="ticket-log-fields">
-            <div>
-              <dt>Código de Ticket</dt>
-              <dd>{bitacora.codigo_ticket}</dd>
-            </div>
-            <div>
-              <dt>Fecha</dt>
-              <dd>{formatDate(bitacora.fecha_resolucion)}</dd>
-            </div>
-            <div>
-              <dt>Técnico Responsable</dt>
-              <dd>{bitacora.tecnico_nombre ?? 'No disponible'}</dd>
-            </div>
-            <div>
-              <dt>Ubicación</dt>
-              <dd>{bitacora.ubicacion}</dd>
-            </div>
-            <div>
-              <dt>Dispositivo</dt>
-              <dd className="ticket-log-checks">
-                {deviceOptions.map((option) => (
-                  <CheckOption key={option.value} checked={bitacora.dispositivo_tipo === option.value} label={option.label} />
-                ))}
-              </dd>
-            </div>
-            <div>
-              <dt>Código de Inventario</dt>
-              <dd>{bitacora.codigo_inventario ?? '—'}</dd>
-            </div>
-          </dl>
+          <div className="ticket-log-cross">
+            <section className="ticket-log-column" aria-labelledby="ticket-log-initial">
+              <h2 id="ticket-log-initial">Ticket inicial</h2>
+              <dl className="ticket-log-fields">
+                <div>
+                  <dt>Ubicación</dt>
+                  <dd>{bitacora.ubicacion}</dd>
+                </div>
+                <div>
+                  <dt>Dispositivo</dt>
+                  <dd className="ticket-log-checks">
+                    {deviceOptions.map((option) => (
+                      <CheckOption key={option.value} checked={bitacora.dispositivo_tipo === option.value} label={option.label} />
+                    ))}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Código de inventario</dt>
+                  <dd>{bitacora.codigo_inventario ?? '—'}</dd>
+                </div>
+                <div>
+                  <dt>Síntoma</dt>
+                  <dd>{bitacora.sintoma}</dd>
+                </div>
+              </dl>
+            </section>
 
-          <h2>Diagnóstico y Causa Raíz</h2>
-          <p><strong>Síntoma:</strong> {bitacora.sintoma}</p>
-          <p><strong>Causa Identificada:</strong> {bitacora.causa_raiz ?? 'No disponible'}</p>
-
-          <h2>Solución Aplicada</h2>
-          {solutionSteps.length > 0 ? (
-            <ul className="ticket-log-solution">
-              {solutionSteps.map((step, index) => <li key={index}>{step}</li>)}
-            </ul>
-          ) : (
-            <p>No disponible</p>
-          )}
-
-          <h2>Estado Final</h2>
-          <p className="ticket-log-checks">
-            <span className="ticket-log-check-label">Estado:</span>
-            {finalStatusOptions.map((option) => (
-              <CheckOption key={option.value} checked={bitacora.estado_final === option.value} label={option.label} />
-            ))}
-          </p>
+            <section className="ticket-log-column" aria-labelledby="ticket-log-final">
+              <h2 id="ticket-log-final">Respuesta técnica</h2>
+              <div className="ticket-log-block">
+                <h3>Diagnóstico y causa raíz</h3>
+                <p>{bitacora.causa_raiz ?? 'No disponible'}</p>
+              </div>
+              <div className="ticket-log-block">
+                <h3>Solución aplicada</h3>
+                {solutionSteps.length > 0 ? (
+                  <ul className="ticket-log-solution">
+                    {solutionSteps.map((step, index) => <li key={index}>{step}</li>)}
+                  </ul>
+                ) : (
+                  <p>No disponible</p>
+                )}
+              </div>
+              <div className="ticket-log-block">
+                <h3>Estado final</h3>
+                <p className="ticket-log-checks">
+                  {finalStatusOptions.map((option) => (
+                    <CheckOption key={option.value} checked={bitacora.estado_final === option.value} label={option.label} />
+                  ))}
+                </p>
+              </div>
+              <div className="ticket-log-block">
+                <h3>Técnico responsable</h3>
+                <p>{bitacora.tecnico_nombre ?? 'No disponible'}</p>
+              </div>
+            </section>
+          </div>
         </article>
       </section>
     </div>,
