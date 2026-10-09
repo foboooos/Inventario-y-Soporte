@@ -7,6 +7,7 @@ import type { Location } from '../types/location'
 import { TicketLogDocument } from './TicketLogDocument'
 import { TicketResolutionForm } from './TicketResolutionForm'
 import { TicketSymptomPreview } from './TicketSymptomPreview'
+import { TableSkeleton } from './Skeleton'
 
 type InboxPageProps = {
   accessToken: string
@@ -336,14 +337,11 @@ export function InboxPage({ accessToken, onSessionExpired }: InboxPageProps) {
 
           <div className="table-card inbox-table-card" id="inbox-results-panel">
             {loading && (
-              <div className="skeleton-block" role="status" aria-live="polite" aria-label="Cargando bandeja de tickets">
-                <span className="sr-only">Cargando bandeja de tickets…</span>
-                <div className="skeleton-row" aria-hidden="true" />
-                <div className="skeleton-row" aria-hidden="true" />
-                <div className="skeleton-row" aria-hidden="true" />
-                <div className="skeleton-row" aria-hidden="true" />
-                <div className="skeleton-row" aria-hidden="true" />
-              </div>
+              <TableSkeleton
+                label="Cargando bandeja de tickets…"
+                columns={['12%', '12%', '14%', '14%', '30%', '14%', '8%']}
+                rows={PAGE_SIZE}
+              />
             )}
 
             {!loading && error && (

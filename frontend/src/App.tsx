@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import './styles/tokens.css'
 import './styles/base.css'
+import './styles/skeleton.css'
 import './styles/login.css'
 import './styles/not-found.css'
 import './styles/layout.css'

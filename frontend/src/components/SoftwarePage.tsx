@@ -4,6 +4,7 @@ import { getSubjects } from '../services/academics'
 import { isSessionExpired } from '../services/http'
 import { createSoftware, deleteSoftware, getSoftware, updateSoftware } from '../services/software'
 import type { Subject } from '../types/academic'
+import { ListSkeleton } from './Skeleton'
 import { SOFTWARE_LICENSES, softwareLicenseLabel } from '../types/software'
 import type { SoftwareLicense, SoftwareProgram } from '../types/software'
 
@@ -270,7 +271,7 @@ export function SoftwarePage({ accessToken, onSessionExpired }: SoftwarePageProp
             </section>
 
             <section className="support-card subjects-card" aria-label="Programas registrados">
-              {loading && <p className="subjects-state" role="status">Cargando software educativo…</p>}
+              {loading && <ListSkeleton label="Cargando software educativo…" />}
               {!loading && programs.length === 0 && (
                 <p className="subjects-state" role="status">Aún no hay programas registrados.</p>
               )}

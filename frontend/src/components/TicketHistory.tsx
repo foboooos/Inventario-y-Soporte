@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { getTickets } from '../services/tickets'
 import { isSessionExpired } from '../services/http'
 import { TicketSymptomPreview } from './TicketSymptomPreview'
+import { TableSkeleton } from './Skeleton'
 import type { Ticket, TicketStatus } from '../types/ticket'
 
 type TicketHistoryProps = {
@@ -137,14 +138,11 @@ export function TicketHistory({ accessToken, onSessionExpired, refreshKey }: Tic
     <section className="ticket-history-section" aria-label="Historial de tickets">
       <section className="support-card ticket-history-card">
         {loading && (
-          <div className="ticket-history-state" role="status" aria-live="polite">
-            <p>Cargando historial de tickets…</p>
-            <div className="ticket-history-loading-lines" aria-hidden="true">
-              <span />
-              <span />
-              <span />
-            </div>
-          </div>
+          <TableSkeleton
+            label="Cargando historial de tickets…"
+            columns={['14%', '14%', '14%', '39%', '19%']}
+            rows={PAGE_SIZE}
+          />
         )}
 
         {!loading && error && (

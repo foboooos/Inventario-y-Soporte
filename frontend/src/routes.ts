@@ -10,8 +10,8 @@ export type RouteDefinition = {
 
 export const routes: readonly RouteDefinition[] = [
   { key: 'support', path: '/soporte', label: 'Soporte', title: 'Soporte', roles: ['DOCENTE'] },
-  { key: 'inventory', path: '/inventario', label: 'Inventario', title: 'Inventario', roles: ['ADMIN', 'TECNICO'] },
   { key: 'inbox', path: '/bandeja', label: 'Bandeja de entrada', title: 'Bandeja de entrada', roles: ['ADMIN', 'TECNICO'] },
+  { key: 'inventory', path: '/inventario', label: 'Inventario', title: 'Inventario', roles: ['ADMIN', 'TECNICO'] },
   { key: 'settings', path: '/config', label: 'Configuración', title: 'Configuración', roles: ['ADMIN'] },
   { key: 'subjects', path: '/asignaturas', label: 'Asignaturas y niveles', title: 'Asignaturas y niveles educativos', roles: ['ADMIN'] },
   { key: 'software', path: '/software', label: 'Software educativo', title: 'Software educativo', roles: ['ADMIN'] },

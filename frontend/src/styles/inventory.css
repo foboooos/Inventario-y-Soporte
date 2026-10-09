@@ -474,27 +474,6 @@ tbody tr:hover {
   margin: 0;
 }
 
-.skeleton-block {
-  flex: 1 1 auto;
-  display: grid;
-  gap: 10px;
-  padding: 20px;
-}
-
-.skeleton-row {
-  height: 34px;
-  border-radius: 6px;
-  background: linear-gradient(90deg, #e9e9e4 25%, #f7f7f4 50%, #e9e9e4 75%);
-  background-size: 200% 100%;
-  animation: skeleton-shimmer 1.2s infinite;
-}
-
-@keyframes skeleton-shimmer {
-  to {
-    background-position: -200% 0;
-  }
-}
-
 .inbox-content {
   padding: 24px 0;
 }
@@ -630,10 +609,6 @@ tbody tr:hover {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .skeleton-row {
-    animation: none;
-  }
-
   .inventory-status-tab,
   .inventory-status-tab::after {
     transition: none;

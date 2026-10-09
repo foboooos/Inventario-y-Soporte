@@ -12,6 +12,7 @@ import {
 } from '../services/academics'
 import { isSessionExpired } from '../services/http'
 import type { EducationalLevel, Subject } from '../types/academic'
+import { ListSkeleton } from './Skeleton'
 
 type SubjectsPageProps = {
   accessToken: string
@@ -288,7 +289,7 @@ export function SubjectsPage({ accessToken, onSessionExpired }: SubjectsPageProp
                 </button>
               </form>
 
-              {loading && <p className="subjects-state" role="status">Cargando niveles educativos…</p>}
+              {loading && <ListSkeleton label="Cargando niveles educativos…" />}
               {!loading && levels.length === 0 && (
                 <p className="subjects-state" role="status">Aún no hay niveles educativos registrados.</p>
               )}
@@ -383,7 +384,7 @@ export function SubjectsPage({ accessToken, onSessionExpired }: SubjectsPageProp
                 </button>
               </form>
 
-              {loading && <p className="subjects-state" role="status">Cargando asignaturas…</p>}
+              {loading && <ListSkeleton label="Cargando asignaturas…" />}
               {!loading && subjects.length === 0 && (
                 <p className="subjects-state" role="status">Aún no hay asignaturas registradas.</p>
               )}

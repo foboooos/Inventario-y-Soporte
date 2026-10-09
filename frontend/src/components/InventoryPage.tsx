@@ -5,6 +5,7 @@ import type { AuthUser } from '../types/auth'
 import type { Device, DeviceStatus, DeviceType } from '../types/inventory'
 import { CreateDeviceForm } from './CreateDeviceForm'
 import { EditDeviceForm } from './EditDeviceForm'
+import { TableSkeleton } from './Skeleton'
 
 type InventoryPageProps = {
   user: AuthUser
@@ -392,14 +393,11 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
       </label>
     </div>
     {loading && (
-      <div className="skeleton-block" role="status" aria-label="Cargando inventario">
-        <span className="sr-only">Cargando inventario…</span>
-        <div className="skeleton-row" aria-hidden="true" />
-        <div className="skeleton-row" aria-hidden="true" />
-        <div className="skeleton-row" aria-hidden="true" />
-        <div className="skeleton-row" aria-hidden="true" />
-        <div className="skeleton-row" aria-hidden="true" />
-      </div>
+      <TableSkeleton
+        label="Cargando inventario…"
+        columns={['18%', '12%', '26%', '29%', '15%']}
+        rows={pageSize}
+      />
     )}
     {!loading && error && devices.length === 0 && (
       <div className="empty-state-block">
