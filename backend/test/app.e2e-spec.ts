@@ -4,7 +4,7 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from './../src/app.module.js';
 
-describe('AppController (e2e)', () => {
+describe('API (e2e)', () => {
   let app: INestApplication<App>;
 
   beforeEach(async () => {
@@ -16,11 +16,15 @@ describe('AppController (e2e)', () => {
     await app.init();
   });
 
-  it('/ (GET)', () => {
+  it('rechaza credenciales inválidas en el login', () => {
     return request(app.getHttpServer())
-      .get('/')
-      .expect(200)
-      .expect('Hello World!');
+      .post('/auth/login')
+      .send({ usuario: 'nadie', password: 'contraseña-invalida' })
+      .expect(401);
+  });
+
+  it('protege el inventario sin token', () => {
+    return request(app.getHttpServer()).get('/inventory').expect(401);
   });
 
   afterEach(async () => {
