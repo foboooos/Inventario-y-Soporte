@@ -100,21 +100,30 @@ function App() {
     }
   }, [activeRoute, navigate, pathname, user])
 
+  // Páginas ya visitadas: se mantienen montadas para no volver a cargar sus datos.
+  const [visitedRoutes, setVisitedRoutes] = useState<RouteKey[]>([])
+
+  if (user && activeRoute && canAccessRoute(user.rol, activeRoute) && !visitedRoutes.includes(activeRoute)) {
+    setVisitedRoutes([...visitedRoutes, activeRoute])
+  }
+
   function handleAuthenticated(authenticatedUser: AuthUser, token: string) {
     localStorage.setItem('access_token', token)
     localStorage.setItem('auth_user', JSON.stringify(authenticatedUser))
     setAccessToken(token)
     setUser(authenticatedUser)
+    setVisitedRoutes([])
     navigate(routePaths[defaultRouteForRole(authenticatedUser.rol)])
   }
 
-  function handleLogout() {
+  const handleLogout = useCallback(() => {
     localStorage.removeItem('access_token')
     localStorage.removeItem('auth_user')
     setAccessToken('')
     setUser(null)
+    setVisitedRoutes([])
     navigate('/login')
-  }
+  }, [navigate])
 
   if (!user) {
     if (pathname !== '/login' && !activeRoute) {
@@ -128,29 +137,33 @@ function App() {
     return <NotFoundPage onBack={() => navigate(routePaths[defaultRouteForRole(user.rol)])} />
   }
 
-  function renderPage(user: AuthUser, accessToken: string, onSessionExpired: () => void) {
-    if (activeRoute === 'support') {
-      return <SupportPage accessToken={accessToken} onSessionExpired={onSessionExpired} />
+  function renderRoute(route: RouteKey, account: AuthUser, token: string, onSessionExpired: () => void) {
+    if (route === 'support') {
+      return <SupportPage accessToken={token} onSessionExpired={onSessionExpired} />
     }
 
-    if (activeRoute === 'settings') {
+    if (route === 'settings') {
       return <ConfigurationPage />
     }
 
-    if (activeRoute === 'subjects') {
-      return <SubjectsPage accessToken={accessToken} onSessionExpired={onSessionExpired} />
+    if (route === 'subjects') {
+      return <SubjectsPage accessToken={token} onSessionExpired={onSessionExpired} />
     }
 
-    if (activeRoute === 'software') {
-      return <SoftwarePage accessToken={accessToken} onSessionExpired={onSessionExpired} />
+    if (route === 'software') {
+      return <SoftwarePage accessToken={token} onSessionExpired={onSessionExpired} />
     }
 
-    if (activeRoute === 'inbox') {
-      return <InboxPage accessToken={accessToken} onSessionExpired={onSessionExpired} />
+    if (route === 'inbox') {
+      return <InboxPage accessToken={token} onSessionExpired={onSessionExpired} />
     }
 
-    return <InventoryPage user={user} accessToken={accessToken} onSessionExpired={onSessionExpired} />
+    return <InventoryPage user={account} accessToken={token} onSessionExpired={onSessionExpired} />
   }
+
+  const routesToRender = visitedRoutes.includes(activeRoute)
+    ? visitedRoutes
+    : [...visitedRoutes, activeRoute]
 
   return (
     <DashboardLayout
@@ -159,7 +172,11 @@ function App() {
       onNavigate={navigateToRoute}
       onLogout={handleLogout}
     >
-      {renderPage(user, accessToken, handleLogout)}
+      {routesToRender.map((route) => (
+        <div key={route} hidden={route !== activeRoute}>
+          {renderRoute(route, user, accessToken, handleLogout)}
+        </div>
+      ))}
     </DashboardLayout>
   )
 }

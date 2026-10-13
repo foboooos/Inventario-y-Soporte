@@ -8,6 +8,7 @@ import { TicketLogDocument } from './TicketLogDocument'
 import { TicketResolutionForm } from './TicketResolutionForm'
 import { TicketSymptomPreview } from './TicketSymptomPreview'
 import { TableSkeleton } from './Skeleton'
+import { getPageNumbers } from '../utils/pagination'
 
 type InboxPageProps = {
   accessToken: string
@@ -37,21 +38,6 @@ const dateFormatter = new Intl.DateTimeFormat('es-CL', {
   dateStyle: 'medium',
   timeStyle: 'short',
 })
-
-function getPageNumbers(currentPage: number, totalPages: number): Array<number | 'ellipsis'> {
-  if (totalPages <= 5) return Array.from({ length: totalPages }, (_, index) => index + 1)
-
-  const pages: Array<number | 'ellipsis'> = [1]
-  const start = Math.max(2, currentPage - 1)
-  const end = Math.min(totalPages - 1, currentPage + 1)
-
-  if (start > 2) pages.push('ellipsis')
-  for (let page = start; page <= end; page += 1) pages.push(page)
-  if (end < totalPages - 1) pages.push('ellipsis')
-  pages.push(totalPages)
-
-  return pages
-}
 
 function formatTicketDate(value?: string) {
   if (!value) return 'No disponible'

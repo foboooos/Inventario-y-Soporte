@@ -3,6 +3,7 @@ import { getTickets } from '../services/tickets'
 import { isSessionExpired } from '../services/http'
 import { TicketSymptomPreview } from './TicketSymptomPreview'
 import { TableSkeleton } from './Skeleton'
+import { getPageNumbers } from '../utils/pagination'
 import type { Ticket, TicketStatus } from '../types/ticket'
 
 type TicketHistoryProps = {
@@ -17,21 +18,6 @@ const statusLabels: Record<TicketStatus, string> = {
   ABIERTO: 'Abierto',
   EN_PROCESO: 'En proceso',
   RESUELTO: 'Resuelto',
-}
-
-function getPageNumbers(currentPage: number, totalPages: number): Array<number | 'ellipsis'> {
-  if (totalPages <= 5) return Array.from({ length: totalPages }, (_, index) => index + 1)
-
-  const pages: Array<number | 'ellipsis'> = [1]
-  const start = Math.max(2, currentPage - 1)
-  const end = Math.min(totalPages - 1, currentPage + 1)
-
-  if (start > 2) pages.push('ellipsis')
-  for (let page = start; page <= end; page += 1) pages.push(page)
-  if (end < totalPages - 1) pages.push('ellipsis')
-  pages.push(totalPages)
-
-  return pages
 }
 
 const dateFormatter = new Intl.DateTimeFormat('es-CL', {
