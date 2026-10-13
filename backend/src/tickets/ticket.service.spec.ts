@@ -39,16 +39,28 @@ describe('TicketService', () => {
     vi.useRealTimers();
   });
 
-  it('returns every ticket ordered from newest to oldest for the technical inbox', async () => {
-    const find = vi.fn().mockResolvedValue([]);
-    const service = createService({ find });
+  it('returns a page of tickets ordered from newest to oldest for the technical inbox', async () => {
+    const findAndCount = vi.fn().mockResolvedValue([[], 0]);
+    const service = createService({ findAndCount });
 
     await service.findInbox();
 
-    expect(find).toHaveBeenCalledWith({
+    expect(findAndCount).toHaveBeenCalledWith({
       where: {},
       order: { fecha_creacion: 'DESC', id_ticket: 'DESC' },
+      skip: 0,
+      take: 10,
     });
+  });
+
+  it('paginates the technical inbox using the requested page and limit', async () => {
+    const findAndCount = vi.fn().mockResolvedValue([[], 25]);
+    const service = createService({ findAndCount });
+
+    const result = await service.findInbox({ page: 3, limit: 5 });
+
+    expect(findAndCount).toHaveBeenCalledWith(expect.objectContaining({ skip: 10, take: 5 }));
+    expect(result).toMatchObject({ total: 25, page: 3, limit: 5, total_pages: 5 });
   });
 
   it('adds the device type and inventory code to the technical inbox tickets', async () => {
@@ -56,43 +68,43 @@ describe('TicketService', () => {
       { id_ticket: 1, id_dispositivo: 5 } as Ticket,
       { id_ticket: 2, id_dispositivo: null } as Ticket,
     ];
-    const find = vi.fn().mockResolvedValue(tickets);
+    const findAndCount = vi.fn().mockResolvedValue([tickets, tickets.length]);
     const findBy = vi.fn().mockResolvedValue([
       { id_dispositivo: 5, tipo: 'PC', codigo_inventario: 'PC-LAB-01' } as Device,
     ]);
-    const service = createService({ find }, { findBy });
+    const service = createService({ findAndCount }, { findBy });
 
     const result = await service.findInbox();
 
     expect(findBy).toHaveBeenCalledOnce();
-    expect(result[0]).toMatchObject({ dispositivo_tipo: 'PC', codigo_inventario: 'PC-LAB-01' });
-    expect(result[1]).toMatchObject({ dispositivo_tipo: null, codigo_inventario: null });
+    expect(result.data[0]).toMatchObject({ dispositivo_tipo: 'PC', codigo_inventario: 'PC-LAB-01' });
+    expect(result.data[1]).toMatchObject({ dispositivo_tipo: null, codigo_inventario: null });
   });
 
   it('translates the operational state filter into resolved tickets with an active device', async () => {
-    const find = vi.fn().mockResolvedValue([]);
-    const service = createService({ find });
+    const findAndCount = vi.fn().mockResolvedValue([[], 0]);
+    const service = createService({ findAndCount });
 
     await service.findInbox({ estado: EstadoFiltro.OPERATIVO });
 
-    expect(find).toHaveBeenCalledWith(expect.objectContaining({
+    expect(findAndCount).toHaveBeenCalledWith(expect.objectContaining({
       where: { estado: TicketStatus.RESUELTO, estado_final: DeviceStatus.ACTIVO },
     }));
   });
 
   it('translates the waiting state filter into open tickets', async () => {
-    const find = vi.fn().mockResolvedValue([]);
-    const service = createService({ find });
+    const findAndCount = vi.fn().mockResolvedValue([[], 0]);
+    const service = createService({ findAndCount });
 
     await service.findInbox({ estado: EstadoFiltro.EN_ESPERA });
 
-    expect(find).toHaveBeenCalledWith(expect.objectContaining({
+    expect(findAndCount).toHaveBeenCalledWith(expect.objectContaining({
       where: { estado: TicketStatus.ABIERTO },
     }));
   });
 
   it('filters by a parent location including its sub-locations', async () => {
-    const find = vi.fn().mockResolvedValue([]);
+    const findAndCount = vi.fn().mockResolvedValue([[], 0]);
     const locations = {
       findOneBy: vi.fn().mockResolvedValue({ id_ubicacion: 3, nombre: 'Laboratorio 1', padre_id: null } as Ubicacion),
       find: vi.fn().mockResolvedValue([
@@ -100,34 +112,34 @@ describe('TicketService', () => {
         { id_ubicacion: 11, nombre: 'Laboratorio 1 - B', padre_id: 3 } as Ubicacion,
       ]),
     };
-    const service = createService({ find }, {}, {}, locations);
+    const service = createService({ findAndCount }, {}, {}, locations);
 
     await service.findInbox({ ubicacion: 'Laboratorio 1' });
 
-    const arg = find.mock.calls[0][0];
+    const arg = findAndCount.mock.calls[0][0];
     expect(arg.where.ubicacion).toBeInstanceOf(FindOperator);
     expect(arg.where.ubicacion.value).toEqual(['Laboratorio 1', 'Laboratorio 1 - A', 'Laboratorio 1 - B']);
   });
 
   it('falls back to an exact location match when the location is not registered', async () => {
-    const find = vi.fn().mockResolvedValue([]);
+    const findAndCount = vi.fn().mockResolvedValue([[], 0]);
     const locations = { findOneBy: vi.fn().mockResolvedValue(null) };
-    const service = createService({ find }, {}, {}, locations);
+    const service = createService({ findAndCount }, {}, {}, locations);
 
     await service.findInbox({ ubicacion: 'Pasillo segundo piso' });
 
-    expect(find).toHaveBeenCalledWith(expect.objectContaining({
+    expect(findAndCount).toHaveBeenCalledWith(expect.objectContaining({
       where: { ubicacion: 'Pasillo segundo piso' },
     }));
   });
 
   it('filters tickets created within a date range', async () => {
-    const find = vi.fn().mockResolvedValue([]);
-    const service = createService({ find });
+    const findAndCount = vi.fn().mockResolvedValue([[], 0]);
+    const service = createService({ findAndCount });
 
     await service.findInbox({ desde: '2026-01-01', hasta: '2026-01-31' });
 
-    const arg = find.mock.calls[0][0];
+    const arg = findAndCount.mock.calls[0][0];
     expect(arg.where.fecha_creacion).toBeInstanceOf(FindOperator);
     expect(arg.where.fecha_creacion.value).toEqual([
       new Date('2026-01-01T00:00:00'),
@@ -136,28 +148,40 @@ describe('TicketService', () => {
   });
 
   it('combines state, location and date filters in a single query', async () => {
-    const find = vi.fn().mockResolvedValue([]);
+    const findAndCount = vi.fn().mockResolvedValue([[], 0]);
     const locations = { findOneBy: vi.fn().mockResolvedValue(null) };
-    const service = createService({ find }, {}, {}, locations);
+    const service = createService({ findAndCount }, {}, {}, locations);
 
     await service.findInbox({ estado: EstadoFiltro.EN_ESPERA, ubicacion: 'Sala 5', desde: '2026-02-01' });
 
-    const arg = find.mock.calls[0][0];
+    const arg = findAndCount.mock.calls[0][0];
     expect(arg.where.estado).toBe(TicketStatus.ABIERTO);
     expect(arg.where.ubicacion).toBe('Sala 5');
     expect(arg.where.fecha_creacion).toBeInstanceOf(FindOperator);
   });
 
-  it('filters ticket history by requester for a teacher', async () => {
-    const find = vi.fn().mockResolvedValue([]);
-    const service = createService({ find });
+  it('returns a page of ticket history filtered by requester for a teacher', async () => {
+    const findAndCount = vi.fn().mockResolvedValue([[], 0]);
+    const service = createService({ findAndCount });
 
     await service.findAll('12345678-9');
 
-    expect(find).toHaveBeenCalledWith({
+    expect(findAndCount).toHaveBeenCalledWith({
       where: { id_solicitante: '12345678-9' },
       order: { fecha_creacion: 'DESC', id_ticket: 'DESC' },
+      skip: 0,
+      take: 10,
     });
+  });
+
+  it('paginates the teacher ticket history using the requested page and limit', async () => {
+    const findAndCount = vi.fn().mockResolvedValue([[], 12]);
+    const service = createService({ findAndCount });
+
+    const result = await service.findAll('12345678-9', { page: 2, limit: 5 });
+
+    expect(findAndCount).toHaveBeenCalledWith(expect.objectContaining({ skip: 5, take: 5 }));
+    expect(result).toMatchObject({ total: 12, page: 2, limit: 5, total_pages: 3 });
   });
 
 

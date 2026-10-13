@@ -19,6 +19,7 @@ export function SupportPage({ accessToken, onSessionExpired }: SupportPageProps)
           onTicketCreated={() => setTicketHistoryRefreshKey((key) => key + 1)}
         />
         <TicketHistory
+          key={ticketHistoryRefreshKey}
           accessToken={accessToken}
           onSessionExpired={onSessionExpired}
           refreshKey={ticketHistoryRefreshKey}

@@ -459,10 +459,11 @@ tbody tr:hover {
   flex: 1 1 auto;
   display: grid;
   align-content: center;
-  gap: 12px;
+  gap: 14px;
   justify-items: center;
   padding: 24px 20px;
   color: var(--minimal-muted);
+  font-size: 14px;
   text-align: center;
 }
 
@@ -472,6 +473,19 @@ tbody tr:hover {
 
 .empty-state-block button {
   margin: 0;
+  padding: 8px 14px;
+  border: 1px solid rgba(12, 12, 9, 0.12);
+  border-radius: 10px;
+  color: var(--minimal-primary);
+  background: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  transition: color 120ms ease, background-color 120ms ease, border-color 120ms ease;
+}
+
+.empty-state-block button:hover:not(:disabled) {
+  border-color: rgba(12, 12, 9, 0.18);
+  background: var(--minimal-surface);
 }
 
 .inbox-content {
@@ -690,6 +704,7 @@ tbody tr:hover {
 }
 
 .table-search input {
+  padding: 7px 12px;
   border-color: #e7e7e2;
   font-size: 13px;
 }

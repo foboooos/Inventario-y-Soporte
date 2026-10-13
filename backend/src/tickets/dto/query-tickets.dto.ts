@@ -1,4 +1,5 @@
-import { IsEnum, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsEnum, IsInt, IsOptional, IsString, Matches, Max, MaxLength, Min } from 'class-validator';
 
 export enum EstadoFiltro {
   EN_ESPERA = 'EN_ESPERA',
@@ -25,4 +26,17 @@ export class QueryTicketsDto {
   @IsOptional()
   @Matches(/^\d{4}-\d{2}-\d{2}$/)
   hasta?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page: number = 1;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limit: number = 10;
 }

@@ -31,8 +31,8 @@ export class TicketController {
 
   @Get()
   @Roles(UserRole.DOCENTE)
-  findAll(@Req() request: AuthenticatedRequest) {
-    return this.ticketService.findAll(request.user.sub);
+  findAll(@Req() request: AuthenticatedRequest, @Query() query: QueryTicketsDto) {
+    return this.ticketService.findAll(request.user.sub, query);
   }
 
   @Patch(':id_ticket')

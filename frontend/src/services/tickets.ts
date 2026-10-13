@@ -1,14 +1,42 @@
-import type { CreateTicketInput, DeviceOption, ResolveTicketInput, Ticket, TicketBitacora, TicketStatus } from '../types/ticket'
+import type { CreateTicketInput, DeviceOption, ResolveTicketInput, Ticket, TicketBitacora, TicketPage, TicketStatus } from '../types/ticket'
 import { apiFetch, readApiJson } from './http'
+
+export type TicketPageQuery = {
+  page?: number
+  limit?: number
+}
+
+type TicketPageResponse = {
+  data: Ticket[]
+  total: number
+  page: number
+  limit: number
+  total_pages: number
+}
+
+function toTicketPage(result: TicketPageResponse): TicketPage {
+  return {
+    tickets: result.data,
+    total: result.total,
+    page: result.page,
+    totalPages: result.total_pages,
+  }
+}
 
 export async function getDeviceOptions(accessToken: string): Promise<DeviceOption[]> {
   const response = await apiFetch('/inventory/options', accessToken)
   return readApiJson<DeviceOption[]>(response, 'No se pudieron cargar los equipos')
 }
 
-export async function getTickets(accessToken: string): Promise<Ticket[]> {
-  const response = await apiFetch('/tickets', accessToken)
-  return readApiJson<Ticket[]>(response, 'No se pudo cargar el historial de tickets')
+export async function getTickets(accessToken: string, query: TicketPageQuery = {}): Promise<TicketPage> {
+  const params = new URLSearchParams()
+  if (query.page) params.set('page', String(query.page))
+  if (query.limit) params.set('limit', String(query.limit))
+
+  const qs = params.toString()
+  const response = await apiFetch(`/tickets${qs ? `?${qs}` : ''}`, accessToken)
+  const result = await readApiJson<TicketPageResponse>(response, 'No se pudo cargar el historial de tickets')
+  return toTicketPage(result)
 }
 
 export type TicketInboxFilters = {
@@ -18,16 +46,19 @@ export type TicketInboxFilters = {
   hasta?: string
 }
 
-export async function getTicketInbox(accessToken: string, filters: TicketInboxFilters = {}): Promise<Ticket[]> {
+export async function getTicketInbox(accessToken: string, filters: TicketInboxFilters = {}, query: TicketPageQuery = {}): Promise<TicketPage> {
   const params = new URLSearchParams()
   if (filters.estado) params.set('estado', filters.estado)
   if (filters.ubicacion) params.set('ubicacion', filters.ubicacion)
   if (filters.desde) params.set('desde', filters.desde)
   if (filters.hasta) params.set('hasta', filters.hasta)
+  if (query.page) params.set('page', String(query.page))
+  if (query.limit) params.set('limit', String(query.limit))
 
-  const query = params.toString()
-  const response = await apiFetch(`/tickets/inbox${query ? `?${query}` : ''}`, accessToken)
-  return readApiJson<Ticket[]>(response, 'No se pudo cargar la bandeja de tickets')
+  const queryString = params.toString()
+  const response = await apiFetch(`/tickets/inbox${queryString ? `?${queryString}` : ''}`, accessToken)
+  const result = await readApiJson<TicketPageResponse>(response, 'No se pudo cargar la bandeja de tickets')
+  return toTicketPage(result)
 }
 
 export async function resolveTicket(accessToken: string, ticketId: number, input: ResolveTicketInput): Promise<Ticket> {

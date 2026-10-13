@@ -89,6 +89,7 @@ function TicketHistoryTable({ tickets }: { tickets: Ticket[] }) {
 
 export function TicketHistory({ accessToken, onSessionExpired, refreshKey }: TicketHistoryProps) {
   const [tickets, setTickets] = useState<Ticket[]>([])
+  const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [reloadKey, setReloadKey] = useState(0)
@@ -100,13 +101,12 @@ export function TicketHistory({ accessToken, onSessionExpired, refreshKey }: Tic
     async function loadTickets() {
       setLoading(true)
       setError('')
-      setTickets([])
 
       try {
-        const loadedTickets = await getTickets(accessToken)
+        const result = await getTickets(accessToken, { page: currentPage, limit: PAGE_SIZE })
         if (isMounted) {
-          setTickets(loadedTickets)
-          setCurrentPage(1)
+          setTickets(result.tickets)
+          setTotal(result.total)
         }
       } catch (exception: unknown) {
         if (isSessionExpired(exception)) {
@@ -126,12 +126,11 @@ export function TicketHistory({ accessToken, onSessionExpired, refreshKey }: Tic
     return () => {
       isMounted = false
     }
-  }, [accessToken, onSessionExpired, refreshKey, reloadKey])
+  }, [accessToken, onSessionExpired, refreshKey, reloadKey, currentPage])
 
-  const totalPages = Math.max(1, Math.ceil(tickets.length / PAGE_SIZE))
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
   const activePage = Math.min(currentPage, totalPages)
   const pageStart = (activePage - 1) * PAGE_SIZE
-  const pagedTickets = tickets.slice(pageStart, pageStart + PAGE_SIZE)
   const pageNumbers = getPageNumbers(activePage, totalPages)
 
   return (
@@ -160,9 +159,9 @@ export function TicketHistory({ accessToken, onSessionExpired, refreshKey }: Tic
 
         {!loading && !error && tickets.length > 0 && (
           <>
-            <TicketHistoryTable tickets={pagedTickets} />
+            <TicketHistoryTable tickets={tickets} />
             <footer className="table-footer">
-              <span>Mostrando {pageStart + 1}–{Math.min(pageStart + PAGE_SIZE, tickets.length)} de {tickets.length} tickets</span>
+              <span>Mostrando {pageStart + 1}–{Math.min(pageStart + PAGE_SIZE, total)} de {total} tickets</span>
               <nav className="pagination" aria-label="Paginación del historial de tickets">
                 <button className="pagination-button" type="button" disabled={activePage === 1} onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}>Anterior</button>
                 {pageNumbers.map((page, index) => page === 'ellipsis'

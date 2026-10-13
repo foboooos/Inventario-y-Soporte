@@ -153,6 +153,7 @@ function InboxTable({ tickets, startingId, bitacoraId, onSelectTicket, onStartTi
 
 export function InboxPage({ accessToken, onSessionExpired }: InboxPageProps) {
   const [tickets, setTickets] = useState<Ticket[]>([])
+  const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [reloadKey, setReloadKey] = useState(0)
@@ -173,17 +174,21 @@ export function InboxPage({ accessToken, onSessionExpired }: InboxPageProps) {
   useEffect(() => {
     let isMounted = true
 
-    getTicketInbox(accessToken, {
-      ...(estadoFilter !== 'ALL' ? { estado: estadoFilter } : {}),
-      ...((subLocation || parentLocation) ? { ubicacion: subLocation || parentLocation } : {}),
-      ...(desde ? { desde } : {}),
-      ...(hasta ? { hasta } : {}),
-    })
-      .then((loadedTickets) => {
+    getTicketInbox(
+      accessToken,
+      {
+        ...(estadoFilter !== 'ALL' ? { estado: estadoFilter } : {}),
+        ...((subLocation || parentLocation) ? { ubicacion: subLocation || parentLocation } : {}),
+        ...(desde ? { desde } : {}),
+        ...(hasta ? { hasta } : {}),
+      },
+      { page: currentPage, limit: PAGE_SIZE },
+    )
+      .then((result) => {
         if (!isMounted) return
-        setTickets(loadedTickets)
+        setTickets(result.tickets)
+        setTotal(result.total)
         setError('')
-        setCurrentPage(1)
       })
       .catch((exception: unknown) => {
         if (!isMounted) return
@@ -200,7 +205,7 @@ export function InboxPage({ accessToken, onSessionExpired }: InboxPageProps) {
     return () => {
       isMounted = false
     }
-  }, [accessToken, onSessionExpired, reloadKey, estadoFilter, parentLocation, subLocation, desde, hasta])
+  }, [accessToken, onSessionExpired, reloadKey, estadoFilter, parentLocation, subLocation, desde, hasta, currentPage])
 
   useEffect(() => {
     let isMounted = true
@@ -237,10 +242,9 @@ export function InboxPage({ accessToken, onSessionExpired }: InboxPageProps) {
 
   const hasActiveFilters = estadoFilter !== 'ALL' || Boolean(subLocation || parentLocation) || Boolean(desde) || Boolean(hasta)
 
-  const totalPages = Math.max(1, Math.ceil(tickets.length / PAGE_SIZE))
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
   const activePage = Math.min(currentPage, totalPages)
   const pageStart = (activePage - 1) * PAGE_SIZE
-  const pagedTickets = tickets.slice(pageStart, pageStart + PAGE_SIZE)
   const pageNumbers = getPageNumbers(activePage, totalPages)
 
   function retryLoad() {
@@ -367,7 +371,7 @@ export function InboxPage({ accessToken, onSessionExpired }: InboxPageProps) {
             {!loading && !error && tickets.length > 0 && (
               <>
                 <InboxTable
-                  tickets={pagedTickets}
+                  tickets={tickets}
                   startingId={startingId}
                   bitacoraId={bitacoraId}
                   onStartTicket={startTicket}
@@ -378,7 +382,7 @@ export function InboxPage({ accessToken, onSessionExpired }: InboxPageProps) {
                   }}
                 />
                 <footer className="table-footer">
-                  <span>Mostrando {pageStart + 1}–{Math.min(pageStart + PAGE_SIZE, tickets.length)} de {tickets.length} tickets</span>
+                  <span>Mostrando {pageStart + 1}–{Math.min(pageStart + PAGE_SIZE, total)} de {total} tickets</span>
                   <nav className="pagination" aria-label="Paginación de la bandeja de entrada">
                     <button className="pagination-button" type="button" disabled={activePage === 1} onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}>Anterior</button>
                     {pageNumbers.map((page, index) => page === 'ellipsis'

@@ -71,11 +71,13 @@ export function Sidebar({ user, activeRoute, onNavigate, onLogout }: SidebarProp
             className={`sidebar-link${activeRoute === route.key ? ' active' : ''}`}
             key={route.key}
             href={route.path}
+            title={route.title}
+            aria-label={route.title}
             aria-current={activeRoute === route.key ? 'page' : undefined}
             onClick={(event) => handleLinkClick(event, route.key)}
           >
             <RouteIcon route={route.key} />
-            <span>{route.label}</span>
+            <span className="sidebar-link-label">{route.label}</span>
           </a>
         ))}
       </nav>
@@ -89,7 +91,14 @@ export function Sidebar({ user, activeRoute, onNavigate, onLogout }: SidebarProp
             <span className="sidebar-user-name-text">{user.nombre}</span>
           </strong>
         </div>
-        <button className="sidebar-logout" type="button" onClick={onLogout}>Cerrar sesión</button>
+        <button className="sidebar-logout" type="button" onClick={onLogout}>
+          <svg className="sidebar-logout-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M9 4H6.5A2.5 2.5 0 0 0 4 6.5v11A2.5 2.5 0 0 0 6.5 20H9" />
+            <path d="m16 8 4 4-4 4" />
+            <path d="M20 12H9" />
+          </svg>
+          <span className="sidebar-logout-label">Cerrar sesión</span>
+        </button>
       </div>
     </aside>
   )

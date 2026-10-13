@@ -1,6 +1,6 @@
 :root {
   font: 18px/145% system-ui, 'Segoe UI', Roboto, sans-serif;
-  color-scheme: light dark;
+  color-scheme: light;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -15,6 +15,7 @@
 
 body {
   margin: 0;
+  color: var(--minimal-text);
   background: #f4f6fb;
 }
 

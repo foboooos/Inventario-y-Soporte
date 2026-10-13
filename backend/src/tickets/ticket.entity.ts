@@ -1,7 +1,11 @@
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
 import { DeviceStatus } from '../inventory/device-status.enum.js';
 import { TicketStatus } from './ticket-status.enum.js';
 
+@Index('IDX_tickets_solicitante_fecha', ['id_solicitante', 'fecha_creacion'])
+@Index('IDX_tickets_estado_estado_final_fecha', ['estado', 'estado_final', 'fecha_creacion'])
+@Index('IDX_tickets_fecha_creacion', ['fecha_creacion'])
+@Index('IDX_tickets_ubicacion_fecha', ['ubicacion', 'fecha_creacion'])
 @Entity({ name: 'tickets_soporte' })
 export class Ticket {
   @PrimaryGeneratedColumn({ name: 'id_ticket', type: 'int' })

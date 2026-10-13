@@ -41,6 +41,13 @@ export type Ticket = {
   fecha_creacion?: string
 }
 
+export type TicketPage = {
+  tickets: Ticket[]
+  total: number
+  page: number
+  totalPages: number
+}
+
 export type TicketBitacora = {
   codigo_ticket: string
   fecha_resolucion?: string | null

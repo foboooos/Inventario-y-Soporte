@@ -1,7 +1,9 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
 import { DeviceStatus } from './device-status.enum.js';
 import { DeviceType } from './device-type.enum.js';
 
+@Index('IDX_inventario_estado', ['estado'])
+@Index('IDX_inventario_ubicacion', ['ubicacion'])
 @Entity({ name: 'inventario' })
 export class Device {
   @PrimaryGeneratedColumn({ name: 'id_dispositivo', type: 'int' })

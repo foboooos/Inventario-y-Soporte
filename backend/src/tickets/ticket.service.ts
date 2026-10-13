@@ -24,7 +24,7 @@ export class TicketService {
     @InjectRepository(Ubicacion) private readonly locations: Repository<Ubicacion>,
   ) {}
 
-  async findInbox(filters: QueryTicketsDto = {}) {
+  async findInbox(filters: Partial<QueryTicketsDto> = {}) {
     // El filtro de estado es semántico: la UI envía una de las 5 vistas y aquí se
     // traduce a las columnas reales del ticket.
     //   EN_ESPERA     -> estado = ABIERTO
@@ -60,9 +60,14 @@ export class TicketService {
       where.fecha_creacion = Between(start, end);
     }
 
-    const tickets = await this.tickets.find({
+    const page = filters.page ?? 1;
+    const limit = filters.limit ?? 10;
+
+    const [tickets, total] = await this.tickets.findAndCount({
       where,
       order: { fecha_creacion: 'DESC', id_ticket: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
     });
 
     const deviceIds = [
@@ -73,14 +78,20 @@ export class TicketService {
       : [];
     const devicesById = new Map(devices.map((device) => [device.id_dispositivo, device]));
 
-    return tickets.map((ticket) => {
-      const device = ticket.id_dispositivo !== null ? devicesById.get(ticket.id_dispositivo) : undefined;
-      return {
-        ...ticket,
-        dispositivo_tipo: device?.tipo ?? null,
-        codigo_inventario: device?.codigo_inventario ?? null,
-      };
-    });
+    return {
+      data: tickets.map((ticket) => {
+        const device = ticket.id_dispositivo !== null ? devicesById.get(ticket.id_dispositivo) : undefined;
+        return {
+          ...ticket,
+          dispositivo_tipo: device?.tipo ?? null,
+          codigo_inventario: device?.codigo_inventario ?? null,
+        };
+      }),
+      total,
+      page,
+      limit,
+      total_pages: Math.max(1, Math.ceil(total / limit)),
+    };
   }
 
   private async resolveLocationNames(nombre: string): Promise<string[]> {
@@ -95,11 +106,24 @@ export class TicketService {
     return [location.nombre, ...children.map((child) => child.nombre)];
   }
 
-  async findAll(requesterRut: string) {
-    return this.tickets.find({
+  async findAll(requesterRut: string, query: Partial<QueryTicketsDto> = {}) {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 10;
+
+    const [data, total] = await this.tickets.findAndCount({
       where: { id_solicitante: requesterRut },
       order: { fecha_creacion: 'DESC', id_ticket: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
     });
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+      total_pages: Math.max(1, Math.ceil(total / limit)),
+    };
   }
 
   async resolve(idTicket: number, resolveTicketDto: ResolveTicketDto, tecnicoRut: string) {

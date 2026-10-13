@@ -18,6 +18,10 @@
     overflow-y: visible;
   }
 
+  .sidebar-toggle {
+    display: none;
+  }
+
   .dashboard-main {
     width: 100%;
     margin-left: 0;
