@@ -134,7 +134,16 @@ function App() {
   }
 
   if (!activeRoute || !canAccessRoute(user.rol, activeRoute)) {
-    return <NotFoundPage onBack={() => navigate(routePaths[defaultRouteForRole(user.rol)])} />
+    return (
+      <DashboardLayout
+        user={user}
+        activeRoute={activeRoute}
+        onNavigate={navigateToRoute}
+        onLogout={handleLogout}
+      >
+        <NotFoundPage onBack={() => navigate(routePaths[defaultRouteForRole(user.rol)])} />
+      </DashboardLayout>
+    )
   }
 
   function renderRoute(route: RouteKey, account: AuthUser, token: string, onSessionExpired: () => void) {

@@ -8,7 +8,7 @@ const SIDEBAR_STORAGE_KEY = 'sidebar_collapsed'
 type DashboardLayoutProps = {
   children: ReactNode
   user: AuthUser
-  activeRoute: RouteKey
+  activeRoute: RouteKey | null
   onNavigate: (route: RouteKey) => void
   onLogout: () => void
 }

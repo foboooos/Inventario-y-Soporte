@@ -56,7 +56,7 @@ function TicketHistoryTable({ tickets }: { tickets: Ticket[] }) {
                   {statusLabels[ticket.estado] ?? ticket.estado}
                 </span>
               </td>
-              <td>{ticket.ubicacion}</td>
+              <td className="ticket-history-location"><span className="ticket-history-location-text">{ticket.ubicacion}</span></td>
               <td className="ticket-history-symptom"><TicketSymptomPreview ticket={ticket} /></td>
               <td className="ticket-history-date">
                 {ticket.fecha_creacion ? (

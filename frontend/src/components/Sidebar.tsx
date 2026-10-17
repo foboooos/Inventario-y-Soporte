@@ -4,7 +4,7 @@ import { routesForRole, type RouteKey } from '../routes'
 
 type SidebarProps = {
   user: AuthUser
-  activeRoute: RouteKey
+  activeRoute: RouteKey | null
   onNavigate: (route: RouteKey) => void
   onLogout: () => void
 }
