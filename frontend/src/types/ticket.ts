@@ -27,6 +27,7 @@ export type Ticket = {
   id_ticket: number
   codigo_ticket: string
   id_solicitante?: string
+  solicitante_nombre?: string | null
   id_dispositivo?: number | null
   dispositivo_tipo?: DeviceType | null
   codigo_inventario?: string | null

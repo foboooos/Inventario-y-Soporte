@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { getTicketBitacora, getTicketInbox, updateTicketStatus } from '../services/tickets'
 import { getLocations } from '../services/locations'
 import { isSessionExpired } from '../services/http'
+import type { DeviceType } from '../types/inventory'
 import type { Ticket, TicketBitacora, TicketStatus } from '../types/ticket'
 import type { Location } from '../types/location'
 import { TicketLogDocument } from './TicketLogDocument'
@@ -18,11 +19,25 @@ type InboxPageProps = {
 type EstadoFilter = 'ALL' | 'EN_ESPERA' | 'EN_PROCESO' | 'OPERATIVO' | 'INACTIVO' | 'BAJA_TECNICA'
 
 const PAGE_SIZE = 10
+const AUTO_REFRESH_MS = 15000
 
 const statusLabels: Record<TicketStatus, string> = {
   ABIERTO: 'Abierto',
   EN_PROCESO: 'En proceso',
   RESUELTO: 'Resuelto',
+}
+
+const deviceTypeLabels: Record<DeviceType, string> = {
+  PC: 'PC',
+  PROYECTOR: 'Proyector',
+  IMPRESORA: 'Impresora',
+  RED: 'Equipo de red',
+}
+
+function formatDeviceLabel(ticket: Ticket): string {
+  if (!ticket.codigo_inventario) return '—'
+  const type = ticket.dispositivo_tipo ? deviceTypeLabels[ticket.dispositivo_tipo] : ''
+  return [type, ticket.codigo_inventario].filter(Boolean).join(' · ')
 }
 
 const estadoOptions: Array<{ value: EstadoFilter; label: string }> = [
@@ -64,6 +79,7 @@ function InboxTable({ tickets, startingId, bitacoraId, onSelectTicket, onStartTi
             <th scope="col">Estado</th>
             <th scope="col">Solicitante</th>
             <th scope="col">Ubicación</th>
+            <th scope="col">Equipo</th>
             <th scope="col">Síntoma</th>
             <th scope="col">Fecha de creación</th>
             <th scope="col"><span className="sr-only">Acciones</span></th>
@@ -94,8 +110,9 @@ function InboxTable({ tickets, startingId, bitacoraId, onSelectTicket, onStartTi
                     {statusLabels[ticket.estado] ?? ticket.estado}
                   </span>
                 </td>
-                <td>{ticket.id_solicitante ?? 'No disponible'}</td>
+                <td>{ticket.solicitante_nombre ?? ticket.id_solicitante ?? 'No disponible'}</td>
                 <td>{ticket.ubicacion}</td>
+                <td className="inbox-device" title={formatDeviceLabel(ticket)}>{formatDeviceLabel(ticket)}</td>
                 <td className="inbox-symptom"><TicketSymptomPreview ticket={ticket} /></td>
                 <td className="inbox-date">
                   {ticket.fecha_creacion ? (
@@ -152,6 +169,7 @@ export function InboxPage({ accessToken, onSessionExpired }: InboxPageProps) {
   const [currentPage, setCurrentPage] = useState(1)
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null)
   const resolutionTriggerRef = useRef<HTMLButtonElement | null>(null)
+  const hasDataRef = useRef(false)
   const [startingId, setStartingId] = useState<number | null>(null)
   const [bitacoraId, setBitacoraId] = useState<number | null>(null)
   const [bitacora, setBitacora] = useState<TicketBitacora | null>(null)
@@ -172,6 +190,7 @@ export function InboxPage({ accessToken, onSessionExpired }: InboxPageProps) {
     )
       .then((result) => {
         if (!isMounted) return
+        hasDataRef.current = true
         setTickets(result.tickets)
         setTotal(result.total)
         setError('')
@@ -182,7 +201,12 @@ export function InboxPage({ accessToken, onSessionExpired }: InboxPageProps) {
           onSessionExpired()
           return
         }
-        setError(exception instanceof Error ? exception.message : 'No se pudo cargar la bandeja de tickets')
+        const message = exception instanceof Error ? exception.message : 'No se pudo cargar la bandeja de tickets'
+        if (hasDataRef.current) {
+          setActionError(`${message}. Se muestran los datos anteriores.`)
+        } else {
+          setError(message)
+        }
       })
       .finally(() => {
         if (isMounted) setLoading(false)
@@ -192,6 +216,22 @@ export function InboxPage({ accessToken, onSessionExpired }: InboxPageProps) {
       isMounted = false
     }
   }, [accessToken, onSessionExpired, reloadKey, estadoFilter, parentLocation, subLocation, desde, hasta, currentPage])
+
+  useEffect(() => {
+    function refresh() {
+      if (document.visibilityState === 'visible') {
+        setReloadKey((key) => key + 1)
+      }
+    }
+
+    const intervalId = window.setInterval(refresh, AUTO_REFRESH_MS)
+    window.addEventListener('focus', refresh)
+
+    return () => {
+      window.clearInterval(intervalId)
+      window.removeEventListener('focus', refresh)
+    }
+  }, [])
 
   useEffect(() => {
     let isMounted = true

@@ -505,7 +505,13 @@ tbody tr:hover {
 }
 
 .inbox-table {
-  min-width: 960px;
+  min-width: 1024px;
+}
+
+.inbox-table th {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .inbox-table th:nth-child(1),
@@ -515,34 +521,39 @@ tbody tr:hover {
 
 .inbox-table th:nth-child(2),
 .inbox-table td:nth-child(2) {
-  width: 12%;
+  width: 11%;
 }
 
 .inbox-table th:nth-child(3),
 .inbox-table td:nth-child(3) {
-  width: 14%;
+  width: 12%;
 }
 
 .inbox-table th:nth-child(4),
 .inbox-table td:nth-child(4) {
-  width: 14%;
+  width: 12%;
 }
 
 .inbox-table th:nth-child(5),
 .inbox-table td:nth-child(5) {
-  width: 30%;
+  width: 15%;
 }
 
 .inbox-table th:nth-child(6),
 .inbox-table td:nth-child(6) {
   width: 14%;
-  padding-right: 8px;
-  text-align: right;
 }
 
 .inbox-table th:nth-child(7),
 .inbox-table td:nth-child(7) {
-  width: 8%;
+  width: 17%;
+  padding-right: 8px;
+  text-align: right;
+}
+
+.inbox-table th:nth-child(8),
+.inbox-table td:nth-child(8) {
+  width: 7%;
 }
 
 .inbox-table tbody tr {
@@ -566,8 +577,16 @@ tbody tr:hover {
   color: var(--minimal-muted);
 }
 
+.inbox-device {
+  min-width: 0;
+  color: var(--minimal-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .inbox-symptom {
-  min-width: 220px;
+  min-width: 0;
 }
 
 .inbox-date {

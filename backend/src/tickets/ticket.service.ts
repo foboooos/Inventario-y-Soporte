@@ -78,6 +78,12 @@ export class TicketService {
       : [];
     const devicesById = new Map(devices.map((device) => [device.id_dispositivo, device]));
 
+    const solicitanteRuts = [...new Set(tickets.map((ticket) => ticket.id_solicitante))];
+    const solicitantes = solicitanteRuts.length
+      ? await this.users.findBy({ rut: In(solicitanteRuts) })
+      : [];
+    const solicitantesByRut = new Map(solicitantes.map((user) => [user.rut, user]));
+
     return {
       data: tickets.map((ticket) => {
         const device = ticket.id_dispositivo !== null ? devicesById.get(ticket.id_dispositivo) : undefined;
@@ -85,6 +91,7 @@ export class TicketService {
           ...ticket,
           dispositivo_tipo: device?.tipo ?? null,
           codigo_inventario: device?.codigo_inventario ?? null,
+          solicitante_nombre: solicitantesByRut.get(ticket.id_solicitante)?.nombre ?? null,
         };
       }),
       total,

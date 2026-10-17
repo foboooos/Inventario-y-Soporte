@@ -122,7 +122,7 @@ export function TicketResolutionForm({ accessToken, ticket, onResolved, onCancel
             </div>
             <div>
               <dt>Solicitante</dt>
-              <dd>{ticket.id_solicitante ?? 'No disponible'}</dd>
+              <dd>{ticket.solicitante_nombre ?? ticket.id_solicitante ?? 'No disponible'}</dd>
             </div>
             <div>
               <dt>Ubicación</dt>
@@ -182,7 +182,7 @@ export function TicketResolutionForm({ accessToken, ticket, onResolved, onCancel
             </fieldset>
             {error && <p className="error" role="alert">{error}</p>}
             <div className="ticket-resolution-actions">
-              <button ref={cancelRef} className="primary-action" type="button" disabled={saving} onClick={onCancel}>Cancelar</button>
+              <button ref={cancelRef} className="secondary-button" type="button" disabled={saving} onClick={onCancel}>Cancelar</button>
               <button ref={saveRef} className="primary-action" type="submit" disabled={saving || !cause.trim() || !solution.trim() || !finalStatus}>
                 {saving ? 'Guardando…' : 'Cerrar ticket'}
               </button>
