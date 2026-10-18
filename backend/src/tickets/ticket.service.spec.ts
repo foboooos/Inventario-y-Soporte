@@ -63,22 +63,32 @@ describe('TicketService', () => {
     expect(result).toMatchObject({ total: 25, page: 3, limit: 5, total_pages: 5 });
   });
 
-  it('adds the device type and inventory code to the technical inbox tickets', async () => {
+  it('adds the device info and the requester name to the technical inbox tickets', async () => {
     const tickets = [
-      { id_ticket: 1, id_dispositivo: 5 } as Ticket,
-      { id_ticket: 2, id_dispositivo: null } as Ticket,
+      { id_ticket: 1, id_dispositivo: 5, id_solicitante: '12345678-9' } as Ticket,
+      { id_ticket: 2, id_dispositivo: null, id_solicitante: '98765432-1' } as Ticket,
     ];
     const findAndCount = vi.fn().mockResolvedValue([tickets, tickets.length]);
     const findBy = vi.fn().mockResolvedValue([
       { id_dispositivo: 5, tipo: 'PC', codigo_inventario: 'PC-LAB-01' } as Device,
     ]);
-    const service = createService({ findAndCount }, { findBy });
+    const findUsersBy = vi.fn().mockResolvedValue([{ rut: '12345678-9', nombre: 'Ana Pérez' } as User]);
+    const service = createService({ findAndCount }, { findBy }, { findBy: findUsersBy });
 
     const result = await service.findInbox();
 
     expect(findBy).toHaveBeenCalledOnce();
-    expect(result.data[0]).toMatchObject({ dispositivo_tipo: 'PC', codigo_inventario: 'PC-LAB-01' });
-    expect(result.data[1]).toMatchObject({ dispositivo_tipo: null, codigo_inventario: null });
+    expect(findUsersBy).toHaveBeenCalledOnce();
+    expect(result.data[0]).toMatchObject({
+      dispositivo_tipo: 'PC',
+      codigo_inventario: 'PC-LAB-01',
+      solicitante_nombre: 'Ana Pérez',
+    });
+    expect(result.data[1]).toMatchObject({
+      dispositivo_tipo: null,
+      codigo_inventario: null,
+      solicitante_nombre: null,
+    });
   });
 
   it('translates the operational state filter into resolved tickets with an active device', async () => {
@@ -213,6 +223,48 @@ describe('TicketService', () => {
     });
     expect(save).toHaveBeenCalledWith(ticket);
     expect(result).toBe(ticket);
+  });
+
+  it('marks the affected device with the final status when the ticket is resolved', async () => {
+    const ticket = { id_ticket: 7, estado: TicketStatus.EN_PROCESO, id_dispositivo: 5 } as Ticket;
+    const findOneBy = vi.fn().mockResolvedValue(ticket);
+    const save = vi.fn().mockResolvedValue(ticket);
+    const update = vi.fn().mockResolvedValue({ affected: 1 });
+    const service = createService(
+      { findOneBy, save },
+      { update },
+      { findOneBy: vi.fn().mockResolvedValue({ rut: '12345678-9', nombre: 'Ana Pérez' } as User) },
+    );
+
+    const input = {
+      causa_raiz: 'Falla en la fuente de poder',
+      solucion_aplicada: 'Se reemplazó la fuente y se verificó el encendido',
+      estado_final: DeviceStatus.ACTIVO,
+    } as ResolveTicketDto;
+
+    await service.resolve(7, input, '12345678-9');
+
+    expect(update).toHaveBeenCalledWith({ id_dispositivo: 5 }, { estado: DeviceStatus.ACTIVO });
+  });
+
+  it('leaves the inventory untouched when the ticket has no device', async () => {
+    const ticket = { id_ticket: 7, estado: TicketStatus.EN_PROCESO, id_dispositivo: null } as Ticket;
+    const findOneBy = vi.fn().mockResolvedValue(ticket);
+    const save = vi.fn().mockResolvedValue(ticket);
+    const update = vi.fn();
+    const service = createService(
+      { findOneBy, save },
+      { update },
+      { findOneBy: vi.fn().mockResolvedValue({ rut: '12345678-9', nombre: 'Ana Pérez' } as User) },
+    );
+
+    await service.resolve(7, {
+      causa_raiz: 'Falla',
+      solucion_aplicada: 'Reparación',
+      estado_final: DeviceStatus.ACTIVO,
+    }, '12345678-9');
+
+    expect(update).not.toHaveBeenCalled();
   });
 
   it('rejects resolving a ticket that does not exist', async () => {

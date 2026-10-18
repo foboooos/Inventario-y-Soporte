@@ -153,7 +153,16 @@ export class TicketService {
     ticket.fecha_resolucion = new Date();
     ticket.estado = TicketStatus.RESUELTO;
 
-    return this.tickets.save(ticket);
+    const saved = await this.tickets.save(ticket);
+
+    if (typeof saved.id_dispositivo === 'number') {
+      await this.devices.update(
+        { id_dispositivo: saved.id_dispositivo },
+        { estado: resolveTicketDto.estado_final },
+      );
+    }
+
+    return saved;
   }
 
   async changeStatus(idTicket: number, nextStatus: TicketStatus) {
