@@ -3,14 +3,15 @@ import type { Ticket } from '../types/ticket'
 
 type TicketSymptomPreviewProps = {
   ticket: Pick<Ticket, 'id_ticket' | 'codigo_ticket' | 'sintoma'>
+  isExpanded: boolean
+  onExpandedChange: (expanded: boolean) => void
 }
 
-export function TicketSymptomPreview({ ticket }: TicketSymptomPreviewProps) {
+export function TicketSymptomPreview({ ticket, isExpanded, onExpandedChange }: TicketSymptomPreviewProps) {
   const symptomTextRef = useRef<HTMLSpanElement | null>(null)
   const symptomToggleRef = useRef<HTMLButtonElement | null>(null)
   const symptomPopupRef = useRef<HTMLDivElement | null>(null)
   const [hasOverflow, setHasOverflow] = useState(false)
-  const [isExpanded, setIsExpanded] = useState(false)
   const [popupPosition, setPopupPosition] = useState<{ top: number; left: number } | null>(null)
   const expandedDescriptionId = `ticket-symptom-${ticket.id_ticket}`
 
@@ -29,6 +30,26 @@ export function TicketSymptomPreview({ ticket }: TicketSymptomPreviewProps) {
     resizeObserver.observe(symptomText)
     return () => resizeObserver.disconnect()
   }, [ticket.sintoma])
+
+  useEffect(() => {
+    if (!isExpanded) return
+
+    function handlePointerDown(event: PointerEvent) {
+      const target = event.target
+
+      if (
+        target instanceof Node &&
+        (symptomPopupRef.current?.contains(target) || symptomToggleRef.current?.contains(target))
+      ) {
+        return
+      }
+
+      onExpandedChange(false)
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown)
+    return () => document.removeEventListener('pointerdown', handlePointerDown)
+  }, [isExpanded, onExpandedChange])
 
   useLayoutEffect(() => {
     if (!isExpanded) return
@@ -80,7 +101,7 @@ export function TicketSymptomPreview({ ticket }: TicketSymptomPreviewProps) {
             aria-label={`${isExpanded ? 'Ocultar' : 'Ver'} síntoma completo del ticket ${ticket.codigo_ticket}`}
             onClick={() => {
               setPopupPosition(null)
-              setIsExpanded((expanded) => !expanded)
+              onExpandedChange(!isExpanded)
             }}
           >
             <svg viewBox="0 0 24 24" aria-hidden="true">

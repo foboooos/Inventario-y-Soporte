@@ -69,6 +69,8 @@ function InboxTable({ tickets, startingId, bitacoraId, onSelectTicket, onStartTi
   onStartTicket: (ticket: Ticket) => void
   onOpenBitacora: (ticket: Ticket) => void
 }) {
+  const [expandedSymptomId, setExpandedSymptomId] = useState<number | null>(null)
+
   return (
     <div className="table-scroll inbox-table-scroll" role="region" tabIndex={0} aria-label="Tabla de tickets">
       <table className="inbox-table">
@@ -113,7 +115,13 @@ function InboxTable({ tickets, startingId, bitacoraId, onSelectTicket, onStartTi
                 <td>{ticket.solicitante_nombre ?? ticket.id_solicitante ?? 'No disponible'}</td>
                 <td>{ticket.ubicacion}</td>
                 <td className="inbox-device" title={formatDeviceLabel(ticket)}>{formatDeviceLabel(ticket)}</td>
-                <td className="inbox-symptom"><TicketSymptomPreview ticket={ticket} /></td>
+                <td className="inbox-symptom">
+                  <TicketSymptomPreview
+                    ticket={ticket}
+                    isExpanded={expandedSymptomId === ticket.id_ticket}
+                    onExpandedChange={(expanded) => setExpandedSymptomId(expanded ? ticket.id_ticket : null)}
+                  />
+                </td>
                 <td className="inbox-date">
                   {ticket.fecha_creacion ? (
                     <time dateTime={ticket.fecha_creacion}>{formatTicketDate(ticket.fecha_creacion)}</time>
@@ -298,7 +306,11 @@ export function InboxPage({ accessToken, onSessionExpired }: InboxPageProps) {
 
     try {
       const updatedTicket = await updateTicketStatus(accessToken, ticket.id_ticket, 'EN_PROCESO')
-      setTickets((current) => current.map((item) => (item.id_ticket === updatedTicket.id_ticket ? updatedTicket : item)))
+      setTickets((current) =>
+        current.map((item) =>
+          item.id_ticket === ticket.id_ticket ? { ...item, estado: updatedTicket.estado } : item,
+        ),
+      )
     } catch (exception: unknown) {
       if (isSessionExpired(exception)) {
         onSessionExpired()

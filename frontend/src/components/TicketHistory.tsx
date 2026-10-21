@@ -34,6 +34,8 @@ function formatTicketDate(value?: string) {
 
 
 function TicketHistoryTable({ tickets }: { tickets: Ticket[] }) {
+  const [expandedSymptomId, setExpandedSymptomId] = useState<number | null>(null)
+
   return (
     <div className="ticket-history-table-scroll" role="region" tabIndex={0} aria-label="Tabla de historial de tickets">
       <table className="ticket-history-table">
@@ -57,7 +59,13 @@ function TicketHistoryTable({ tickets }: { tickets: Ticket[] }) {
                 </span>
               </td>
               <td className="ticket-history-location"><span className="ticket-history-location-text">{ticket.ubicacion}</span></td>
-              <td className="ticket-history-symptom"><TicketSymptomPreview ticket={ticket} /></td>
+              <td className="ticket-history-symptom">
+                <TicketSymptomPreview
+                  ticket={ticket}
+                  isExpanded={expandedSymptomId === ticket.id_ticket}
+                  onExpandedChange={(expanded) => setExpandedSymptomId(expanded ? ticket.id_ticket : null)}
+                />
+              </td>
               <td className="ticket-history-date">
                 {ticket.fecha_creacion ? (
                   <time dateTime={ticket.fecha_creacion}>{formatTicketDate(ticket.fecha_creacion)}</time>
