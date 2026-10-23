@@ -71,6 +71,12 @@
   font-size: 13px;
 }
 
+.device-form input:focus-visible,
+.device-form select:focus-visible {
+  border-color: var(--minimal-secondary);
+  box-shadow: 0 0 0 3px rgba(49, 44, 133, 0.14);
+}
+
 .device-form-wide {
   grid-column: 1 / -1;
 }
@@ -85,24 +91,3 @@
   margin: 0;
 }
 
-.secondary-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0;
-  padding: 8px 12px;
-  border: 1px solid rgba(12, 12, 9, 0.08);
-  border-radius: 12px;
-  color: var(--minimal-muted);
-  background: #fff;
-  font-size: 14px;
-  font-weight: 600;
-  white-space: nowrap;
-  transition: color 120ms ease, background-color 120ms ease, border-color 120ms ease;
-}
-
-.secondary-button:hover:not(:disabled) {
-  border-color: rgba(12, 12, 9, 0.12);
-  color: var(--minimal-primary);
-  background: var(--minimal-surface);
-}

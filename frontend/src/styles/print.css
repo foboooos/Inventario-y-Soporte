@@ -137,10 +137,6 @@
   white-space: nowrap;
 }
 
-.ticket-log-check-label {
-  font-weight: 600;
-}
-
 .ticket-log-solution {
   margin: 0;
   padding-left: 20px;

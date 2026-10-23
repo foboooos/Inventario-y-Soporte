@@ -62,7 +62,7 @@ export function LoginForm({ onAuthenticated }: LoginFormProps) {
             </button>
           </div>
           {error && <p className="error" role="alert">{error}</p>}
-          <button type="submit" disabled={loading}>{loading ? 'Ingresando…' : 'Ingresar'}</button>
+          <button className="primary-action" type="submit" disabled={loading}>{loading ? 'Ingresando…' : 'Ingresar'}</button>
         </form>
       </section>
     </main>

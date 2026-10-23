@@ -78,15 +78,6 @@
     padding-bottom: 24px;
   }
 
-  .heading-actions {
-    justify-content: stretch;
-  }
-
-  .heading-actions .primary-action {
-    width: 100%;
-    justify-content: center;
-  }
-
   .table-scroll table {
     min-width: 0;
   }

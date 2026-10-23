@@ -389,7 +389,7 @@ export function InboxPage({ accessToken, onSessionExpired }: InboxPageProps) {
             {!loading && error && (
               <div className="empty-state-block">
                 <p className="error" role="alert">{error}</p>
-                <button type="button" onClick={retryLoad}>Reintentar</button>
+                <button className="text-button" type="button" onClick={retryLoad}>Reintentar</button>
               </div>
             )}
 

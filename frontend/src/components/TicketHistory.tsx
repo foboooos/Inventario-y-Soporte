@@ -141,7 +141,7 @@ export function TicketHistory({ accessToken, onSessionExpired, refreshKey }: Tic
         {!loading && error && (
           <div className="ticket-history-state">
             <p className="error" role="alert">{error}</p>
-            <button type="button" onClick={() => setReloadKey((key) => key + 1)}>Reintentar</button>
+            <button className="text-button" type="button" onClick={() => setReloadKey((key) => key + 1)}>Reintentar</button>
           </div>
         )}
 

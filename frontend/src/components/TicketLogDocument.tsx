@@ -58,7 +58,7 @@ export function TicketLogDocument({ bitacora, onClose }: TicketLogDocumentProps)
       >
         <div className="ticket-log-toolbar no-print">
           <button className="primary-action" type="button" onClick={() => window.print()}>Imprimir / Guardar PDF</button>
-          <button className="primary-action" type="button" onClick={onClose}>Cerrar</button>
+          <button className="secondary-button" type="button" onClick={onClose}>Cerrar</button>
         </div>
 
         <article className="ticket-log-document">

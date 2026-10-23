@@ -4,7 +4,7 @@
   display: grid;
   place-items: center;
   padding: 32px 24px;
-  background: #fafaf8;
+  background: var(--minimal-surface);
   color: var(--minimal-text);
   font-family: 'Open Sans', 'Segoe UI', sans-serif;
 }
@@ -13,9 +13,10 @@
   width: min(100%, 400px);
   box-sizing: border-box;
   padding: 32px;
-  border: 1px solid var(--minimal-border);
-  border-radius: 8px;
+  border: 1px solid rgba(12, 12, 9, 0.08);
+  border-radius: 12px;
   background: #fff;
+  box-shadow: 0 3px 12px rgba(12, 12, 9, 0.06);
   text-align: center;
 }
 
