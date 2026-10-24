@@ -4,6 +4,7 @@ import { getLocations } from '../services/locations'
 import { isSessionExpired } from '../services/http'
 import type { Device, DeviceStatus, DeviceType } from '../types/inventory'
 import type { Location } from '../types/location'
+import { SelectMenu } from './SelectMenu'
 
 type CreateDeviceFormProps = {
   accessToken: string
@@ -78,6 +79,12 @@ export function CreateDeviceForm({ accessToken, onCreated, onCancel, onSessionEx
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError('')
+
+    if (!form.ubicacion) {
+      setError('Selecciona una ubicación')
+      return
+    }
+
     setSaving(true)
 
     try {
@@ -103,15 +110,21 @@ export function CreateDeviceForm({ accessToken, onCreated, onCancel, onSessionEx
               <span>Código de inventario</span>
               <input value={form.codigo_inventario} onChange={(event) => updateField('codigo_inventario', event.target.value)} placeholder="DV-PC-004" required maxLength={50} />
             </label>
-            <label>
+            <div className="device-field">
               <span>Tipo</span>
-              <select value={form.tipo} onChange={(event) => updateField('tipo', event.target.value as DeviceType)}>
-                <option value="PC">PC</option>
-                <option value="PROYECTOR">Proyector</option>
-                <option value="IMPRESORA">Impresora</option>
-                <option value="RED">Red</option>
-              </select>
-            </label>
+              <SelectMenu
+                id="device-type"
+                ariaLabel="Tipo"
+                value={form.tipo}
+                onChange={(next) => updateField('tipo', next as DeviceType)}
+                options={[
+                  { value: 'PC', label: 'PC' },
+                  { value: 'PROYECTOR', label: 'Proyector' },
+                  { value: 'IMPRESORA', label: 'Impresora' },
+                  { value: 'RED', label: 'Red' },
+                ]}
+              />
+            </div>
             <label>
               <span>Marca</span>
               <input value={form.marca} onChange={(event) => updateField('marca', event.target.value)} maxLength={50} />
@@ -120,35 +133,56 @@ export function CreateDeviceForm({ accessToken, onCreated, onCancel, onSessionEx
               <span>Modelo</span>
               <input value={form.modelo} onChange={(event) => updateField('modelo', event.target.value)} maxLength={50} />
             </label>
-            <label>
+            <div className="device-field">
               <span>Ubicación</span>
-              <select value={parentName} onChange={(event) => updateField('ubicacion', event.target.value)} disabled={loadingLocations} required>
-                <option value="">Selecciona una ubicación</option>
-                {parentName && !globalLocations.some((item) => item.nombre === parentName) && <option value={parentName}>{parentName}</option>}
-                {globalLocations.map((item) => <option key={item.id} value={item.nombre}>{item.nombre}</option>)}
-              </select>
-            </label>
+              <SelectMenu
+                id="device-location"
+                ariaLabel="Ubicación"
+                placeholder="Selecciona una ubicación"
+                value={parentName}
+                disabled={loadingLocations}
+                onChange={(next) => updateField('ubicacion', next)}
+                options={[
+                  { value: '', label: 'Selecciona una ubicación' },
+                  ...(parentName && !globalLocations.some((item) => item.nombre === parentName) ? [{ value: parentName, label: parentName }] : []),
+                  ...globalLocations.map((item) => ({ value: item.nombre, label: item.nombre })),
+                ]}
+              />
+            </div>
             {subLocations.length > 0 && (
-              <label>
+              <div className="device-field">
                 <span>Curso / Sub-ubicación</span>
-                <select value={subName} onChange={(event) => updateField('ubicacion', event.target.value || parentName)}>
-                  <option value="">Toda la ubicación</option>
-                  {subLocations.map((item) => <option key={item.id} value={item.nombre}>{item.nombre}</option>)}
-                </select>
-              </label>
+                <SelectMenu
+                  id="device-sublocation"
+                  ariaLabel="Curso o sub-ubicación"
+                  placeholder="Toda la ubicación"
+                  value={subName}
+                  onChange={(next) => updateField('ubicacion', next || parentName)}
+                  options={[
+                    { value: '', label: 'Toda la ubicación' },
+                    ...subLocations.map((item) => ({ value: item.nombre, label: item.nombre })),
+                  ]}
+                />
+              </div>
             )}
-            <label>
+            <div className="device-field">
               <span>Estado</span>
-              <select value={form.estado} onChange={(event) => updateField('estado', event.target.value as DeviceStatus)}>
-                <option value="ACTIVO">Activo</option>
-                <option value="INACTIVO">Inactivo</option>
-                <option value="BAJA_TECNICA">Baja técnica</option>
-              </select>
-            </label>
+              <SelectMenu
+                id="device-status"
+                ariaLabel="Estado"
+                value={form.estado}
+                onChange={(next) => updateField('estado', next as DeviceStatus)}
+                options={[
+                  { value: 'ACTIVO', label: 'Activo' },
+                  { value: 'INACTIVO', label: 'Inactivo' },
+                  { value: 'BAJA_TECNICA', label: 'Baja técnica' },
+                ]}
+              />
+            </div>
             {error && <p className="error device-form-wide" role="alert">{error}</p>}
             <div className="device-form-actions device-form-wide">
               <button className="secondary-button" type="button" onClick={onCancel}>Cancelar</button>
-              <button className="primary-action" type="submit" disabled={saving}>{saving ? 'Guardando…' : 'Registrar dispositivo'}</button>
+              <button className="primary-action primary-action-solid" type="submit" disabled={saving}>{saving ? 'Guardando…' : 'Registrar dispositivo'}</button>
             </div>
           </form>
         </div>

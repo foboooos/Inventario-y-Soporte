@@ -7,6 +7,8 @@ type SidebarProps = {
   activeRoute: RouteKey | null
   onNavigate: (route: RouteKey) => void
   onLogout: () => void
+  mobileOpen: boolean
+  onToggleMobile: () => void
 }
 
 function RoleIcon({ role }: { role: string }) {
@@ -45,7 +47,7 @@ function RouteIcon({ route }: { route: RouteKey }) {
   return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5a2 2 0 0 1 2 2v.38a6.8 6.8 0 0 1 1.55.9l.33-.19a2 2 0 1 1 2 3.46l-.33.19c.08.36.12.73.12 1.11s-.04.75-.12 1.11l.33.19a2 2 0 1 1-2 3.46l-.33-.19a6.8 6.8 0 0 1-1.55.9v.38a2 2 0 1 1-4 0v-.38a6.8 6.8 0 0 1-1.55-.9l.33.19a2 2 0 1 1-2-3.46l.33-.19A5.7 5.7 0 0 1 6.33 12c0-.38.04-.75.12-1.11l-.33-.19a2 2 0 1 1 2-3.46l.33.19A6.8 6.8 0 0 1 10 5.88V5.5a2 2 0 0 1 2-2Z" /><circle cx="12" cy="11.35" r="2.5" /></svg>
 }
 
-export function Sidebar({ user, activeRoute, onNavigate, onLogout }: SidebarProps) {
+export function Sidebar({ user, activeRoute, onNavigate, onLogout, mobileOpen, onToggleMobile }: SidebarProps) {
   const visibleRoutes = routesForRole(user.rol)
   const roleLabels: Record<string, string> = {
     ADMIN: 'Administrador',
@@ -65,7 +67,7 @@ export function Sidebar({ user, activeRoute, onNavigate, onLogout }: SidebarProp
 
   return (
     <aside className="sidebar">
-      <nav className="sidebar-nav" aria-label="Navegación principal">
+      <nav className="sidebar-nav" id="main-navigation" aria-label="Navegación principal">
         {visibleRoutes.map((route) => (
           <a
             className={`sidebar-link${activeRoute === route.key ? ' active' : ''}`}
@@ -98,6 +100,18 @@ export function Sidebar({ user, activeRoute, onNavigate, onLogout }: SidebarProp
             <path d="M20 12H9" />
           </svg>
           <span className="sidebar-logout-label">Cerrar sesión</span>
+        </button>
+        <button
+          className="sidebar-menu-toggle"
+          type="button"
+          onClick={onToggleMobile}
+          aria-label={mobileOpen ? 'Cerrar menú' : 'Abrir menú'}
+          aria-expanded={mobileOpen}
+          aria-controls="main-navigation"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            {mobileOpen ? <path d="m6 6 12 12M18 6 6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
+          </svg>
         </button>
       </div>
     </aside>

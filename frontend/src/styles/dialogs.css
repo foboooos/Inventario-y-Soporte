@@ -16,7 +16,7 @@
 .modal-card {
   width: min(100%, 640px);
   max-height: calc(100svh - 48px);
-  margin: 0;
+  margin: auto;
   overflow-y: auto;
 }
 
@@ -53,13 +53,15 @@
   gap: 16px;
 }
 
-.device-form label {
+.device-form label,
+.device-form .device-field {
   display: grid;
   gap: 8px;
   margin: 0;
 }
 
-.device-form label > span {
+.device-form label > span,
+.device-form .device-field > span {
   color: var(--minimal-muted);
   font-size: 13px;
   font-weight: 600;
@@ -68,6 +70,7 @@
 
 .device-form input,
 .device-form select {
+  padding: 8px 12px;
   font-size: 13px;
 }
 

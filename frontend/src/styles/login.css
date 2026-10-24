@@ -44,16 +44,6 @@
 
 .login-card .primary-action {
   margin-top: 12px;
-  justify-content: center;
-  border-color: var(--minimal-primary);
-  color: #fff;
-  background: var(--minimal-primary);
-}
-
-.login-card .primary-action:hover:not(:disabled) {
-  border-color: var(--minimal-primary);
-  color: #fff;
-  background: rgba(12, 12, 9, 0.86);
 }
 
 .login-card input {

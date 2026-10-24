@@ -15,6 +15,7 @@ type DashboardLayoutProps = {
 
 export function DashboardLayout({ children, user, activeRoute, onNavigate, onLogout }: DashboardLayoutProps) {
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(SIDEBAR_STORAGE_KEY) === 'true')
+  const [mobileOpen, setMobileOpen] = useState(false)
 
   function toggleSidebar() {
     setCollapsed((current) => {
@@ -25,12 +26,14 @@ export function DashboardLayout({ children, user, activeRoute, onNavigate, onLog
   }
 
   return (
-    <div className={`dashboard-layout${collapsed ? ' is-collapsed' : ''}`}>
+    <div className={`dashboard-layout${collapsed ? ' is-collapsed' : ''}${mobileOpen ? ' is-mobile-open' : ''}`}>
       <Sidebar
         user={user}
         activeRoute={activeRoute}
         onNavigate={onNavigate}
         onLogout={onLogout}
+        mobileOpen={mobileOpen}
+        onToggleMobile={() => setMobileOpen((current) => !current)}
       />
       <button
         className="sidebar-toggle"

@@ -121,6 +121,7 @@ button:disabled {
   padding: 8px 12px;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   border: 1px solid rgba(12, 12, 9, 0.08);
   border-radius: 12px;
@@ -147,6 +148,18 @@ button:disabled {
   stroke: currentColor;
   stroke-linecap: round;
   stroke-width: 2;
+}
+
+.primary-action-solid {
+  border-color: var(--minimal-primary);
+  color: #fff;
+  background: var(--minimal-primary);
+}
+
+.primary-action-solid:hover:not(:disabled) {
+  border-color: var(--minimal-primary);
+  color: #fff;
+  background: rgba(12, 12, 9, 0.86);
 }
 
 .secondary-button {
@@ -231,4 +244,92 @@ button:disabled {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--minimal-border) transparent;
+}
+
+.select-menu {
+  position: relative;
+}
+
+.select-menu-button {
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 12px;
+  border: 1px solid var(--minimal-border);
+  border-radius: 4px;
+  color: var(--minimal-text);
+  background: #fff;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: left;
+}
+
+.select-menu-button svg {
+  flex: 0 0 14px;
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: var(--minimal-primary);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.select-menu-placeholder {
+  color: var(--minimal-muted);
+}
+
+.select-menu-list {
+  position: absolute;
+  z-index: 40;
+  left: 0;
+  right: 0;
+  box-sizing: border-box;
+  max-height: 248px;
+  margin: 0;
+  padding: 4px;
+  overflow-y: auto;
+  list-style: none;
+  border: 1px solid var(--minimal-border);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(12, 12, 9, 0.14);
+}
+
+.select-menu-list.is-below {
+  top: calc(100% + 4px);
+}
+
+.select-menu-list.is-above {
+  bottom: calc(100% + 4px);
+}
+
+.select-menu-option {
+  display: flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.select-menu-option.is-active {
+  background: #ececf6;
+}
+
+.select-menu-option.is-selected {
+  color: var(--minimal-secondary);
+  font-weight: 700;
 }

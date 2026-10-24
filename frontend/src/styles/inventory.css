@@ -174,27 +174,27 @@
 
 .table-scroll th:nth-child(1),
 .table-scroll td:nth-child(1) {
-  width: 18%;
+  width: 13%;
 }
 
 .table-scroll th:nth-child(2),
 .table-scroll td:nth-child(2) {
-  width: 12%;
+  width: 14%;
 }
 
 .table-scroll th:nth-child(3),
 .table-scroll td:nth-child(3) {
-  width: 26%;
+  width: 22%;
 }
 
 .table-scroll th:nth-child(4),
 .table-scroll td:nth-child(4) {
-  width: 29%;
+  width: 34%;
 }
 
 .table-scroll th:nth-child(5),
 .table-scroll td:nth-child(5) {
-  width: 15%;
+  width: 17%;
 }
 
 th,
@@ -524,25 +524,19 @@ tbody tr:hover {
   .table-footer {
     align-items: flex-start;
     flex-direction: column;
+    gap: 12px;
+    padding-top: 0;
+    padding-bottom: 12px;
+  }
+
+  .table-footer > span {
+    position: relative;
+    top: 6px;
+    align-self: center;
   }
 }
 
 @media (max-width: 520px) {
-  .inventory-summary {
-    display: flex;
-    gap: 10px;
-    overflow-x: auto;
-    scrollbar-width: thin;
-    scroll-snap-type: x proximity;
-    padding-bottom: 4px;
-  }
-
-  .inventory-summary-card {
-    flex: 0 0 auto;
-    min-width: 148px;
-    scroll-snap-align: start;
-  }
-
   .inventory-status-tabs {
     gap: 18px;
   }
