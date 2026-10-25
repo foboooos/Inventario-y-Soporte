@@ -6,6 +6,7 @@ import { seedLevels } from './seeds/levels.seed.js';
 import { seedLocations } from './seeds/locations.seed.js';
 import { seedSoftware } from './seeds/software.seed.js';
 import { seedSubjects } from './seeds/subjects.seed.js';
+import { seedTickets } from './seeds/tickets.seed.js';
 import { seedUsers } from './seeds/users.seed.js';
 
 async function bootstrap() {
@@ -19,6 +20,7 @@ async function bootstrap() {
     await seedSoftware(dataSource);
     await seedUsers(dataSource);
     await seedDevices(dataSource);
+    await seedTickets(dataSource);
 
     console.log('Seed completado');
   } finally {

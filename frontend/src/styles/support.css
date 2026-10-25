@@ -2,7 +2,7 @@
   min-height: 100svh;
   height: 100svh;
   box-sizing: border-box;
-  background: #fafaf8;
+  background: var(--surface-sunken);
   color: var(--minimal-text);
   font-family: 'Open Sans', 'Segoe UI', sans-serif;
   overflow: hidden;
@@ -22,8 +22,8 @@
 .support-card {
   margin-top: 0;
   padding: 24px;
-  border: 1px solid #e7e7e2;
-  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
   background: #fff;
 }
 
@@ -35,7 +35,7 @@
 .ticket-form-card {
   width: 100%;
   box-sizing: border-box;
-  border-color: #e7e7e2;
+  border-color: var(--border-subtle);
 }
 
 .ticket-form {
@@ -60,7 +60,7 @@
 .ticket-form input,
 .ticket-form select,
 .ticket-form textarea {
-  border-color: #e7e7e2;
+  border-color: var(--border-subtle);
   font-size: 13px;
 }
 
@@ -123,8 +123,8 @@
   flex: 1 1 0;
   flex-direction: column;
   padding: 0;
-  border: 1px solid #e7e7e2;
-  border-radius: 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
   overflow: hidden;
 }
 
@@ -148,7 +148,7 @@
 .ticket-history-table th,
 .ticket-history-table td {
   padding: 3px 16px;
-  border-bottom: 1px solid #ecece6;
+  border-bottom: 1px solid var(--border-subtle);
   vertical-align: middle;
 }
 
@@ -159,7 +159,7 @@
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  border-bottom-color: #e4e4df;
+  border-bottom-color: var(--border-subtle);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -183,7 +183,7 @@
 }
 
 .ticket-history-table tbody tr:hover {
-  background: #fafaf8;
+  background: var(--surface-sunken);
 }
 
 .ticket-history-code-column,
@@ -246,7 +246,7 @@
   margin: 0;
   padding: 0;
   border: 0;
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--minimal-muted);
 }
@@ -284,7 +284,7 @@
 .ticket-symptom-toggle:hover:not(:disabled),
 .ticket-symptom-toggle[aria-expanded='true'] {
   color: var(--minimal-primary);
-  background: #ececf6;
+  background: var(--tint-accent);
 }
 
 .ticket-symptom-expanded {
@@ -296,11 +296,12 @@
   box-sizing: border-box;
   padding: 10px 12px;
   border: 1px solid var(--minimal-border);
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   color: var(--minimal-text);
   background: #fff;
-  box-shadow: 0 8px 24px rgba(12, 12, 9, 0.14);
+  box-shadow: var(--shadow-overlay);
   line-height: 1.45;
+  white-space: normal;
   overflow-y: auto;
   overflow-wrap: anywhere;
 }
@@ -308,9 +309,9 @@
 .ticket-status {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 3px 9px;
-  border-radius: 999px;
+  gap: 4px;
+  padding: 3px 7px;
+  border-radius: var(--radius-pill);
   font-size: 11px;
   font-weight: 700;
   line-height: 1.4;
@@ -321,24 +322,24 @@
   width: 6px;
   height: 6px;
   flex: 0 0 auto;
-  border-radius: 50%;
+  border-radius: var(--radius-circle);
   background: currentColor;
   content: '';
 }
 
 .ticket-status-abierto {
   color: var(--minimal-secondary);
-  background: #ececf6;
+  background: var(--tint-accent);
 }
 
 .ticket-status-en-proceso {
   color: var(--minimal-warning);
-  background: #fef3c7;
+  background: var(--tint-warning);
 }
 
 .ticket-status-resuelto {
   color: var(--minimal-success);
-  background: #dcfce7;
+  background: var(--tint-success);
 }
 
 .ticket-history-state {
@@ -367,10 +368,10 @@
 
 .ticket-resolution-modal {
   padding: 0;
-  border: 1px solid #e7e7e2;
-  border-radius: 14px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
   background: #fff;
-  box-shadow: 0 28px 64px -20px rgba(12, 12, 9, 0.35);
+  box-shadow: var(--shadow-modal);
 }
 
 .ticket-resolution-body {
@@ -384,16 +385,16 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1px;
   margin: 0;
-  border: 1px solid #ecece6;
-  border-radius: 10px;
-  background: #ecece6;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--border-subtle);
   overflow: hidden;
 }
 
 .ticket-resolution-summary > div {
   min-width: 0;
   padding: 9px 14px;
-  background: #fafaf8;
+  background: var(--surface-sunken);
 }
 
 .ticket-resolution-summary dt {
@@ -479,8 +480,8 @@
   justify-content: center;
   min-height: 40px;
   padding: 8px 12px;
-  border: 1px solid #e7e7e2;
-  border-radius: 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
   background: #fff;
   color: var(--minimal-text);
   font-size: 13px;
@@ -493,20 +494,20 @@
 
 .ticket-resolution-form .ticket-resolution-status-option[data-status='activo'] input:checked + span {
   border-color: var(--minimal-success);
-  background: #dcfce7;
+  background: var(--tint-success);
   color: var(--minimal-success);
 }
 
 .ticket-resolution-form .ticket-resolution-status-option[data-status='inactivo'] input:checked + span {
-  border-color: #78350f;
-  background: #fef3c7;
-  color: #78350f;
+  border-color: var(--ink-warning);
+  background: var(--tint-warning);
+  color: var(--ink-warning);
 }
 
 .ticket-resolution-form .ticket-resolution-status-option[data-status='baja_tecnica'] input:checked + span {
-  border-color: #b91c1c;
-  background: #fee2e2;
-  color: #b91c1c;
+  border-color: var(--ink-danger);
+  background: var(--tint-danger);
+  color: var(--ink-danger);
 }
 
 .ticket-resolution-form .ticket-resolution-status-option input:focus-visible + span {
@@ -680,7 +681,7 @@
 
 .subjects-form input,
 .subjects-form select {
-  border-color: #e7e7e2;
+  border-color: var(--border-subtle);
   font-size: 13px;
 }
 
@@ -731,8 +732,8 @@
   gap: 2px;
   max-height: 220px;
   padding: 8px;
-  border: 1px solid #e7e7e2;
-  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
   background: #fff;
   overflow-y: auto;
   scrollbar-gutter: stable;
@@ -744,17 +745,17 @@
   gap: 8px;
   margin-top: 0;
   padding: 5px 8px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   font-size: 13px;
   cursor: pointer;
 }
 
 .subjects-checkbox:hover {
-  background: #f4f4f1;
+  background: var(--minimal-surface);
 }
 
 .subjects-checkbox:has(input:checked) {
-  background: #ececf6;
+  background: var(--tint-accent);
   color: var(--minimal-secondary);
   font-weight: 600;
 }
@@ -800,9 +801,9 @@
   justify-content: space-between;
   gap: 12px;
   padding: 10px 14px;
-  border: 1px solid #ecece6;
-  border-radius: 8px;
-  background: #fafaf8;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
 }
 
 .subjects-item-block {
@@ -832,8 +833,8 @@
   display: inline-flex;
   align-items: center;
   padding: 2px 9px;
-  border-radius: 999px;
-  background: #ececf6;
+  border-radius: var(--radius-pill);
+  background: var(--tint-accent);
   color: var(--minimal-secondary);
   font-size: 11px;
   font-weight: 700;
@@ -859,7 +860,7 @@
   display: inline-flex;
   align-items: center;
   padding: 2px 9px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   font-size: 11px;
   font-weight: 700;
   line-height: 1.6;
@@ -868,27 +869,27 @@
 
 .software-license-libre {
   color: var(--minimal-success);
-  background: #dcfce7;
+  background: var(--tint-success);
 }
 
 .software-license-gratuita {
-  color: #075985;
-  background: #e0f2fe;
+  color: var(--ink-info);
+  background: var(--tint-info);
 }
 
 .software-license-comercial {
-  color: #b91c1c;
-  background: #fee2e2;
+  color: var(--ink-danger);
+  background: var(--tint-danger);
 }
 
 .software-license-suscripcion {
-  color: #78350f;
-  background: #fef3c7;
+  color: var(--ink-warning);
+  background: var(--tint-warning);
 }
 
 .software-license-freemium {
   color: var(--minimal-secondary);
-  background: #ececf6;
+  background: var(--tint-accent);
 }
 
 .subjects-actions {
@@ -914,7 +915,7 @@
 .subjects-edit input {
   flex: 1 1 auto;
   min-width: 0;
-  border-color: #e7e7e2;
+  border-color: var(--border-subtle);
   font-size: 13px;
 }
 
@@ -943,7 +944,7 @@
 
 .subjects-edit-column input,
 .subjects-edit-column select {
-  border-color: #e7e7e2;
+  border-color: var(--border-subtle);
   font-size: 13px;
 }
 

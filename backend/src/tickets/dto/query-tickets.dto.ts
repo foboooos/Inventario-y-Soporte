@@ -1,18 +1,11 @@
 import { Type } from 'class-transformer';
 import { IsEnum, IsInt, IsOptional, IsString, Matches, Max, MaxLength, Min } from 'class-validator';
-
-export enum EstadoFiltro {
-  EN_ESPERA = 'EN_ESPERA',
-  EN_PROCESO = 'EN_PROCESO',
-  OPERATIVO = 'OPERATIVO',
-  INACTIVO = 'INACTIVO',
-  BAJA_TECNICA = 'BAJA_TECNICA',
-}
+import { TicketStatus } from '../ticket-status.enum.js';
 
 export class QueryTicketsDto {
   @IsOptional()
-  @IsEnum(EstadoFiltro)
-  estado?: EstadoFiltro;
+  @IsEnum(TicketStatus)
+  estado?: TicketStatus;
 
   @IsOptional()
   @IsString()

@@ -8,4 +8,36 @@
   --minimal-danger: #dc2626;
   --minimal-success: #166534;
   --minimal-warning: #92400e;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-pill: 999px;
+  --radius-circle: 50%;
+
+  --shadow-raised: 0 3px 12px rgba(12, 12, 9, 0.06);
+  --shadow-overlay: 0 8px 24px rgba(12, 12, 9, 0.14);
+  --shadow-modal: 0 28px 64px -20px rgba(12, 12, 9, 0.35);
+
+  --border-subtle: #e7e7e2;
+  --surface-sunken: #fafaf8;
+
+  --tint-accent: #ececf6;
+  --tint-success: #dcfce7;
+  --tint-warning: #fef3c7;
+  --tint-info: #e0f2fe;
+  --tint-danger: #fee2e2;
+  --tint-danger-soft: #fef2f2;
+  --tint-danger-hover: #fdeaea;
+  --ink-danger: #b91c1c;
+  --ink-warning: #78350f;
+  --ink-info: #075985;
+
+  --control-height: 36px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
 }

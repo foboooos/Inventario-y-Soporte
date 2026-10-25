@@ -39,7 +39,7 @@
   padding: 12px 14px 12px 18px;
   overflow: hidden;
   border: 0;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   color: var(--minimal-muted);
   background: transparent;
   font-size: 14px;
@@ -148,7 +148,7 @@
   margin: 0;
   padding: 9px 14px 9px 17px;
   border: 1px solid rgba(220, 38, 38, 0.35);
-  border-radius: 9px;
+  border-radius: var(--radius-md);
   color: var(--minimal-danger);
   background: transparent;
   font-size: 12px;
@@ -194,7 +194,7 @@
   margin: 0;
   padding: 0;
   border: 1px solid rgba(12, 12, 9, 0.12);
-  border-radius: 50%;
+  border-radius: var(--radius-circle);
   color: var(--minimal-muted);
   background: #fff;
   box-shadow: 0 2px 8px rgba(12, 12, 9, 0.12);
@@ -218,6 +218,15 @@
   outline-offset: 2px;
 }
 
+.sidebar-panel,
+.sidebar-panel-inner {
+  display: contents;
+}
+
+.sidebar-scrim {
+  display: none;
+}
+
 .sidebar-menu-toggle {
   display: none;
   width: 36px;
@@ -227,7 +236,7 @@
   margin: 0;
   padding: 0;
   border: 1px solid rgba(12, 12, 9, 0.12);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   color: var(--minimal-text);
   background: #fff;
   cursor: pointer;

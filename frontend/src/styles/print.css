@@ -1,10 +1,10 @@
 .ticket-log-modal {
   width: min(100%, 840px);
   padding: 20px 24px 24px;
-  border: 1px solid #e7e7e2;
-  border-radius: 14px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
   background: #fff;
-  box-shadow: 0 28px 64px -20px rgba(12, 12, 9, 0.35);
+  box-shadow: var(--shadow-modal);
 }
 
 .ticket-log-toolbar {
@@ -43,7 +43,7 @@
   gap: 8px 28px;
   margin: 0;
   padding-bottom: 12px;
-  border-bottom: 1px solid #ecece6;
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .ticket-log-meta > div {
@@ -63,8 +63,8 @@
 .ticket-log-cross {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  border: 1px solid #e7e7e2;
-  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
   overflow: hidden;
 }
 
@@ -73,14 +73,14 @@
 }
 
 .ticket-log-column + .ticket-log-column {
-  border-left: 1px solid #e7e7e2;
-  background: #fafaf8;
+  border-left: 1px solid var(--border-subtle);
+  background: var(--surface-sunken);
 }
 
 .ticket-log-column > h2 {
   margin: 0 0 12px;
   padding-bottom: 6px;
-  border-bottom: 1px solid #ecece6;
+  border-bottom: 1px solid var(--border-subtle);
   color: var(--minimal-text);
   font-size: 12px;
   font-weight: 700;
@@ -154,7 +154,7 @@
 
   .ticket-log-column + .ticket-log-column {
     border-left: 0;
-    border-top: 1px solid #e7e7e2;
+    border-top: 1px solid var(--border-subtle);
   }
 
   .ticket-log-fields > div {

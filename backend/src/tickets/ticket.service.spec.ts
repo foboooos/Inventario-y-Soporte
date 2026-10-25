@@ -6,7 +6,6 @@ import { Device } from '../inventory/device.entity.js';
 import { Ubicacion } from '../locations/ubicacion.entity.js';
 import { User } from '../users/user.entity.js';
 import { CreateTicketDto } from './dto/create-ticket.dto.js';
-import { EstadoFiltro } from './dto/query-tickets.dto.js';
 import { ResolveTicketDto } from './dto/resolve-ticket.dto.js';
 import { Ticket } from './ticket.entity.js';
 import { TicketService } from './ticket.service.js';
@@ -91,22 +90,22 @@ describe('TicketService', () => {
     });
   });
 
-  it('translates the operational state filter into resolved tickets with an active device', async () => {
+  it('filters resolved tickets', async () => {
     const findAndCount = vi.fn().mockResolvedValue([[], 0]);
     const service = createService({ findAndCount });
 
-    await service.findInbox({ estado: EstadoFiltro.OPERATIVO });
+    await service.findInbox({ estado: TicketStatus.RESUELTO });
 
     expect(findAndCount).toHaveBeenCalledWith(expect.objectContaining({
-      where: { estado: TicketStatus.RESUELTO, estado_final: DeviceStatus.ACTIVO },
+      where: { estado: TicketStatus.RESUELTO },
     }));
   });
 
-  it('translates the waiting state filter into open tickets', async () => {
+  it('filters open tickets', async () => {
     const findAndCount = vi.fn().mockResolvedValue([[], 0]);
     const service = createService({ findAndCount });
 
-    await service.findInbox({ estado: EstadoFiltro.EN_ESPERA });
+    await service.findInbox({ estado: TicketStatus.ABIERTO });
 
     expect(findAndCount).toHaveBeenCalledWith(expect.objectContaining({
       where: { estado: TicketStatus.ABIERTO },
@@ -162,7 +161,7 @@ describe('TicketService', () => {
     const locations = { findOneBy: vi.fn().mockResolvedValue(null) };
     const service = createService({ findAndCount }, {}, {}, locations);
 
-    await service.findInbox({ estado: EstadoFiltro.EN_ESPERA, ubicacion: 'Sala 5', desde: '2026-02-01' });
+    await service.findInbox({ estado: TicketStatus.ABIERTO, ubicacion: 'Sala 5', desde: '2026-02-01' });
 
     const arg = findAndCount.mock.calls[0][0];
     expect(arg.where.estado).toBe(TicketStatus.ABIERTO);

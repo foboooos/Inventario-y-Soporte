@@ -21,7 +21,8 @@ API REST en NestJS + TypeORM sobre PostgreSQL. Autenticación JWT y control de a
 - **Niveles educativos** — Pre-Kinder, Kinder, educación básica y media (paralelos A/B).
 - **Asignaturas** — el plan de estudios, vinculado a los niveles que corresponden.
 - **Software educativo** — programas y sus licencias (`LIBRE`, `GRATUITA`, `COMERCIAL`, `SUSCRIPCION`, `FREEMIUM`), vinculados a asignaturas.
-- **Usuarios** — 1 administrador, 2 técnicos y 10 docentes. La contraseña inicial de cada uno es su RUT sin puntos. El administrador y el primer docente se pueden sobreescribir con `SEED_ADMIN_*` y `SEED_TEACHER_*`.
+- **Usuarios** — 1 administrador, 2 técnicos y 19 docentes. La contraseña inicial de cada uno es su RUT sin puntos. El administrador y el primer docente se pueden sobreescribir con `SEED_ADMIN_*` y `SEED_TEACHER_*`.
 - **Dispositivos** — PCs, proyectores, impresoras y equipos de red distribuidos por las ubicaciones.
+- **Tickets** — 20 tickets de ejemplo repartidos entre los docentes agregados, con equipos, ubicaciones y estados variados. Los síntomas están redactados como los escribiría un docente, sin diagnóstico técnico.
 
 Los seeders están en `src/seeds/` y el orquestador en `src/seed.ts`.

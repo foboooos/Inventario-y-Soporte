@@ -2,12 +2,11 @@ import { ConflictException, Injectable, InternalServerErrorException, NotFoundEx
 import { InjectRepository } from '@nestjs/typeorm';
 import { Between, FindOptionsWhere, In, Repository } from 'typeorm';
 
-import { DeviceStatus } from '../inventory/device-status.enum.js';
 import { Device } from '../inventory/device.entity.js';
 import { Ubicacion } from '../locations/ubicacion.entity.js';
 import { User } from '../users/user.entity.js';
 import { CreateTicketDto } from './dto/create-ticket.dto.js';
-import { EstadoFiltro, QueryTicketsDto } from './dto/query-tickets.dto.js';
+import { QueryTicketsDto } from './dto/query-tickets.dto.js';
 import { ResolveTicketDto } from './dto/resolve-ticket.dto.js';
 import { formatTicketCode } from './ticket-code.js';
 import { Ticket } from './ticket.entity.js';
@@ -25,28 +24,10 @@ export class TicketService {
   ) {}
 
   async findInbox(filters: Partial<QueryTicketsDto> = {}) {
-    // El filtro de estado es semántico: la UI envía una de las 5 vistas y aquí se
-    // traduce a las columnas reales del ticket.
-    //   EN_ESPERA     -> estado = ABIERTO
-    //   EN_PROCESO    -> estado = EN_PROCESO
-    //   OPERATIVO     -> estado = RESUELTO  AND estado_final = ACTIVO
-    //   INACTIVO      -> estado = RESUELTO  AND estado_final = INACTIVO
-    //   BAJA_TECNICA  -> estado = RESUELTO  AND estado_final = BAJA_TECNICA
     const where: FindOptionsWhere<Ticket> = {};
 
-    if (filters.estado === EstadoFiltro.EN_ESPERA) {
-      where.estado = TicketStatus.ABIERTO;
-    } else if (filters.estado === EstadoFiltro.EN_PROCESO) {
-      where.estado = TicketStatus.EN_PROCESO;
-    } else if (filters.estado === EstadoFiltro.OPERATIVO) {
-      where.estado = TicketStatus.RESUELTO;
-      where.estado_final = DeviceStatus.ACTIVO;
-    } else if (filters.estado === EstadoFiltro.INACTIVO) {
-      where.estado = TicketStatus.RESUELTO;
-      where.estado_final = DeviceStatus.INACTIVO;
-    } else if (filters.estado === EstadoFiltro.BAJA_TECNICA) {
-      where.estado = TicketStatus.RESUELTO;
-      where.estado_final = DeviceStatus.BAJA_TECNICA;
+    if (filters.estado) {
+      where.estado = filters.estado;
     }
 
     if (filters.ubicacion) {

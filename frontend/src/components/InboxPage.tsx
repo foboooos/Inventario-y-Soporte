@@ -16,9 +16,11 @@ type InboxPageProps = {
   onSessionExpired: () => void
 }
 
-type EstadoFilter = 'ALL' | 'EN_ESPERA' | 'EN_PROCESO' | 'OPERATIVO' | 'INACTIVO' | 'BAJA_TECNICA'
+type EstadoFilter = 'ALL' | TicketStatus
 
 const PAGE_SIZE = 10
+const MIN_PAGE_SIZE = 5
+const MAX_PAGE_SIZE = 100
 const AUTO_REFRESH_MS = 15000
 
 const statusLabels: Record<TicketStatus, string> = {
@@ -42,11 +44,9 @@ function formatDeviceLabel(ticket: Ticket): string {
 
 const estadoOptions: Array<{ value: EstadoFilter; label: string }> = [
   { value: 'ALL', label: 'Todos' },
-  { value: 'EN_ESPERA', label: 'En espera' },
+  { value: 'ABIERTO', label: 'Abierto' },
   { value: 'EN_PROCESO', label: 'En proceso' },
-  { value: 'OPERATIVO', label: 'Operativo' },
-  { value: 'INACTIVO', label: 'Inactivo' },
-  { value: 'BAJA_TECNICA', label: 'Baja técnica' },
+  { value: 'RESUELTO', label: 'Resuelto' },
 ]
 
 const dateFormatter = new Intl.DateTimeFormat('es-CL', {
@@ -61,10 +61,11 @@ function formatTicketDate(value?: string) {
   return Number.isNaN(date.getTime()) ? value : dateFormatter.format(date)
 }
 
-function InboxTable({ tickets, startingId, bitacoraId, onSelectTicket, onStartTicket, onOpenBitacora }: {
+function InboxTable({ tickets, startingId, bitacoraId, rowHeight, onSelectTicket, onStartTicket, onOpenBitacora }: {
   tickets: Ticket[]
   startingId: number | null
   bitacoraId: number | null
+  rowHeight?: number
   onSelectTicket: (ticket: Ticket, trigger: HTMLButtonElement) => void
   onStartTicket: (ticket: Ticket) => void
   onOpenBitacora: (ticket: Ticket) => void
@@ -92,7 +93,7 @@ function InboxTable({ tickets, startingId, bitacoraId, onSelectTicket, onStartTi
             const canResolve = ticket.estado === 'EN_PROCESO'
 
             return (
-              <tr key={ticket.id_ticket}>
+              <tr key={ticket.id_ticket} style={rowHeight ? { height: rowHeight } : undefined}>
                 <td className="inbox-code">
                   {canResolve ? (
                     <button
@@ -178,6 +179,10 @@ export function InboxPage({ accessToken, onSessionExpired }: InboxPageProps) {
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null)
   const resolutionTriggerRef = useRef<HTMLButtonElement | null>(null)
   const hasDataRef = useRef(false)
+  const tableCardRef = useRef<HTMLDivElement | null>(null)
+  const tableFooterRef = useRef<HTMLElement | null>(null)
+  const [pageSize, setPageSize] = useState(PAGE_SIZE)
+  const [rowHeight, setRowHeight] = useState<number | null>(null)
   const [startingId, setStartingId] = useState<number | null>(null)
   const [bitacoraId, setBitacoraId] = useState<number | null>(null)
   const [bitacora, setBitacora] = useState<TicketBitacora | null>(null)
@@ -194,7 +199,7 @@ export function InboxPage({ accessToken, onSessionExpired }: InboxPageProps) {
         ...(desde ? { desde } : {}),
         ...(hasta ? { hasta } : {}),
       },
-      { page: currentPage, limit: PAGE_SIZE },
+      { page: currentPage, limit: pageSize },
     )
       .then((result) => {
         if (!isMounted) return
@@ -223,7 +228,7 @@ export function InboxPage({ accessToken, onSessionExpired }: InboxPageProps) {
     return () => {
       isMounted = false
     }
-  }, [accessToken, onSessionExpired, reloadKey, estadoFilter, parentLocation, subLocation, desde, hasta, currentPage])
+  }, [accessToken, onSessionExpired, reloadKey, estadoFilter, parentLocation, subLocation, desde, hasta, currentPage, pageSize])
 
   useEffect(() => {
     function refresh() {
@@ -240,6 +245,49 @@ export function InboxPage({ accessToken, onSessionExpired }: InboxPageProps) {
       window.removeEventListener('focus', refresh)
     }
   }, [])
+
+  useEffect(() => {
+    function measure() {
+      const card = tableCardRef.current
+      if (!card) return
+
+      const table = card.querySelector('table')
+      const header = table?.querySelector('thead')?.getBoundingClientRect().height ?? 0
+      const naturalRowHeight = table?.querySelector('tbody tr')?.getBoundingClientRect().height ?? 0
+      const footer = tableFooterRef.current?.getBoundingClientRect().height ?? 0
+
+      if (naturalRowHeight <= 0) return
+
+      if (window.matchMedia('(max-width: 700px)').matches) {
+        const content = card.parentElement
+        const paddingBottom = content ? Number.parseFloat(getComputedStyle(content).paddingBottom) || 0 : 0
+        const renderedRows = table?.querySelectorAll('tbody tr').length ?? 0
+        const cardHeight = card.getBoundingClientRect().height
+        const rowCost = renderedRows > 0 ? (cardHeight - header - footer) / renderedRows : naturalRowHeight
+        const top = card.getBoundingClientRect().top + window.scrollY
+        const available = window.innerHeight - top - paddingBottom - 6
+        const fit = Math.floor((available - header - footer) / rowCost)
+
+        setPageSize((current) => {
+          const next = Math.min(MAX_PAGE_SIZE, Math.max(MIN_PAGE_SIZE, fit))
+          return current === next ? current : next
+        })
+        setRowHeight((current) => (current === null ? current : null))
+        return
+      }
+
+      const available = card.clientHeight - header - footer
+      const rows = Math.min(MAX_PAGE_SIZE, Math.max(MIN_PAGE_SIZE, Math.floor(available / naturalRowHeight)))
+
+      setPageSize((current) => (current === rows ? current : rows))
+      setRowHeight(available > 0 ? available / rows : null)
+    }
+
+    measure()
+    window.addEventListener('resize', measure)
+
+    return () => window.removeEventListener('resize', measure)
+  }, [tickets.length])
 
   useEffect(() => {
     let isMounted = true
@@ -276,9 +324,9 @@ export function InboxPage({ accessToken, onSessionExpired }: InboxPageProps) {
 
   const hasActiveFilters = estadoFilter !== 'ALL' || Boolean(subLocation || parentLocation) || Boolean(desde) || Boolean(hasta)
 
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
   const activePage = Math.min(currentPage, totalPages)
-  const pageStart = (activePage - 1) * PAGE_SIZE
+  const pageStart = (activePage - 1) * pageSize
   const pageNumbers = getPageNumbers(activePage, totalPages)
 
   function retryLoad() {
@@ -377,12 +425,12 @@ export function InboxPage({ accessToken, onSessionExpired }: InboxPageProps) {
             <button className="text-button" type="button" onClick={clearFilters}>Limpiar filtros</button>
           </div>
 
-          <div className="table-card inbox-table-card" id="inbox-results-panel">
+          <div className="table-card inbox-table-card" id="inbox-results-panel" ref={tableCardRef}>
             {loading && (
               <TableSkeleton
                 label="Cargando bandeja de tickets…"
                 columns={['12%', '12%', '14%', '14%', '30%', '14%', '8%']}
-                rows={PAGE_SIZE}
+                rows={pageSize}
               />
             )}
 
@@ -412,6 +460,7 @@ export function InboxPage({ accessToken, onSessionExpired }: InboxPageProps) {
                   tickets={tickets}
                   startingId={startingId}
                   bitacoraId={bitacoraId}
+                  rowHeight={rowHeight ?? undefined}
                   onStartTicket={startTicket}
                   onOpenBitacora={openBitacora}
                   onSelectTicket={(ticket, trigger) => {
@@ -419,8 +468,8 @@ export function InboxPage({ accessToken, onSessionExpired }: InboxPageProps) {
                     setSelectedTicket(ticket)
                   }}
                 />
-                <footer className="table-footer">
-                  <span>Mostrando {pageStart + 1}–{Math.min(pageStart + PAGE_SIZE, total)} de {total} tickets</span>
+                <footer className="table-footer" ref={tableFooterRef}>
+                  <span>Mostrando {pageStart + 1}–{Math.min(pageStart + pageSize, total)} de {total} tickets</span>
                   <nav className="pagination" aria-label="Paginación de la bandeja de entrada">
                     <button className="pagination-button" type="button" disabled={activePage === 1} onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}>Anterior</button>
                     {pageNumbers.map((page, index) => page === 'ellipsis'

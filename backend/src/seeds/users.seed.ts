@@ -34,6 +34,15 @@ const DOCENTES: UserSeedBase[] = [
   { rut: '18.789.012-3', nombre: 'Valentina Ríos', email: 'valentina.rios@davincicoquimbo.cl' },
   { rut: '19.890.123-4', nombre: 'Ignacio Peña', email: 'ignacio.pena@davincicoquimbo.cl' },
   { rut: '20.901.234-5', nombre: 'Daniela Contreras', email: 'daniela.contreras@davincicoquimbo.cl' },
+  { rut: '11.456.789-0', nombre: 'Claudia Sepúlveda', email: 'claudia.sepulveda@davincicoquimbo.cl' },
+  { rut: '12.345.678-9', nombre: 'Pedro Salinas', email: 'pedro.salinas@davincicoquimbo.cl' },
+  { rut: '13.789.456-1', nombre: 'Andrea Muñoz', email: 'andrea.munoz@davincicoquimbo.cl' },
+  { rut: '15.234.678-5', nombre: 'Cristián Espinoza', email: 'cristian.espinoza@davincicoquimbo.cl' },
+  { rut: '16.543.210-7', nombre: 'Lorena Pizarro', email: 'lorena.pizarro@davincicoquimbo.cl' },
+  { rut: '17.890.123-6', nombre: 'Mauricio Carrasco', email: 'mauricio.carrasco@davincicoquimbo.cl' },
+  { rut: '18.234.567-2', nombre: 'Nicole Valdés', email: 'nicole.valdes@davincicoquimbo.cl' },
+  { rut: '19.345.678-1', nombre: 'Jorge Mansilla', email: 'jorge.mansilla@davincicoquimbo.cl' },
+  { rut: '20.456.789-0', nombre: 'Katherine Silva', email: 'katherine.silva@davincicoquimbo.cl' },
 ];
 
 /** La contraseña inicial de cada usuario es su RUT sin puntos. */

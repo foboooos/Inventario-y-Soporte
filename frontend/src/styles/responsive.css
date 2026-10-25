@@ -1,26 +1,39 @@
 @media (max-width: 700px) {
+  html,
+  body {
+    overflow-x: hidden;
+  }
+
   .dashboard-layout {
-    display: block;
+    display: flex;
+    flex-direction: column;
   }
 
   .inventory-shell {
     height: auto;
+    min-height: 0;
+    flex: 1 1 auto;
     overflow: visible;
   }
 
   .support-shell {
     height: auto;
+    min-height: 0;
+    flex: 1 1 auto;
     overflow: visible;
   }
 
   .sidebar {
+    --mobile-bar-height: 48px;
     position: static;
     width: 100%;
     height: auto;
-    min-height: auto;
-    padding: 10px 12px;
-    border-bottom: 1px solid rgba(12, 12, 9, 0.08);
-    overflow-y: visible;
+    min-height: 0;
+    padding: 6px 12px;
+    border-bottom: 0;
+    background: transparent;
+    overflow: visible;
+    justify-content: flex-start;
   }
 
   .sidebar-toggle {
@@ -28,90 +41,95 @@
   }
 
   .dashboard-main {
+    flex: 1 1 auto;
     width: 100%;
     margin-left: 0;
-  }
-
-  .sidebar-nav {
-    display: none;
-    gap: 4px;
-    padding: 0;
-  }
-
-  .dashboard-layout.is-mobile-open .sidebar-nav {
     display: flex;
-  }
-
-  .sidebar-account {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-top: 0;
-    padding: 0;
-  }
-
-  .dashboard-layout.is-mobile-open .sidebar-account {
-    margin-top: 8px;
-    padding: 8px 0 0;
-  }
-
-  .sidebar-user {
-    min-width: 0;
-    flex: 1 1 auto;
-  }
-
-  .dashboard-layout:not(.is-mobile-open) .sidebar-user {
-    display: none;
-  }
-
-  .dashboard-layout:not(.is-mobile-open) .sidebar-account {
-    justify-content: flex-end;
-    border-top: 0;
-  }
-
-  .sidebar-link {
-    width: auto;
-    min-width: 0;
-    min-height: 56px;
-    flex: 1 1 0;
     flex-direction: column;
-    justify-content: center;
-    gap: 4px;
-    padding: 8px 4px;
-    font-size: 12px;
-    text-align: center;
   }
 
-  .sidebar-link-label {
-    max-width: 100%;
-    font-size: 11px;
-    text-align: center;
+  .dashboard-main > div {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
   }
 
-  .sidebar-link.active {
-    box-shadow: 0 2px 8px rgba(12, 12, 9, 0.07);
+  .sidebar-panel {
+    position: fixed;
+    top: var(--mobile-bar-height);
+    left: 0;
+    z-index: 60;
+    width: min(280px, 84vw);
+    height: calc(100svh - var(--mobile-bar-height));
+    box-sizing: border-box;
+    display: block;
+    padding: 16px 12px;
+    overflow-y: auto;
+    background: var(--minimal-surface);
+    border-right: 1px solid rgba(12, 12, 9, 0.08);
+    box-shadow: 0 12px 32px rgba(12, 12, 9, 0.16);
+    transform: translateX(-100%);
+    visibility: hidden;
   }
 
-  .sidebar-logout {
-    display: none;
-    width: auto;
-    flex: 0 0 auto;
-    min-height: 36px;
-    padding: 6px 10px;
-    font-size: 12px;
+  .dashboard-layout.is-mobile-open .sidebar-panel {
+    transform: translateX(0);
+    visibility: visible;
   }
 
-  .dashboard-layout.is-mobile-open .sidebar-logout {
-    display: inline-flex;
+  .sidebar-panel-inner {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+  }
+
+  .sidebar-scrim {
+    position: fixed;
+    top: var(--mobile-bar-height);
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 55;
+    display: block;
+    background: rgba(12, 12, 9, 0.38);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  .dashboard-layout.is-mobile-open .sidebar-scrim {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
   }
 
   .sidebar-menu-toggle {
     display: inline-grid;
+    align-self: flex-start;
+    margin: 0;
+    border-radius: var(--radius-circle);
+  }
+
+  .dashboard-layout.is-mobile-open .sidebar-menu-toggle-icon {
+    transform: rotate(180deg);
   }
 
   .inventory-content,
   .support-content {
     width: min(100% - 32px, 1180px);
+  }
+
+  .inventory-content,
+  .support-content,
+  .table-card {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .table-card {
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .inventory-content {
@@ -121,6 +139,11 @@
   .support-content {
     padding-top: 24px;
     padding-bottom: 24px;
+  }
+
+  .inventory-content.inbox-content {
+    padding-top: 0;
+    padding-bottom: 0;
   }
 
   .table-scroll,
@@ -133,7 +156,7 @@
   }
 
   .table-scroll .inbox-table {
-    min-width: 960px;
+    min-width: 1120px;
   }
 
   .ticket-history-table {
@@ -192,5 +215,27 @@
 
   .login-card {
     padding: 24px;
+  }
+}
+
+@media (max-width: 700px) and (prefers-reduced-motion: no-preference) {
+  .sidebar-panel {
+    transition: transform 240ms ease, visibility 0s 240ms;
+  }
+
+  .dashboard-layout.is-mobile-open .sidebar-panel {
+    transition: transform 240ms ease, visibility 0s;
+  }
+
+  .sidebar-scrim {
+    transition: opacity 240ms ease, visibility 0s 240ms;
+  }
+
+  .dashboard-layout.is-mobile-open .sidebar-scrim {
+    transition: opacity 240ms ease, visibility 0s;
+  }
+
+  .sidebar-menu-toggle-icon {
+    transition: transform 240ms ease;
   }
 }

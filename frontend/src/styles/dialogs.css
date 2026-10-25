@@ -22,10 +22,10 @@
 
 .create-device-card {
   padding: 0;
-  border: 1px solid #e7e7e2;
-  border-radius: 14px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
   background: #fff;
-  box-shadow: 0 28px 64px -20px rgba(12, 12, 9, 0.35);
+  box-shadow: var(--shadow-modal);
 }
 
 .device-modal-body {

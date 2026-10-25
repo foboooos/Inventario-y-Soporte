@@ -14,9 +14,9 @@
   box-sizing: border-box;
   padding: 32px;
   border: 1px solid rgba(12, 12, 9, 0.08);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   background: #fff;
-  box-shadow: 0 3px 12px rgba(12, 12, 9, 0.06);
+  box-shadow: var(--shadow-raised);
   text-align: center;
 }
 

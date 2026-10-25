@@ -67,53 +67,66 @@ export function Sidebar({ user, activeRoute, onNavigate, onLogout, mobileOpen, o
 
   return (
     <aside className="sidebar">
-      <nav className="sidebar-nav" id="main-navigation" aria-label="Navegación principal">
-        {visibleRoutes.map((route) => (
-          <a
-            className={`sidebar-link${activeRoute === route.key ? ' active' : ''}`}
-            key={route.key}
-            href={route.path}
-            title={route.title}
-            aria-label={route.title}
-            aria-current={activeRoute === route.key ? 'page' : undefined}
-            onClick={(event) => handleLinkClick(event, route.key)}
-          >
-            <RouteIcon route={route.key} />
-            <span className="sidebar-link-label">{route.label}</span>
-          </a>
-        ))}
-      </nav>
+      <div className="sidebar-panel">
+        <div className="sidebar-panel-inner">
+          <nav className="sidebar-nav" id="main-navigation" aria-label="Navegación principal">
+            {visibleRoutes.map((route) => (
+              <a
+                className={`sidebar-link${activeRoute === route.key ? ' active' : ''}`}
+                key={route.key}
+                href={route.path}
+                title={route.title}
+                aria-label={route.title}
+                aria-current={activeRoute === route.key ? 'page' : undefined}
+                onClick={(event) => handleLinkClick(event, route.key)}
+              >
+                <RouteIcon route={route.key} />
+                <span className="sidebar-link-label">{route.label}</span>
+              </a>
+            ))}
+          </nav>
 
-      <div className="sidebar-account">
-        <div className="sidebar-user">
-          <strong className="sidebar-user-name">
-            <span className="sidebar-role-icon" role="img" aria-label={`Rol: ${roleLabel}`}>
-              <RoleIcon role={user.rol} />
-            </span>
-            <span className="sidebar-user-name-text">{user.nombre}</span>
-          </strong>
+          <div className="sidebar-account">
+            <div className="sidebar-user">
+              <strong className="sidebar-user-name">
+                <span className="sidebar-role-icon" role="img" aria-label={`Rol: ${roleLabel}`}>
+                  <RoleIcon role={user.rol} />
+                </span>
+                <span className="sidebar-user-name-text">{user.nombre}</span>
+              </strong>
+            </div>
+            <button className="sidebar-logout" type="button" onClick={onLogout}>
+              <svg className="sidebar-logout-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M9 4H6.5A2.5 2.5 0 0 0 4 6.5v11A2.5 2.5 0 0 0 6.5 20H9" />
+                <path d="m16 8 4 4-4 4" />
+                <path d="M20 12H9" />
+              </svg>
+              <span className="sidebar-logout-label">Cerrar sesión</span>
+            </button>
+          </div>
         </div>
-        <button className="sidebar-logout" type="button" onClick={onLogout}>
-          <svg className="sidebar-logout-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M9 4H6.5A2.5 2.5 0 0 0 4 6.5v11A2.5 2.5 0 0 0 6.5 20H9" />
-            <path d="m16 8 4 4-4 4" />
-            <path d="M20 12H9" />
-          </svg>
-          <span className="sidebar-logout-label">Cerrar sesión</span>
-        </button>
-        <button
-          className="sidebar-menu-toggle"
-          type="button"
-          onClick={onToggleMobile}
-          aria-label={mobileOpen ? 'Cerrar menú' : 'Abrir menú'}
-          aria-expanded={mobileOpen}
-          aria-controls="main-navigation"
-        >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            {mobileOpen ? <path d="m6 6 12 12M18 6 6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
-          </svg>
-        </button>
       </div>
+
+      <button
+        className="sidebar-menu-toggle"
+        type="button"
+        onClick={onToggleMobile}
+        aria-label={mobileOpen ? 'Cerrar menú' : 'Abrir menú'}
+        aria-expanded={mobileOpen}
+        aria-controls="main-navigation"
+      >
+        <svg className="sidebar-menu-toggle-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="m15 6-6 6 6 6" />
+        </svg>
+      </button>
+
+      <div
+        className="sidebar-scrim"
+        role="presentation"
+        onClick={() => {
+          if (mobileOpen) onToggleMobile()
+        }}
+      />
     </aside>
   )
 }
