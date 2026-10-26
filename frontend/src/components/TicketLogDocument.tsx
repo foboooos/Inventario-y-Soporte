@@ -32,7 +32,12 @@ function formatDate(value?: string | null) {
 }
 
 function CheckOption({ checked, label }: { checked: boolean; label: string }) {
-  return <span className="ticket-log-check">{`[${checked ? 'x' : ' '}] ${label}`}</span>
+  return (
+    <span className="ticket-log-check">
+      <span className="ticket-log-check-box" aria-hidden="true">{checked ? '✓' : ''}</span>
+      <span>{label}</span>
+    </span>
+  )
 }
 
 export function TicketLogDocument({ bitacora, onClose }: TicketLogDocumentProps) {
@@ -40,6 +45,15 @@ export function TicketLogDocument({ bitacora, onClose }: TicketLogDocumentProps)
     .split('\n')
     .map((line) => line.trim())
     .filter(Boolean)
+
+  function printDocument() {
+    const originalTitle = document.title
+    document.title = bitacora.codigo_ticket
+    window.addEventListener('afterprint', () => {
+      document.title = originalTitle
+    }, { once: true })
+    window.print()
+  }
 
   return createPortal(
     <div
@@ -57,7 +71,7 @@ export function TicketLogDocument({ bitacora, onClose }: TicketLogDocumentProps)
         onMouseDown={(event) => event.stopPropagation()}
       >
         <div className="ticket-log-toolbar no-print">
-          <button className="primary-action" type="button" onClick={() => window.print()}>Imprimir / Guardar PDF</button>
+          <button className="primary-action" type="button" onClick={printDocument}>Imprimir / Guardar PDF</button>
           <button className="secondary-button" type="button" onClick={onClose}>Cerrar</button>
         </div>
 

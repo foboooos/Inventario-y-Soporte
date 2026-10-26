@@ -55,6 +55,10 @@
     min-height: 0;
   }
 
+  .dashboard-main > div[hidden] {
+    display: none;
+  }
+
   .sidebar-panel {
     position: fixed;
     top: var(--mobile-bar-height);
@@ -142,7 +146,7 @@
   }
 
   .inventory-content.inbox-content {
-    padding-top: 0;
+    padding-top: 16px;
     padding-bottom: 0;
   }
 
