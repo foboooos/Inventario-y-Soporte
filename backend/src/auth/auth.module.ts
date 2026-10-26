@@ -14,10 +14,18 @@ import { RolesGuard } from './guards/roles.guard.js';
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        secret: config.get<string>('JWT_SECRET', 'dev-only-change-this-secret'),
-        signOptions: { expiresIn: config.get<'1d'>('JWT_EXPIRES_IN', '1d') },
-      }),
+      useFactory: (config: ConfigService) => {
+        const secret = config.get<string>('JWT_SECRET')?.trim();
+
+        if (!secret || secret.length < 32) {
+          throw new Error('JWT_SECRET debe configurarse con al menos 32 caracteres');
+        }
+
+        return {
+          secret,
+          signOptions: { expiresIn: config.get<'1d'>('JWT_EXPIRES_IN', '1d') },
+        };
+      },
     }),
   ],
   controllers: [AuthController],

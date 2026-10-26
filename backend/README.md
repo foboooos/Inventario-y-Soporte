@@ -17,6 +17,8 @@ API REST en NestJS + TypeORM sobre PostgreSQL. Autenticación JWT y control de a
 
 `npm run seed` puebla la base con los datos de la institución de forma **idempotente** (se puede ejecutar varias veces sin duplicar registros):
 
+El seed contiene datos y credenciales de demostración; se niega a ejecutarse cuando `NODE_ENV=production`.
+
 - **Ubicaciones** — 13 espacios (laboratorios, biblioteca, dirección, secretaría, casino, gimnasio, etc.) más los cursos bajo "Salas de Clases" (1° Básico A/B … 4° Medio A/B).
 - **Niveles educativos** — Pre-Kinder, Kinder, educación básica y media (paralelos A/B).
 - **Asignaturas** — el plan de estudios, vinculado a los niveles que corresponden.

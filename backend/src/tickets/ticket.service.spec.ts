@@ -19,6 +19,22 @@ function createService(
   users: Partial<Repository<User>> = {},
   locations: Partial<Repository<Ubicacion>> = {},
 ) {
+  const repositories = new Map<unknown, unknown>([
+    [Ticket, tickets],
+    [Device, devices],
+    [User, users],
+    [Ubicacion, locations],
+  ]);
+
+  if (!tickets.manager) {
+    Object.assign(tickets, {
+      manager: {
+        transaction: <T>(work: (manager: { getRepository: (entity: unknown) => unknown }) => Promise<T>) =>
+          work({ getRepository: (entity) => repositories.get(entity) }),
+      },
+    });
+  }
+
   return new TicketService(
     tickets as Repository<Ticket>,
     devices as Repository<Device>,
@@ -196,10 +212,10 @@ describe('TicketService', () => {
 
   it('stores the resolution with the technician, date and final status', async () => {
     const ticket = { id_ticket: 7, estado: TicketStatus.EN_PROCESO } as Ticket;
-    const findOneBy = vi.fn().mockResolvedValue(ticket);
+    const findOne = vi.fn().mockResolvedValue(ticket);
     const save = vi.fn().mockResolvedValue(ticket);
     const service = createService(
-      { findOneBy, save },
+      { findOne, save },
       {},
       { findOneBy: vi.fn().mockResolvedValue({ rut: '12345678-9', nombre: 'Ana Pérez' } as User) },
     );
@@ -211,7 +227,10 @@ describe('TicketService', () => {
 
     const result = await service.resolve(7, input, '12345678-9');
 
-    expect(findOneBy).toHaveBeenCalledWith({ id_ticket: 7 });
+    expect(findOne).toHaveBeenCalledWith({
+      where: { id_ticket: 7 },
+      lock: { mode: 'pessimistic_write' },
+    });
     expect(ticket).toMatchObject({
       causa_raiz: input.causa_raiz,
       solucion_aplicada: input.solucion_aplicada,
@@ -226,11 +245,11 @@ describe('TicketService', () => {
 
   it('marks the affected device with the final status when the ticket is resolved', async () => {
     const ticket = { id_ticket: 7, estado: TicketStatus.EN_PROCESO, id_dispositivo: 5 } as Ticket;
-    const findOneBy = vi.fn().mockResolvedValue(ticket);
+    const findOne = vi.fn().mockResolvedValue(ticket);
     const save = vi.fn().mockResolvedValue(ticket);
     const update = vi.fn().mockResolvedValue({ affected: 1 });
     const service = createService(
-      { findOneBy, save },
+      { findOne, save },
       { update },
       { findOneBy: vi.fn().mockResolvedValue({ rut: '12345678-9', nombre: 'Ana Pérez' } as User) },
     );
@@ -248,11 +267,11 @@ describe('TicketService', () => {
 
   it('leaves the inventory untouched when the ticket has no device', async () => {
     const ticket = { id_ticket: 7, estado: TicketStatus.EN_PROCESO, id_dispositivo: null } as Ticket;
-    const findOneBy = vi.fn().mockResolvedValue(ticket);
+    const findOne = vi.fn().mockResolvedValue(ticket);
     const save = vi.fn().mockResolvedValue(ticket);
     const update = vi.fn();
     const service = createService(
-      { findOneBy, save },
+      { findOne, save },
       { update },
       { findOneBy: vi.fn().mockResolvedValue({ rut: '12345678-9', nombre: 'Ana Pérez' } as User) },
     );
@@ -267,8 +286,8 @@ describe('TicketService', () => {
   });
 
   it('rejects resolving a ticket that does not exist', async () => {
-    const findOneBy = vi.fn().mockResolvedValue(null);
-    const service = createService({ findOneBy });
+    const findOne = vi.fn().mockResolvedValue(null);
+    const service = createService({ findOne });
 
     await expect(service.resolve(7, {
       causa_raiz: 'Falla',
@@ -279,8 +298,8 @@ describe('TicketService', () => {
 
   it('rejects resolving a ticket that is already resolved', async () => {
     const ticket = { id_ticket: 7, estado: TicketStatus.RESUELTO } as Ticket;
-    const findOneBy = vi.fn().mockResolvedValue(ticket);
-    const service = createService({ findOneBy });
+    const findOne = vi.fn().mockResolvedValue(ticket);
+    const service = createService({ findOne });
 
     await expect(service.resolve(7, {
       causa_raiz: 'Falla',

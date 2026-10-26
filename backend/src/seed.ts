@@ -10,6 +10,10 @@ import { seedTickets } from './seeds/tickets.seed.js';
 import { seedUsers } from './seeds/users.seed.js';
 
 async function bootstrap() {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('El seed de demostración no se puede ejecutar en producción');
+  }
+
   const app = await NestFactory.createApplicationContext(AppModule, { logger: false });
   const dataSource = app.get(DataSource);
 

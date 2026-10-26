@@ -3,9 +3,17 @@ import { JwtModule, JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
 import 'reflect-metadata';
 import request from 'supertest';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { LevelController } from '../../academics/level.controller.js';
+import { LevelService } from '../../academics/level.service.js';
+import { SubjectController } from '../../academics/subject.controller.js';
+import { SubjectService } from '../../academics/subject.service.js';
 import { InventoryController } from '../../inventory/inventory.controller.js';
 import { InventoryService } from '../../inventory/inventory.service.js';
+import { LocationController } from '../../locations/location.controller.js';
+import { LocationService } from '../../locations/location.service.js';
+import { SoftwareController } from '../../software/software.controller.js';
+import { SoftwareService } from '../../software/software.service.js';
 import { TicketController } from '../../tickets/ticket.controller.js';
 import { TicketService } from '../../tickets/ticket.service.js';
 import { UserRole } from '../../users/user-role.enum.js';
@@ -42,15 +50,55 @@ const controllers: Array<[string, any]> = Object.values(controllerModules)
 const rolesOf = (controller: any, method: string): UserRole[] | undefined =>
   Reflect.getMetadata(ROLES_KEY, controller.prototype[method]);
 
-const docenteForbiddenRoutes: Array<[string, any, string]> = [
-  ['InventoryController.findAll', InventoryController, 'findAll'],
-  ['InventoryController.create', InventoryController, 'create'],
-  ['InventoryController.update', InventoryController, 'update'],
-  ['TicketController.findInbox', TicketController, 'findInbox'],
-  ['TicketController.findBitacora', TicketController, 'findBitacora'],
-  ['TicketController.resolve', TicketController, 'resolve'],
-  ['TicketController.changeStatus', TicketController, 'changeStatus'],
+type HttpMethod = 'get' | 'post' | 'patch' | 'delete';
+type RouteCase = {
+  controller: any;
+  handler: string;
+  method: HttpMethod;
+  path: string;
+  status: number;
+};
+
+const protectedRoutes: RouteCase[] = [
+  { controller: InventoryController, handler: 'findOptions', method: 'get', path: '/inventory/options', status: 200 },
+  { controller: InventoryController, handler: 'findAll', method: 'get', path: '/inventory', status: 200 },
+  { controller: InventoryController, handler: 'create', method: 'post', path: '/inventory', status: 201 },
+  { controller: InventoryController, handler: 'update', method: 'patch', path: '/inventory/1', status: 200 },
+  { controller: TicketController, handler: 'findInbox', method: 'get', path: '/tickets/inbox', status: 200 },
+  { controller: TicketController, handler: 'findBitacora', method: 'get', path: '/tickets/1/bitacora', status: 200 },
+  { controller: TicketController, handler: 'findAll', method: 'get', path: '/tickets', status: 200 },
+  { controller: TicketController, handler: 'resolve', method: 'patch', path: '/tickets/1', status: 200 },
+  { controller: TicketController, handler: 'changeStatus', method: 'patch', path: '/tickets/1/status', status: 200 },
+  { controller: TicketController, handler: 'create', method: 'post', path: '/tickets', status: 201 },
+  { controller: LocationController, handler: 'findAll', method: 'get', path: '/locations', status: 200 },
+  { controller: LocationController, handler: 'create', method: 'post', path: '/locations', status: 201 },
+  { controller: LocationController, handler: 'generateCourses', method: 'post', path: '/locations/courses', status: 201 },
+  { controller: LocationController, handler: 'rename', method: 'patch', path: '/locations/1', status: 200 },
+  { controller: LocationController, handler: 'remove', method: 'delete', path: '/locations/1', status: 204 },
+  { controller: LevelController, handler: 'findAll', method: 'get', path: '/levels', status: 200 },
+  { controller: LevelController, handler: 'create', method: 'post', path: '/levels', status: 201 },
+  { controller: LevelController, handler: 'rename', method: 'patch', path: '/levels/1', status: 200 },
+  { controller: LevelController, handler: 'remove', method: 'delete', path: '/levels/1', status: 204 },
+  { controller: SubjectController, handler: 'findAll', method: 'get', path: '/subjects', status: 200 },
+  { controller: SubjectController, handler: 'create', method: 'post', path: '/subjects', status: 201 },
+  { controller: SubjectController, handler: 'update', method: 'patch', path: '/subjects/1', status: 200 },
+  { controller: SubjectController, handler: 'remove', method: 'delete', path: '/subjects/1', status: 204 },
+  { controller: SoftwareController, handler: 'findAll', method: 'get', path: '/software', status: 200 },
+  { controller: SoftwareController, handler: 'create', method: 'post', path: '/software', status: 201 },
+  { controller: SoftwareController, handler: 'update', method: 'patch', path: '/software/1', status: 200 },
+  { controller: SoftwareController, handler: 'remove', method: 'delete', path: '/software/1', status: 204 },
 ];
+
+const forbiddenRoleRoutes = protectedRoutes.flatMap((route) => {
+  const allowedRoles = rolesOf(route.controller, route.handler) ?? [];
+  return Object.values(UserRole)
+    .filter((role) => !allowedRoles.includes(role))
+    .map((role) => ({ route, role }));
+});
+
+const serviceMock = (methods: string[]) => Object.fromEntries(
+  methods.map((method) => [method, vi.fn().mockReturnValue({})]),
+);
 
 describe('RBAC audit — control de acceso aplicado en el backend', () => {
   it('descubre automáticamente todos los controladores de la aplicación', () => {
@@ -91,40 +139,44 @@ describe('RBAC audit — control de acceso aplicado en el backend', () => {
     }
   });
 
-  it.each(docenteForbiddenRoutes)('%s excluye el rol DOCENTE', (_label, controller, method) => {
-    expect(rolesOf(controller, method)).not.toContain(UserRole.DOCENTE);
+  it('tiene un caso HTTP para cada ruta protegida', () => {
+    const expected = controllers
+      .filter(([name]) => !PUBLIC_CONTROLLERS.has(name))
+      .flatMap(([name, controller]) => routeHandlers(controller).map((handler) => `${name}.${handler}`))
+      .sort();
+    const covered = protectedRoutes
+      .map((route) => `${route.controller.name}.${route.handler}`)
+      .sort();
+
+    expect(covered).toEqual(expected);
   });
 });
 
-describe('RBAC enforcement — DOCENTE bloqueado con 403 en inventario y bitácora', () => {
+describe('RBAC enforcement — todas las rutas protegidas', () => {
   let app: INestApplication;
   let jwt: JwtService;
 
-  const inventoryService = {
-    findOptions: () => [],
-    findAll: () => ({ data: [], total: 0 }),
-    create: () => ({}),
-    update: () => ({}),
-  };
-  const ticketService = {
-    findInbox: () => [],
-    findBitacora: () => ({}),
-    findAll: () => [],
-  };
-
   const payload = (rol: string) => ({ sub: '12345678-9', email: 'usuario@colegio.cl', rol });
   const token = (rol: UserRole) => jwt.sign(payload(rol));
-  const docente = () => token(UserRole.DOCENTE);
-  const tecnico = () => token(UserRole.TECNICO);
-  const admin = () => token(UserRole.ADMIN);
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
       imports: [JwtModule.register({ secret: TEST_SECRET })],
-      controllers: [InventoryController, TicketController],
+      controllers: [
+        InventoryController,
+        TicketController,
+        LocationController,
+        LevelController,
+        SubjectController,
+        SoftwareController,
+      ],
       providers: [
-        { provide: InventoryService, useValue: inventoryService },
-        { provide: TicketService, useValue: ticketService },
+        { provide: InventoryService, useValue: serviceMock(['findOptions', 'findAll', 'create', 'update']) },
+        { provide: TicketService, useValue: serviceMock(['findInbox', 'findBitacora', 'findAll', 'resolve', 'changeStatus', 'create']) },
+        { provide: LocationService, useValue: serviceMock(['findAll', 'create', 'generateCourses', 'rename', 'remove']) },
+        { provide: LevelService, useValue: serviceMock(['findAll', 'create', 'rename', 'remove']) },
+        { provide: SubjectService, useValue: serviceMock(['findAll', 'create', 'update', 'remove']) },
+        { provide: SoftwareService, useValue: serviceMock(['findAll', 'create', 'update', 'remove']) },
       ],
     }).compile();
 
@@ -136,6 +188,20 @@ describe('RBAC enforcement — DOCENTE bloqueado con 403 en inventario y bitáco
   afterAll(async () => {
     await app.close();
   });
+
+  function send(route: RouteCase, role?: UserRole) {
+    const server = request(app.getHttpServer());
+    let pending = server.get(route.path);
+
+    if (route.method === 'post') pending = server.post(route.path);
+    else if (route.method === 'patch') pending = server.patch(route.path);
+    else if (route.method === 'delete') pending = server.delete(route.path);
+
+    if (role) pending.set('Authorization', `Bearer ${token(role)}`);
+    if (route.method === 'post' || route.method === 'patch') pending.send({});
+
+    return pending;
+  }
 
   it('devuelve 401 sin token', async () => {
     await request(app.getHttpServer()).get('/inventory').expect(401);
@@ -166,105 +232,20 @@ describe('RBAC enforcement — DOCENTE bloqueado con 403 en inventario y bitáco
       .expect(403);
   });
 
-  it('devuelve 403 cuando un DOCENTE lista el inventario', async () => {
-    await request(app.getHttpServer())
-      .get('/inventory')
-      .set('Authorization', `Bearer ${docente()}`)
-      .expect(403);
+  it.each(protectedRoutes)('$method $path requiere autenticación', async (route) => {
+    await send(route).expect(401);
   });
 
-  it('devuelve 403 cuando un DOCENTE crea un dispositivo', async () => {
-    await request(app.getHttpServer())
-      .post('/inventory')
-      .set('Authorization', `Bearer ${docente()}`)
-      .send({})
-      .expect(403);
+  it.each(protectedRoutes)('$method $path permite los roles declarados', async (route) => {
+    const allowedRoles = rolesOf(route.controller, route.handler) ?? [];
+    expect(allowedRoles.length, `${route.controller.name}.${route.handler} requiere roles`).toBeGreaterThan(0);
+
+    for (const role of allowedRoles) {
+      await send(route, role).expect(route.status);
+    }
   });
 
-  it('devuelve 403 cuando un DOCENTE edita un dispositivo', async () => {
-    await request(app.getHttpServer())
-      .patch('/inventory/1')
-      .set('Authorization', `Bearer ${docente()}`)
-      .send({})
-      .expect(403);
-  });
-
-  it('devuelve 403 cuando un DOCENTE accede a la bandeja técnica', async () => {
-    await request(app.getHttpServer())
-      .get('/tickets/inbox')
-      .set('Authorization', `Bearer ${docente()}`)
-      .expect(403);
-  });
-
-  it('devuelve 403 cuando un DOCENTE solicita una bitácora', async () => {
-    await request(app.getHttpServer())
-      .get('/tickets/1/bitacora')
-      .set('Authorization', `Bearer ${docente()}`)
-      .expect(403);
-  });
-
-  it('devuelve 403 cuando un DOCENTE resuelve un ticket', async () => {
-    await request(app.getHttpServer())
-      .patch('/tickets/1')
-      .set('Authorization', `Bearer ${docente()}`)
-      .send({})
-      .expect(403);
-  });
-
-  it('devuelve 403 cuando un DOCENTE cambia el estado de un ticket', async () => {
-    await request(app.getHttpServer())
-      .patch('/tickets/1/status')
-      .set('Authorization', `Bearer ${docente()}`)
-      .send({ estado: 'EN_PROCESO' })
-      .expect(403);
-  });
-
-  it('devuelve 403 cuando un TECNICO lista sus propios tickets (ruta solo DOCENTE)', async () => {
-    await request(app.getHttpServer())
-      .get('/tickets')
-      .set('Authorization', `Bearer ${tecnico()}`)
-      .expect(403);
-  });
-
-  it('permite a un DOCENTE leer las opciones de inventario para crear tickets', async () => {
-    await request(app.getHttpServer())
-      .get('/inventory/options')
-      .set('Authorization', `Bearer ${docente()}`)
-      .expect(200);
-  });
-
-  it('permite a un DOCENTE listar sus propios tickets', async () => {
-    await request(app.getHttpServer())
-      .get('/tickets')
-      .set('Authorization', `Bearer ${docente()}`)
-      .expect(200);
-  });
-
-  it('permite a un TECNICO listar el inventario', async () => {
-    await request(app.getHttpServer())
-      .get('/inventory')
-      .set('Authorization', `Bearer ${tecnico()}`)
-      .expect(200);
-  });
-
-  it('permite a un TECNICO leer la bitácora', async () => {
-    await request(app.getHttpServer())
-      .get('/tickets/1/bitacora')
-      .set('Authorization', `Bearer ${tecnico()}`)
-      .expect(200);
-  });
-
-  it('permite a un ADMIN listar el inventario', async () => {
-    await request(app.getHttpServer())
-      .get('/inventory')
-      .set('Authorization', `Bearer ${admin()}`)
-      .expect(200);
-  });
-
-  it('permite a un ADMIN leer la bitácora', async () => {
-    await request(app.getHttpServer())
-      .get('/tickets/1/bitacora')
-      .set('Authorization', `Bearer ${admin()}`)
-      .expect(200);
+  it.each(forbiddenRoleRoutes)('$route.method $route.path bloquea el rol $role', async ({ route, role }) => {
+    await send(route, role).expect(403);
   });
 });

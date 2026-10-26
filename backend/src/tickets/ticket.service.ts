@@ -115,35 +115,47 @@ export class TicketService {
   }
 
   async resolve(idTicket: number, resolveTicketDto: ResolveTicketDto, tecnicoRut: string) {
-    const ticket = await this.tickets.findOneBy({ id_ticket: idTicket });
+    return this.tickets.manager.transaction(async (manager) => {
+      const tickets = manager.getRepository(Ticket);
+      const devices = manager.getRepository(Device);
+      const users = manager.getRepository(User);
+      const ticket = await tickets.findOne({
+        where: { id_ticket: idTicket },
+        lock: { mode: 'pessimistic_write' },
+      });
 
-    if (!ticket) {
-      throw new NotFoundException('El ticket no existe');
-    }
+      if (!ticket) {
+        throw new NotFoundException('El ticket no existe');
+      }
 
-    if (!canTransition(ticket.estado, TicketStatus.RESUELTO)) {
-      throw new ConflictException('Transición de estado no permitida');
-    }
+      if (!canTransition(ticket.estado, TicketStatus.RESUELTO)) {
+        throw new ConflictException('Transición de estado no permitida');
+      }
 
-    const tecnico = await this.users.findOneBy({ rut: tecnicoRut });
+      const tecnico = await users.findOneBy({ rut: tecnicoRut });
 
-    ticket.causa_raiz = resolveTicketDto.causa_raiz.trim();
-    ticket.solucion_aplicada = resolveTicketDto.solucion_aplicada.trim();
-    ticket.estado_final = resolveTicketDto.estado_final;
-    ticket.tecnico_nombre = tecnico?.nombre ?? null;
-    ticket.fecha_resolucion = new Date();
-    ticket.estado = TicketStatus.RESUELTO;
+      ticket.causa_raiz = resolveTicketDto.causa_raiz.trim();
+      ticket.solucion_aplicada = resolveTicketDto.solucion_aplicada.trim();
+      ticket.estado_final = resolveTicketDto.estado_final;
+      ticket.tecnico_nombre = tecnico?.nombre ?? null;
+      ticket.fecha_resolucion = new Date();
+      ticket.estado = TicketStatus.RESUELTO;
 
-    const saved = await this.tickets.save(ticket);
+      const saved = await tickets.save(ticket);
 
-    if (typeof saved.id_dispositivo === 'number') {
-      await this.devices.update(
-        { id_dispositivo: saved.id_dispositivo },
-        { estado: resolveTicketDto.estado_final },
-      );
-    }
+      if (typeof saved.id_dispositivo === 'number') {
+        const result = await devices.update(
+          { id_dispositivo: saved.id_dispositivo },
+          { estado: resolveTicketDto.estado_final },
+        );
 
-    return saved;
+        if (!result.affected) {
+          throw new NotFoundException('El dispositivo asociado no existe');
+        }
+      }
+
+      return saved;
+    });
   }
 
   async changeStatus(idTicket: number, nextStatus: TicketStatus) {
