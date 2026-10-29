@@ -10,6 +10,7 @@ type TicketHistoryProps = {
   accessToken: string
   onSessionExpired: () => void
   refreshKey: number
+  desktopOnly?: boolean
 }
 
 const PAGE_SIZE = 5
@@ -81,7 +82,7 @@ function TicketHistoryTable({ tickets }: { tickets: Ticket[] }) {
   )
 }
 
-export function TicketHistory({ accessToken, onSessionExpired, refreshKey }: TicketHistoryProps) {
+export function TicketHistory({ accessToken, onSessionExpired, refreshKey, desktopOnly = false }: TicketHistoryProps) {
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -128,7 +129,7 @@ export function TicketHistory({ accessToken, onSessionExpired, refreshKey }: Tic
   const pageNumbers = getPageNumbers(activePage, totalPages)
 
   return (
-    <section className="ticket-history-section" aria-label="Historial de tickets">
+    <section className={`ticket-history-section${desktopOnly ? ' ticket-history-desktop-only' : ''}`} aria-label="Historial de tickets">
       <section className="support-card ticket-history-card">
         {loading && (
           <TableSkeleton

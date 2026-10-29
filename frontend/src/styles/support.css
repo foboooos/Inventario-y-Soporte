@@ -44,13 +44,15 @@
   gap: 16px;
 }
 
-.ticket-form label {
+.ticket-form label,
+.ticket-form .ticket-field {
   display: grid;
   gap: 8px;
   margin: 0;
 }
 
-.ticket-form label > span {
+.ticket-form label > span,
+.ticket-form .ticket-field > span {
   color: var(--minimal-muted);
   font-size: 13px;
   font-weight: 600;
@@ -59,7 +61,8 @@
 
 .ticket-form input,
 .ticket-form select,
-.ticket-form textarea {
+.ticket-form textarea,
+.ticket-form .select-menu-button {
   border-color: var(--border-subtle);
   font-size: 13px;
 }
@@ -91,11 +94,6 @@
   background: rgba(255, 255, 255, 0.72);
 }
 
-.form-heading p {
-  font-size: 14px;
-  line-height: 1.5;
-}
-
 .ticket-form textarea {
   min-height: 132px;
   resize: none;
@@ -103,8 +101,10 @@
 
 .ticket-form input:focus-visible,
 .ticket-form select:focus-visible,
-.ticket-form textarea:focus-visible {
+.ticket-form textarea:focus-visible,
+.ticket-form .select-menu-button:focus-visible {
   border-color: var(--minimal-secondary);
+  outline: none;
   box-shadow: 0 0 0 3px rgba(49, 44, 133, 0.14);
 }
 
@@ -188,23 +188,23 @@
 
 .ticket-history-code-column,
 .ticket-history-table .ticket-history-code {
-  width: 14%;
+  width: 16%;
 }
 
 .ticket-history-status-column {
-  width: 14%;
+  width: 17%;
 }
 
 .ticket-history-location-column {
-  width: 24%;
-}
-
-.ticket-history-symptom-column {
   width: 22%;
 }
 
+.ticket-history-symptom-column {
+  width: 21%;
+}
+
 .ticket-history-date-column {
-  width: 26%;
+  width: 24%;
   padding-left: 32px;
   text-align: left;
 }

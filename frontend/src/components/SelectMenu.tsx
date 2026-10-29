@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { KeyboardEvent } from 'react'
 
 export type SelectOption = { value: string; label: string }
@@ -11,17 +11,22 @@ type SelectMenuProps = {
   ariaLabel: string
   placeholder?: string
   disabled?: boolean
+  visibleItems?: number
 }
 
-const LIST_HEIGHT = 260
+const ITEM_HEIGHT = 30
+const LIST_PADDING = 10
 
-export function SelectMenu({ id, value, options, onChange, ariaLabel, placeholder, disabled }: SelectMenuProps) {
+export function SelectMenu({ id, value, options, onChange, ariaLabel, placeholder, disabled, visibleItems = 10 }: SelectMenuProps) {
   const [open, setOpen] = useState(false)
   const [activeIndex, setActiveIndex] = useState(-1)
   const [above, setAbove] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
   const listRef = useRef<HTMLUListElement>(null)
+  const scrollActiveRef = useRef(false)
+  const scrollTopRef = useRef<number | null>(null)
+  const listHeight = visibleItems * ITEM_HEIGHT + LIST_PADDING
 
   const selectedIndex = options.findIndex((option) => option.value === value)
   const selected = selectedIndex >= 0 ? options[selectedIndex] : undefined
@@ -37,17 +42,30 @@ export function SelectMenu({ id, value, options, onChange, ariaLabel, placeholde
     return () => document.removeEventListener('pointerdown', handlePointerDown)
   }, [open])
 
+  useLayoutEffect(() => {
+    if (!open || scrollTopRef.current === null) return
+    if (listRef.current) listRef.current.scrollTop = scrollTopRef.current
+  }, [open])
+
   useEffect(() => {
-    if (!open) return
+    if (!open || !scrollActiveRef.current) return
+    scrollActiveRef.current = false
     const option = listRef.current?.children[activeIndex] as HTMLElement | undefined
     option?.scrollIntoView({ block: 'nearest' })
   }, [open, activeIndex])
 
   function openList() {
     const rect = buttonRef.current?.getBoundingClientRect()
-    setAbove(Boolean(rect && rect.bottom + LIST_HEIGHT > window.innerHeight && rect.top > LIST_HEIGHT))
+    setAbove(Boolean(rect && rect.bottom + listHeight > window.innerHeight && rect.top > listHeight))
+    scrollActiveRef.current = scrollTopRef.current === null
     setActiveIndex(selectedIndex >= 0 ? selectedIndex : 0)
     setOpen(true)
+  }
+
+  function moveActive(index: number) {
+    if (index === activeIndex) return
+    scrollActiveRef.current = true
+    setActiveIndex(index)
   }
 
   function commit(index: number) {
@@ -71,16 +89,16 @@ export function SelectMenu({ id, value, options, onChange, ariaLabel, placeholde
 
     if (event.key === 'ArrowDown') {
       event.preventDefault()
-      setActiveIndex((index) => Math.min(options.length - 1, index + 1))
+      moveActive(Math.min(options.length - 1, activeIndex + 1))
     } else if (event.key === 'ArrowUp') {
       event.preventDefault()
-      setActiveIndex((index) => Math.max(0, index - 1))
+      moveActive(Math.max(0, activeIndex - 1))
     } else if (event.key === 'Home') {
       event.preventDefault()
-      setActiveIndex(0)
+      moveActive(0)
     } else if (event.key === 'End') {
       event.preventDefault()
-      setActiveIndex(options.length - 1)
+      moveActive(options.length - 1)
     } else if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault()
       commit(activeIndex)
@@ -125,6 +143,8 @@ export function SelectMenu({ id, value, options, onChange, ariaLabel, placeholde
           className={`select-menu-list ${above ? 'is-above' : 'is-below'}`}
           role="listbox"
           aria-label={ariaLabel}
+          style={{ maxHeight: listHeight }}
+          onScroll={(event) => { scrollTopRef.current = event.currentTarget.scrollTop }}
         >
           {options.map((option, index) => (
             <li

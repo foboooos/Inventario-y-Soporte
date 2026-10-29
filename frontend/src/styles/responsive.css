@@ -23,6 +23,45 @@
     overflow: visible;
   }
 
+  .support-content {
+    height: auto;
+  }
+
+  .ticket-form-card {
+    display: flex;
+    flex-direction: column;
+    min-height: calc(100svh - 96px);
+  }
+
+  .ticket-form {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .ticket-form-wide {
+    flex: 1 1 auto;
+    display: grid;
+    grid-template-rows: auto minmax(132px, 1fr);
+  }
+
+  .ticket-form-wide textarea {
+    height: 100%;
+  }
+
+  .ticket-form > button {
+    align-self: flex-end;
+  }
+
+  .ticket-history-section,
+  .ticket-history-card {
+    flex: 0 0 auto;
+  }
+
+  .ticket-history-desktop-only {
+    display: none;
+  }
+
   .sidebar {
     --mobile-bar-height: 48px;
     position: static;
@@ -113,6 +152,10 @@
     align-self: flex-start;
     margin: 0;
     border-radius: var(--radius-circle);
+  }
+
+  .sidebar-menu-toggle:active:not(:disabled) {
+    transform: none;
   }
 
   .dashboard-layout.is-mobile-open .sidebar-menu-toggle-icon {

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { createTicket, getDeviceOptions } from '../services/tickets'
 import { getLocations } from '../services/locations'
 import { isSessionExpired } from '../services/http'
+import { SelectMenu } from './SelectMenu'
 import type { DeviceType } from '../types/inventory'
 import type { Location } from '../types/location'
 import type { DeviceOption } from '../types/ticket'
@@ -138,37 +139,57 @@ export function CreateTicketForm({ accessToken, onSessionExpired, onTicketCreate
   return (
     <section className="support-card ticket-form-card" aria-labelledby="new-ticket-title">
       <div className="form-heading">
-        <div>
-          <h2 id="new-ticket-title">Reportar un problema</h2>
-          <p>Cuéntanos qué está fallando y en qué equipo.</p>
-        </div>
+        <h2 id="new-ticket-title">Reportar un problema</h2>
       </div>
       <form className="ticket-form" onSubmit={handleSubmit}>
-        <label>
+        <div className="ticket-field">
           <span>Ubicación</span>
-          <select value={location} onChange={(event) => { setLocation(event.target.value); setSubLocation(''); setDeviceId('') }} required disabled={loadingLocations}>
-            <option value="">Selecciona una ubicación</option>
-            {globalLocations.map((item) => <option key={item.id} value={item.nombre}>{item.nombre}</option>)}
-          </select>
-        </label>
+          <SelectMenu
+            id="ticket-location"
+            ariaLabel="Ubicación"
+            placeholder="Selecciona una ubicación"
+            value={location}
+            disabled={loadingLocations}
+            onChange={(next) => { setLocation(next); setSubLocation(''); setDeviceId('') }}
+            options={[
+              { value: '', label: 'Selecciona una ubicación' },
+              ...globalLocations.map((item) => ({ value: item.nombre, label: item.nombre })),
+            ]}
+          />
+        </div>
         {subLocations.length > 0 && (
-          <label>
+          <div className="ticket-field">
             <span>Curso / Sub-ubicación</span>
-            <select value={subLocation} onChange={(event) => { setSubLocation(event.target.value); setDeviceId('') }}>
-              <option value="">Toda la ubicación</option>
-              {subLocations.map((item) => <option key={item.id} value={item.nombre}>{item.nombre}</option>)}
-            </select>
-          </label>
+            <SelectMenu
+              id="ticket-sublocation"
+              ariaLabel="Curso o sub-ubicación"
+              placeholder="Toda la ubicación"
+              value={subLocation}
+              onChange={(next) => { setSubLocation(next); setDeviceId('') }}
+              options={[
+                { value: '', label: 'Toda la ubicación' },
+                ...subLocations.map((item) => ({ value: item.nombre, label: item.nombre })),
+              ]}
+            />
+          </div>
         )}
-        <label>
+        <div className="ticket-field">
           <span>Equipo afectado <em>(opcional)</em></span>
-          <select value={deviceId} onChange={(event) => setDeviceId(event.target.value)} disabled={loadingDevices || !location}>
-            <option value="">No corresponde o no lo sé</option>
-            {locationDevices.map((device) => <option key={device.id_dispositivo} value={device.id_dispositivo}>{formatDeviceLabel(device)}</option>)}
-          </select>
-        </label>
+          <SelectMenu
+            id="ticket-device"
+            ariaLabel="Equipo afectado"
+            placeholder="No corresponde o no lo sé"
+            value={deviceId}
+            disabled={loadingDevices || !location}
+            onChange={setDeviceId}
+            options={[
+              { value: '', label: 'No corresponde o no lo sé' },
+              ...locationDevices.map((device) => ({ value: String(device.id_dispositivo), label: formatDeviceLabel(device) })),
+            ]}
+          />
+        </div>
         <label className="ticket-form-wide">
-          <span>Describe el síntoma</span>
+          <span>Describe el problema</span>
           <textarea value={symptom} onChange={(event) => setSymptom(event.target.value)} placeholder="Cuéntanos qué está ocurriendo…" maxLength={2000} rows={6} required />
         </label>
         {error && <p className="error" role="alert">{error}</p>}

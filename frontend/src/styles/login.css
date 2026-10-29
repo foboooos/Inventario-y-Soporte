@@ -19,8 +19,13 @@
   object-fit: contain;
 }
 
-.login-card {
+.login-stage {
+  position: relative;
   width: min(100%, 400px);
+}
+
+.login-card {
+  width: 100%;
   box-sizing: border-box;
   padding: 32px;
   border: 1px solid rgba(12, 12, 9, 0.08);
@@ -57,9 +62,62 @@
   line-height: inherit;
 }
 
+.login-card input[aria-invalid='true'] {
+  border-color: rgba(185, 28, 28, 0.35);
+}
+
 .login-card input:focus-visible {
   border-color: var(--minimal-secondary);
   box-shadow: 0 0 0 3px rgba(49, 44, 133, 0.14);
+}
+
+.login-error {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 12px);
+  left: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--tint-danger);
+  color: var(--ink-danger);
+  font-size: 13px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  animation: login-error-in 160ms ease-out;
+}
+
+.login-error svg {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+@keyframes login-error-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-error {
+    animation: none;
+  }
 }
 
 .password-field {

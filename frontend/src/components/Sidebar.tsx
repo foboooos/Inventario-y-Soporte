@@ -72,7 +72,7 @@ export function Sidebar({ user, activeRoute, onNavigate, onLogout, mobileOpen, o
           <nav className="sidebar-nav" id="main-navigation" aria-label="Navegación principal">
             {visibleRoutes.map((route) => (
               <a
-                className={`sidebar-link${activeRoute === route.key ? ' active' : ''}`}
+                className={`sidebar-link${activeRoute === route.key ? ' active' : ''}${route.mobileOnly ? ' sidebar-link-mobile-only' : ''}`}
                 key={route.key}
                 href={route.path}
                 title={route.title}

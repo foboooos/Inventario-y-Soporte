@@ -17,6 +17,11 @@ export function DashboardLayout({ children, user, activeRoute, onNavigate, onLog
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(SIDEBAR_STORAGE_KEY) === 'true')
   const [mobileOpen, setMobileOpen] = useState(false)
 
+  function handleNavigate(route: RouteKey) {
+    setMobileOpen(false)
+    onNavigate(route)
+  }
+
   function toggleSidebar() {
     setCollapsed((current) => {
       const next = !current
@@ -30,7 +35,7 @@ export function DashboardLayout({ children, user, activeRoute, onNavigate, onLog
       <Sidebar
         user={user}
         activeRoute={activeRoute}
-        onNavigate={onNavigate}
+        onNavigate={handleNavigate}
         onLogout={onLogout}
         mobileOpen={mobileOpen}
         onToggleMobile={() => setMobileOpen((current) => !current)}

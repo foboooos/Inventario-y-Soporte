@@ -1,28 +1,27 @@
-import { useState } from 'react'
 import { CreateTicketForm } from './CreateTicketForm'
 import { TicketHistory } from './TicketHistory'
 
 type SupportPageProps = {
   accessToken: string
   onSessionExpired: () => void
+  refreshKey: number
+  onTicketCreated: () => void
 }
 
-export function SupportPage({ accessToken, onSessionExpired }: SupportPageProps) {
-  const [ticketHistoryRefreshKey, setTicketHistoryRefreshKey] = useState(0)
-
+export function SupportPage({ accessToken, onSessionExpired, refreshKey, onTicketCreated }: SupportPageProps) {
   return (
     <main className="support-shell">
       <section className="support-content" aria-label="Soporte">
         <CreateTicketForm
           accessToken={accessToken}
           onSessionExpired={onSessionExpired}
-          onTicketCreated={() => setTicketHistoryRefreshKey((key) => key + 1)}
+          onTicketCreated={onTicketCreated}
         />
         <TicketHistory
-          key={ticketHistoryRefreshKey}
           accessToken={accessToken}
           onSessionExpired={onSessionExpired}
-          refreshKey={ticketHistoryRefreshKey}
+          refreshKey={refreshKey}
+          desktopOnly
         />
       </section>
     </main>

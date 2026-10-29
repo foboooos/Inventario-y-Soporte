@@ -312,6 +312,10 @@
 }
 
 @media (min-width: 701px) {
+  .sidebar-link-mobile-only {
+    display: none;
+  }
+
   .dashboard-layout.is-collapsed {
     --sidebar-width: 80px;
   }

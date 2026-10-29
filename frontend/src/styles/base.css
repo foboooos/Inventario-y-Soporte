@@ -281,6 +281,10 @@ button:disabled {
   text-align: left;
 }
 
+.select-menu-button:active:not(:disabled) {
+  transform: none;
+}
+
 .select-menu-button svg {
   flex: 0 0 14px;
   width: 14px;
@@ -302,7 +306,6 @@ button:disabled {
   left: 0;
   right: 0;
   box-sizing: border-box;
-  max-height: 248px;
   margin: 0;
   padding: 4px;
   overflow-y: auto;
@@ -311,6 +314,7 @@ button:disabled {
   border-radius: var(--radius-md);
   background: #fff;
   box-shadow: var(--shadow-overlay);
+  animation: select-menu-open 160ms ease-out;
 }
 
 .select-menu-list.is-below {
@@ -319,6 +323,37 @@ button:disabled {
 
 .select-menu-list.is-above {
   bottom: calc(100% + 4px);
+  animation-name: select-menu-open-up;
+}
+
+@keyframes select-menu-open {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes select-menu-open-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .select-menu-list {
+    animation: none;
+  }
 }
 
 .select-menu-option {

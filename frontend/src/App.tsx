@@ -12,6 +12,7 @@ import './styles/print.css'
 import './styles/responsive.css'
 import { DashboardLayout } from './components/DashboardLayout'
 import { ConfigurationPage } from './components/ConfigurationPage'
+import { HistoryPage } from './components/HistoryPage'
 import { InboxPage } from './components/InboxPage'
 import { InventoryPage } from './components/InventoryPage'
 import { LoginForm } from './components/LoginForm'
@@ -54,6 +55,7 @@ function App() {
   const [user, setUser] = useState<AuthUser | null>(() => getStoredUser())
   const [accessToken, setAccessToken] = useState(() => localStorage.getItem('access_token') ?? '')
   const [pathname, setPathname] = useState(() => normalizePath(window.location.pathname))
+  const [ticketsVersion, setTicketsVersion] = useState(0)
 
   useEffect(() => {
     function handlePopState() {
@@ -148,7 +150,11 @@ function App() {
 
   function renderRoute(route: RouteKey, account: AuthUser, token: string, onSessionExpired: () => void) {
     if (route === 'support') {
-      return <SupportPage accessToken={token} onSessionExpired={onSessionExpired} />
+      return <SupportPage accessToken={token} onSessionExpired={onSessionExpired} refreshKey={ticketsVersion} onTicketCreated={() => setTicketsVersion((version) => version + 1)} />
+    }
+
+    if (route === 'history') {
+      return <HistoryPage accessToken={token} onSessionExpired={onSessionExpired} refreshKey={ticketsVersion} />
     }
 
     if (route === 'settings') {

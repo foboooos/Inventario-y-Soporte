@@ -1,4 +1,4 @@
-export type RouteKey = 'support' | 'inventory' | 'inbox' | 'settings' | 'subjects' | 'software'
+export type RouteKey = 'support' | 'history' | 'inventory' | 'inbox' | 'settings' | 'subjects' | 'software'
 
 export type RouteDefinition = {
   key: RouteKey
@@ -6,10 +6,12 @@ export type RouteDefinition = {
   label: string
   title: string
   roles: readonly string[]
+  mobileOnly?: boolean
 }
 
 export const routes: readonly RouteDefinition[] = [
   { key: 'support', path: '/soporte', label: 'Soporte', title: 'Soporte', roles: ['DOCENTE'] },
+  { key: 'history', path: '/historial', label: 'Historial', title: 'Historial de tickets', roles: ['DOCENTE'], mobileOnly: true },
   { key: 'inbox', path: '/bandeja', label: 'Bandeja', title: 'Bandeja de entrada', roles: ['ADMIN', 'TECNICO'] },
   { key: 'inventory', path: '/inventario', label: 'Inventario', title: 'Inventario', roles: ['ADMIN', 'TECNICO'] },
   { key: 'settings', path: '/config', label: 'Configuración', title: 'Configuración', roles: ['ADMIN'] },
