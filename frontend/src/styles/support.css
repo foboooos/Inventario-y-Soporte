@@ -188,23 +188,30 @@
 
 .ticket-history-code-column,
 .ticket-history-table .ticket-history-code {
-  width: 16%;
+  width: 114px;
+  padding-right: 4px;
 }
 
 .ticket-history-status-column {
-  width: 17%;
+  width: 104px;
+}
+
+.ticket-history-table .ticket-history-status-column,
+.ticket-history-table td:nth-child(2) {
+  padding-left: 4px;
+  padding-right: 6px;
 }
 
 .ticket-history-location-column {
-  width: 22%;
+  width: calc((100% - 218px) * 0.355);
 }
 
 .ticket-history-symptom-column {
-  width: 21%;
+  width: calc((100% - 218px) * 0.258);
 }
 
 .ticket-history-date-column {
-  width: 24%;
+  width: calc((100% - 218px) * 0.387);
   padding-left: 32px;
   text-align: left;
 }
@@ -344,6 +351,7 @@
 
 .ticket-history-state {
   min-height: 220px;
+  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
   display: grid;
   align-content: center;
   justify-items: center;
@@ -785,6 +793,30 @@
   margin: 16px 0 0;
   color: var(--minimal-muted);
   font-size: 14px;
+}
+
+.subjects-sort {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.subjects-sort-label {
+  color: var(--minimal-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.subjects-sort .select-menu {
+  flex: 0 0 210px;
+  width: 210px;
+}
+
+.subjects-sort .select-menu-button {
+  border-color: var(--border-subtle);
+  font-size: 13px;
 }
 
 .subjects-list {

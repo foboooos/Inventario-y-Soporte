@@ -5,6 +5,7 @@ import { Between, FindOptionsWhere, In, Repository } from 'typeorm';
 import { Device } from '../inventory/device.entity.js';
 import { Ubicacion } from '../locations/ubicacion.entity.js';
 import { User } from '../users/user.entity.js';
+import { normalizeRut } from '../users/rut.js';
 import { CreateTicketDto } from './dto/create-ticket.dto.js';
 import { QueryTicketsDto } from './dto/query-tickets.dto.js';
 import { ResolveTicketDto } from './dto/resolve-ticket.dto.js';
@@ -59,7 +60,7 @@ export class TicketService {
       : [];
     const devicesById = new Map(devices.map((device) => [device.id_dispositivo, device]));
 
-    const solicitanteRuts = [...new Set(tickets.map((ticket) => ticket.id_solicitante))];
+    const solicitanteRuts = [...new Set(tickets.map((ticket) => normalizeRut(ticket.id_solicitante)))];
     const solicitantes = solicitanteRuts.length
       ? await this.users.findBy({ rut: In(solicitanteRuts) })
       : [];
@@ -72,7 +73,7 @@ export class TicketService {
           ...ticket,
           dispositivo_tipo: device?.tipo ?? null,
           codigo_inventario: device?.codigo_inventario ?? null,
-          solicitante_nombre: solicitantesByRut.get(ticket.id_solicitante)?.nombre ?? null,
+          solicitante_nombre: solicitantesByRut.get(normalizeRut(ticket.id_solicitante))?.nombre ?? null,
         };
       }),
       total,

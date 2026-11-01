@@ -24,6 +24,7 @@ const statusLabels: Record<TicketStatus, string> = {
 const dateFormatter = new Intl.DateTimeFormat('es-CL', {
   dateStyle: 'medium',
   timeStyle: 'short',
+  hour12: false,
 })
 
 function formatTicketDate(value?: string) {
@@ -47,7 +48,7 @@ function TicketHistoryTable({ tickets }: { tickets: Ticket[] }) {
             <th className="ticket-history-status-column" scope="col">Estado</th>
             <th className="ticket-history-location-column" scope="col">Ubicación</th>
             <th className="ticket-history-symptom-column" scope="col">Síntoma</th>
-            <th className="ticket-history-date-column" scope="col">Fecha de creación</th>
+            <th className="ticket-history-date-column" scope="col">Fecha</th>
           </tr>
         </thead>
         <tbody>
@@ -134,7 +135,7 @@ export function TicketHistory({ accessToken, onSessionExpired, refreshKey, deskt
         {loading && (
           <TableSkeleton
             label="Cargando historial de tickets…"
-            columns={['14%', '14%', '14%', '39%', '19%']}
+            columns={['16%', '17%', '22%', '21%', '24%']}
             rows={PAGE_SIZE}
           />
         )}

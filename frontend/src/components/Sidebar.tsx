@@ -88,12 +88,13 @@ export function Sidebar({ user, activeRoute, onNavigate, onLogout, mobileOpen, o
 
           <div className="sidebar-account">
             <div className="sidebar-user">
-              <strong className="sidebar-user-name">
-                <span className="sidebar-role-icon" role="img" aria-label={`Rol: ${roleLabel}`}>
-                  <RoleIcon role={user.rol} />
-                </span>
-                <span className="sidebar-user-name-text">{user.nombre}</span>
-              </strong>
+              <span className="sidebar-user-avatar" aria-hidden="true">
+                <RoleIcon role={user.rol} />
+              </span>
+              <span className="sidebar-user-meta">
+                <strong className="sidebar-user-name-text">{user.nombre}</strong>
+                <span className="sidebar-user-role">{roleLabel}</span>
+              </span>
             </div>
             <button className="sidebar-logout" type="button" onClick={onLogout}>
               <svg className="sidebar-logout-icon" viewBox="0 0 24 24" aria-hidden="true">

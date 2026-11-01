@@ -102,6 +102,22 @@ function App() {
     }
   }, [activeRoute, navigate, pathname, user])
 
+  useEffect(() => {
+    const mobileQuery = window.matchMedia('(max-width: 700px)')
+
+    function handleViewportChange() {
+      if (mobileQuery.matches || !user || !activeRoute) return
+      if (!routes.find((route) => route.key === activeRoute)?.mobileOnly) return
+
+      navigate(routePaths[defaultRouteForRole(user.rol)], { replace: true })
+    }
+
+    handleViewportChange()
+    mobileQuery.addEventListener('change', handleViewportChange)
+
+    return () => mobileQuery.removeEventListener('change', handleViewportChange)
+  }, [activeRoute, navigate, user])
+
   // Páginas ya visitadas: se mantienen montadas para no volver a cargar sus datos.
   const [visitedRoutes, setVisitedRoutes] = useState<RouteKey[]>([])
 

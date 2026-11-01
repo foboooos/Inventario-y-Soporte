@@ -106,6 +106,20 @@ describe('TicketService', () => {
     });
   });
 
+  it('resolves the requester name when the ticket kept the legacy -0 RUT', async () => {
+    const tickets = [
+      { id_ticket: 1, id_dispositivo: null, id_solicitante: '11.456.789-0' } as Ticket,
+    ];
+    const findAndCount = vi.fn().mockResolvedValue([tickets, tickets.length]);
+    const findUsersBy = vi.fn().mockResolvedValue([{ rut: '11.456.789-K', nombre: 'Claudia Sepúlveda' } as User]);
+    const service = createService({ findAndCount }, {}, { findBy: findUsersBy });
+
+    const result = await service.findInbox();
+
+    expect(findUsersBy).toHaveBeenCalledOnce();
+    expect(result.data[0]).toMatchObject({ solicitante_nombre: 'Claudia Sepúlveda' });
+  });
+
   it('filters resolved tickets', async () => {
     const findAndCount = vi.fn().mockResolvedValue([[], 0]);
     const service = createService({ findAndCount });

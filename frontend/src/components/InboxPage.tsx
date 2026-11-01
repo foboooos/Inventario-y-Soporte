@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import type { KeyboardEvent } from 'react'
 import { getTicketBitacora, getTicketInbox, updateTicketStatus } from '../services/tickets'
 import { getLocations } from '../services/locations'
 import { isSessionExpired } from '../services/http'
@@ -9,6 +10,8 @@ import { TicketLogDocument } from './TicketLogDocument'
 import { TicketResolutionForm } from './TicketResolutionForm'
 import { TicketSymptomPreview } from './TicketSymptomPreview'
 import { TableSkeleton } from './Skeleton'
+import { DateField } from './DateField'
+import { SelectMenu } from './SelectMenu'
 import { getPageNumbers } from '../utils/pagination'
 
 type InboxPageProps = {
@@ -52,6 +55,7 @@ const estadoOptions: Array<{ value: EstadoFilter; label: string }> = [
 const dateFormatter = new Intl.DateTimeFormat('es-CL', {
   dateStyle: 'medium',
   timeStyle: 'short',
+  hour12: false,
 })
 
 function formatTicketDate(value?: string) {
@@ -84,7 +88,7 @@ function InboxTable({ tickets, startingId, bitacoraId, rowHeight, onSelectTicket
             <th scope="col">Ubicación</th>
             <th scope="col">Equipo</th>
             <th scope="col">Síntoma</th>
-            <th scope="col">Fecha de creación</th>
+            <th scope="col">Fecha</th>
             <th scope="col"><span className="sr-only">Acciones</span></th>
           </tr>
         </thead>
@@ -142,6 +146,9 @@ function InboxTable({ tickets, startingId, bitacoraId, rowHeight, onSelectTicket
                       {startingId === ticket.id_ticket ? 'Iniciando…' : 'Iniciar'}
                     </button>
                   )}
+                  {ticket.estado === 'EN_PROCESO' && (
+                    <span className="inbox-action-state">Iniciado</span>
+                  )}
                   {ticket.estado === 'RESUELTO' && (
                     <button
                       className="text-button"
@@ -181,8 +188,10 @@ export function InboxPage({ accessToken, onSessionExpired }: InboxPageProps) {
   const hasDataRef = useRef(false)
   const tableCardRef = useRef<HTMLDivElement | null>(null)
   const tableFooterRef = useRef<HTMLElement | null>(null)
+  const estadoTabRefs = useRef<Array<HTMLButtonElement | null>>([])
   const [pageSize, setPageSize] = useState(PAGE_SIZE)
   const [rowHeight, setRowHeight] = useState<number | null>(null)
+  const baseRowHeightRef = useRef<number | null>(null)
   const [startingId, setStartingId] = useState<number | null>(null)
   const [bitacoraId, setBitacoraId] = useState<number | null>(null)
   const [bitacora, setBitacora] = useState<TicketBitacora | null>(null)
@@ -247,26 +256,26 @@ export function InboxPage({ accessToken, onSessionExpired }: InboxPageProps) {
   }, [])
 
   useEffect(() => {
+    const cardElement = tableCardRef.current
+    if (!cardElement) return
+
     function measure() {
       const card = tableCardRef.current
       if (!card) return
 
       const table = card.querySelector('table')
       const header = table?.querySelector('thead')?.getBoundingClientRect().height ?? 0
-      const naturalRowHeight = table?.querySelector('tbody tr')?.getBoundingClientRect().height ?? 0
+      const measuredRowHeight = table?.querySelector('tbody tr')?.getBoundingClientRect().height ?? 0
       const footer = tableFooterRef.current?.getBoundingClientRect().height ?? 0
 
-      if (naturalRowHeight <= 0) return
+      if (measuredRowHeight <= 0) return
 
       if (window.matchMedia('(max-width: 700px)').matches) {
         const content = card.parentElement
         const paddingBottom = content ? Number.parseFloat(getComputedStyle(content).paddingBottom) || 0 : 0
-        const renderedRows = table?.querySelectorAll('tbody tr').length ?? 0
-        const cardHeight = card.getBoundingClientRect().height
-        const rowCost = renderedRows > 0 ? (cardHeight - header - footer) / renderedRows : naturalRowHeight
         const top = card.getBoundingClientRect().top + window.scrollY
         const available = window.innerHeight - top - paddingBottom - 6
-        const fit = Math.floor((available - header - footer) / rowCost)
+        const fit = Math.floor((available - header - footer) / measuredRowHeight)
 
         setPageSize((current) => {
           const next = Math.min(MAX_PAGE_SIZE, Math.max(MIN_PAGE_SIZE, fit))
@@ -276,8 +285,15 @@ export function InboxPage({ accessToken, onSessionExpired }: InboxPageProps) {
         return
       }
 
+      if (!baseRowHeightRef.current || baseRowHeightRef.current <= 0) {
+        baseRowHeightRef.current = measuredRowHeight
+      }
+
+      const baseRowHeight = baseRowHeightRef.current
+      if (!baseRowHeight || baseRowHeight <= 0) return
+
       const available = card.clientHeight - header - footer
-      const rows = Math.min(MAX_PAGE_SIZE, Math.max(MIN_PAGE_SIZE, Math.floor(available / naturalRowHeight)))
+      const rows = Math.min(MAX_PAGE_SIZE, Math.max(MIN_PAGE_SIZE, Math.floor(available / baseRowHeight)))
 
       setPageSize((current) => (current === rows ? current : rows))
       setRowHeight(available > 0 ? available / rows : null)
@@ -286,7 +302,13 @@ export function InboxPage({ accessToken, onSessionExpired }: InboxPageProps) {
     measure()
     window.addEventListener('resize', measure)
 
-    return () => window.removeEventListener('resize', measure)
+    const observer = new ResizeObserver(measure)
+    observer.observe(cardElement)
+
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', measure)
+    }
   }, [tickets.length])
 
   useEffect(() => {
@@ -348,6 +370,25 @@ export function InboxPage({ accessToken, onSessionExpired }: InboxPageProps) {
     setCurrentPage(1)
   }
 
+  function changeEstadoFilter(nextEstado: EstadoFilter) {
+    setEstadoFilter(nextEstado)
+    setCurrentPage(1)
+  }
+
+  function handleEstadoTabKeyDown(event: KeyboardEvent<HTMLButtonElement>, index: number) {
+    let nextIndex = index
+
+    if (event.key === 'ArrowRight') nextIndex = (index + 1) % estadoOptions.length
+    if (event.key === 'ArrowLeft') nextIndex = (index - 1 + estadoOptions.length) % estadoOptions.length
+    if (event.key === 'Home') nextIndex = 0
+    if (event.key === 'End') nextIndex = estadoOptions.length - 1
+    if (nextIndex === index) return
+
+    event.preventDefault()
+    changeEstadoFilter(estadoOptions[nextIndex].value)
+    estadoTabRefs.current[nextIndex]?.focus()
+  }
+
   async function startTicket(ticket: Ticket) {
     setStartingId(ticket.id_ticket)
     setActionError('')
@@ -389,43 +430,78 @@ export function InboxPage({ accessToken, onSessionExpired }: InboxPageProps) {
   }
 
   return (
-    <main className="inventory-shell">
+    <main className="inventory-shell inbox-shell">
       <section className="inventory-content inbox-content" aria-label="Bandeja de entrada de tickets">
-          <div className="inbox-filters">
-            <label>
-              <span>Estado</span>
-              <select value={estadoFilter} onChange={(event) => { setEstadoFilter(event.target.value as EstadoFilter); resetPage() }}>
-                {estadoOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-              </select>
-            </label>
-            <label>
-              <span>Ubicación</span>
-              <select value={parentLocation} onChange={(event) => { setParentLocation(event.target.value); setSubLocation(''); resetPage() }}>
-                <option value="">Todas las ubicaciones</option>
-                {globalLocations.map((item) => <option key={item.id} value={item.nombre}>{item.nombre}</option>)}
-              </select>
-            </label>
-            {subLocations.length > 0 && (
+          <div className="inbox-filter-row">
+            <div className="inbox-status-row">
+              <div className="inventory-status-tabs" role="tablist" aria-label="Filtrar tickets por estado">
+                {estadoOptions.map((option, index) => {
+                  const selected = estadoFilter === option.value
+                  return (
+                    <button
+                      className={`inventory-status-tab${selected ? ' active' : ''}`}
+                      id={`inbox-tab-${option.value.toLowerCase()}`}
+                      key={option.value}
+                      type="button"
+                      role="tab"
+                      aria-selected={selected}
+                      aria-controls="inbox-results-panel"
+                      tabIndex={selected ? 0 : -1}
+                      ref={(element) => { estadoTabRefs.current[index] = element }}
+                      onClick={() => changeEstadoFilter(option.value)}
+                      onKeyDown={(event) => handleEstadoTabKeyDown(event, index)}
+                    >
+                      {option.label}
+                    </button>
+                  )
+                })}
+              </div>
+              <button className="text-button inbox-clear-button" type="button" onClick={clearFilters}>Limpiar</button>
+            </div>
+
+            <div className="inbox-filters">
               <label>
-                <span>Curso / Sala</span>
-                <select value={subLocation} onChange={(event) => { setSubLocation(event.target.value); resetPage() }}>
-                  <option value="">Toda la ubicación</option>
-                  {subLocations.map((item) => <option key={item.id} value={item.nombre}>{item.nombre}</option>)}
-                </select>
+                <span>Ubicación</span>
+                <SelectMenu
+                  id="inbox-location"
+                  value={parentLocation}
+                  options={[{ value: '', label: 'Todas las ubicaciones' }, ...globalLocations.map((item) => ({ value: item.nombre, label: item.nombre }))]}
+                  onChange={(value) => { setParentLocation(value); setSubLocation(''); resetPage() }}
+                  ariaLabel="Filtrar por ubicación"
+                  placeholder="Todas las ubicaciones"
+                />
               </label>
-            )}
-            <label>
-              <span>Desde</span>
-              <input type="date" value={desde} onChange={(event) => { setDesde(event.target.value); resetPage() }} />
-            </label>
-            <label>
-              <span>Hasta</span>
-              <input type="date" value={hasta} onChange={(event) => { setHasta(event.target.value); resetPage() }} />
-            </label>
-            <button className="text-button" type="button" onClick={clearFilters}>Limpiar filtros</button>
+              {subLocations.length > 0 && (
+                <label>
+                  <span>Curso / Sala</span>
+                  <SelectMenu
+                    id="inbox-sublocation"
+                    value={subLocation}
+                    options={[{ value: '', label: 'Toda la ubicación' }, ...subLocations.map((item) => ({ value: item.nombre, label: item.nombre }))]}
+                    onChange={(value) => { setSubLocation(value); resetPage() }}
+                    ariaLabel="Filtrar por curso o sala"
+                    placeholder="Toda la ubicación"
+                  />
+                </label>
+              )}
+              <label>
+                <span>Desde</span>
+                <DateField id="inbox-desde" value={desde} onChange={(value) => { setDesde(value); resetPage() }} ariaLabel="Filtrar desde" />
+              </label>
+              <label>
+                <span>Hasta</span>
+                <DateField id="inbox-hasta" value={hasta} onChange={(value) => { setHasta(value); resetPage() }} ariaLabel="Filtrar hasta" />
+              </label>
+            </div>
           </div>
 
-          <div className="table-card inbox-table-card" id="inbox-results-panel" ref={tableCardRef}>
+          <div
+            className="table-card inbox-table-card"
+            id="inbox-results-panel"
+            role="tabpanel"
+            aria-labelledby={`inbox-tab-${estadoFilter.toLowerCase()}`}
+            ref={tableCardRef}
+          >
             {loading && (
               <TableSkeleton
                 label="Cargando bandeja de tickets…"

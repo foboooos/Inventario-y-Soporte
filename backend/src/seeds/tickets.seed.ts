@@ -6,6 +6,7 @@ import { TicketSequence } from '../tickets/ticket-sequence.entity.js';
 import { TicketStatus } from '../tickets/ticket-status.enum.js';
 import { formatTicketCode } from '../tickets/ticket-code.js';
 import { User } from '../users/user.entity.js';
+import { normalizeRut } from '../users/rut.js';
 
 type SeedTicket = {
   /** Se asigna en el padrón de abajo, alternando entre los docentes nuevos. */
@@ -21,7 +22,7 @@ type SeedTicket = {
 
 /** Docentes incorporados para poblar la bandeja; los tickets alternan entre ellos. */
 const SOLICITANTES = [
-  '11.456.789-0',
+  '11.456.789-K',
   '12.345.678-9',
   '13.789.456-1',
   '15.234.678-5',
@@ -29,7 +30,7 @@ const SOLICITANTES = [
   '17.890.123-6',
   '18.234.567-2',
   '19.345.678-1',
-  '20.456.789-0',
+  '20.456.789-K',
 ];
 
 /**
@@ -163,6 +164,18 @@ export async function seedTickets(dataSource: DataSource): Promise<number> {
   const devices = dataSource.getRepository(Device);
   const sequences = dataSource.getRepository(TicketSequence);
   const year = new Date().getFullYear();
+
+  const legacyTickets = await tickets
+    .createQueryBuilder('ticket')
+    .where("ticket.id_solicitante LIKE '%-0'")
+    .getMany();
+
+  for (const ticket of legacyTickets) {
+    const normalized = normalizeRut(ticket.id_solicitante);
+    if (normalized !== ticket.id_solicitante) {
+      await tickets.update(ticket.id_ticket, { id_solicitante: normalized });
+    }
+  }
 
   await sequences
     .createQueryBuilder()

@@ -14,9 +14,9 @@ export const routes: readonly RouteDefinition[] = [
   { key: 'history', path: '/historial', label: 'Historial', title: 'Historial de tickets', roles: ['DOCENTE'], mobileOnly: true },
   { key: 'inbox', path: '/bandeja', label: 'Bandeja', title: 'Bandeja de entrada', roles: ['ADMIN', 'TECNICO'] },
   { key: 'inventory', path: '/inventario', label: 'Inventario', title: 'Inventario', roles: ['ADMIN', 'TECNICO'] },
-  { key: 'settings', path: '/config', label: 'Configuración', title: 'Configuración', roles: ['ADMIN'] },
   { key: 'subjects', path: '/asignaturas', label: 'Asignaturas', title: 'Asignaturas y niveles educativos', roles: ['ADMIN'] },
   { key: 'software', path: '/software', label: 'Software', title: 'Software educativo', roles: ['ADMIN'] },
+  { key: 'settings', path: '/config', label: 'Configuración', title: 'Configuración', roles: ['ADMIN'] },
 ]
 
 export const routePaths: Record<RouteKey, string> = Object.fromEntries(

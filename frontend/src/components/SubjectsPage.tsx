@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import {
   createLevel,
@@ -13,10 +13,23 @@ import {
 import { isSessionExpired } from '../services/http'
 import type { EducationalLevel, Subject } from '../types/academic'
 import { ListSkeleton } from './Skeleton'
+import { SelectMenu } from './SelectMenu'
 
 type SubjectsPageProps = {
   accessToken: string
   onSessionExpired: () => void
+}
+
+type SubjectSort = 'curso' | 'adicion' | 'alfabetico'
+
+const subjectSortOptions = [
+  { value: 'curso', label: 'Por curso' },
+  { value: 'adicion', label: 'Por fecha de adición' },
+  { value: 'alfabetico', label: 'Por alfabético' },
+]
+
+function compareNames(a: Subject, b: Subject) {
+  return a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' })
 }
 
 function toggleLevel(current: number[], id: number): number[] {
@@ -47,6 +60,7 @@ export function SubjectsPage({ accessToken, onSessionExpired }: SubjectsPageProp
   const [savingSubjectId, setSavingSubjectId] = useState<number | null>(null)
   const [confirmSubjectId, setConfirmSubjectId] = useState<number | null>(null)
   const [deletingSubjectId, setDeletingSubjectId] = useState<number | null>(null)
+  const [subjectSort, setSubjectSort] = useState<SubjectSort>('alfabetico')
 
   useEffect(() => {
     let active = true
@@ -76,6 +90,30 @@ export function SubjectsPage({ accessToken, onSessionExpired }: SubjectsPageProp
   }, [accessToken, onSessionExpired, reloadKey])
 
   const levelNameById = new Map(levels.map((level) => [level.id, level.nombre]))
+
+  const sortedSubjects = useMemo(() => {
+    const items = [...subjects]
+
+    if (subjectSort === 'alfabetico') {
+      return items.sort(compareNames)
+    }
+
+    if (subjectSort === 'curso') {
+      const levelOrder = new Map(levels.map((level, index) => [level.id, index]))
+
+      const courseKey = (subject: Subject) => {
+        const indexes = subject.nivelIds
+          .map((id) => levelOrder.get(id))
+          .filter((index): index is number => index !== undefined)
+
+        return indexes.length > 0 ? Math.min(...indexes) : Number.MAX_SAFE_INTEGER
+      }
+
+      return items.sort((a, b) => courseKey(a) - courseKey(b) || compareNames(a, b))
+    }
+
+    return items.sort((a, b) => a.id - b.id)
+  }, [subjects, levels, subjectSort])
 
   function retry() {
     setLoading(true)
@@ -243,6 +281,16 @@ export function SubjectsPage({ accessToken, onSessionExpired }: SubjectsPageProp
       return <span className="subjects-hint">Sin niveles asignados</span>
     }
 
+    const coversAllLevels = levels.length > 0 && levels.every((level) => subject.nivelIds.includes(level.id))
+
+    if (coversAllLevels) {
+      return (
+        <span className="subjects-chips">
+          <span className="subject-chip">Todos los cursos</span>
+        </span>
+      )
+    }
+
     return (
       <span className="subjects-chips">
         {subject.nivelIds.map((id) => (
@@ -390,8 +438,22 @@ export function SubjectsPage({ accessToken, onSessionExpired }: SubjectsPageProp
               )}
 
               {!loading && subjects.length > 0 && (
+                <div className="subjects-sort">
+                  <span className="subjects-sort-label">Ordenar por</span>
+                  <SelectMenu
+                    id="subject-sort"
+                    value={subjectSort}
+                    options={subjectSortOptions}
+                    onChange={(value) => setSubjectSort(value as SubjectSort)}
+                    ariaLabel="Ordenar asignaturas"
+                    visibleItems={3}
+                  />
+                </div>
+              )}
+
+              {!loading && subjects.length > 0 && (
                 <ul className="subjects-list">
-                  {subjects.map((subject) => (
+                  {sortedSubjects.map((subject) => (
                     <li className="subjects-item subjects-item-block" key={subject.id}>
                       {editingSubjectId === subject.id ? (
                         <form className="subjects-edit-column" onSubmit={(event) => handleUpdateSubject(event, subject)}>

@@ -15,8 +15,6 @@ type InventoryPageProps = {
 }
 
 type StatusFilter = 'ALL' | DeviceStatus
-type SortKey = 'code' | 'location' | 'status'
-type SortDir = 'asc' | 'desc'
 type Modal = { kind: 'create' } | { kind: 'edit'; device: Device } | null
 
 const FILTERS_KEY = 'inventory-filters-v1'
@@ -57,8 +55,6 @@ const statusOptions: Array<{ value: StatusFilter; label: string }> = [
 
 type StoredFilters = {
   status?: unknown
-  sortKey?: unknown
-  sortDir?: unknown
 }
 
 function loadStoredFilters(): StoredFilters {
@@ -76,30 +72,6 @@ function pickFilter<T extends string>(value: unknown, allowed: readonly T[], fal
   return typeof value === 'string' && (allowed as readonly string[]).includes(value) ? (value as T) : fallback
 }
 
-function SortButton({ label, sortKey, activeKey, dir, onToggle }: {
-  label: string
-  sortKey: SortKey
-  activeKey: SortKey
-  dir: SortDir
-  onToggle: (key: SortKey) => void
-}) {
-  const active = activeKey === sortKey
-  const hint = active
-    ? dir === 'asc' ? 'orden ascendente, activar para orden descendente' : 'orden descendente, activar para orden ascendente'
-    : 'activar para ordenar'
-
-  return (
-    <button type="button" className="th-sort" onClick={() => onToggle(sortKey)} aria-label={`${label}: ${hint}`}>
-      {label}
-      <svg className="th-sort-icon" viewBox="0 0 24 24" aria-hidden="true">
-        {!active && <><path d="m8 9 4-4 4 4" /><path d="m8 15 4 4 4-4" /></>}
-        {active && dir === 'asc' && <path d="M12 19V5M6 11l6-6 6 6" />}
-        {active && dir === 'desc' && <path d="M12 5v14M6 13l6 6 6-6" />}
-      </svg>
-    </button>
-  )
-}
-
 export function InventoryPage({ user, accessToken, onSessionExpired }: InventoryPageProps) {
   const [initial] = useState<StoredFilters>(() => loadStoredFilters())
 
@@ -111,10 +83,7 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
   const [statusFilter, setStatusFilter] = useState<StatusFilter>(
     pickFilter(initial.status, ['ALL', 'ACTIVO', 'INACTIVO', 'BAJA_TECNICA'] as const, 'ALL'),
   )
-  const [sortKey, setSortKey] = useState<SortKey>(
-    pickFilter(initial.sortKey, ['code', 'location', 'status'] as const, 'code'),
-  )
-  const [sortDir, setSortDir] = useState<SortDir>(initial.sortDir === 'desc' ? 'desc' : 'asc')
+  const [rowHeight, setRowHeight] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [refreshError, setRefreshError] = useState('')
@@ -127,6 +96,8 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
   const actionsRef = useRef<HTMLDivElement | null>(null)
   const summaryRef = useRef<HTMLElement | null>(null)
   const tabsRef = useRef<HTMLDivElement | null>(null)
+  const tableScrollRef = useRef<HTMLDivElement | null>(null)
+  const baseRowHeightRef = useRef<number | null>(null)
   const statusTabRefs = useRef<Array<HTMLButtonElement | null>>([])
   const canManageInventory = user.rol === 'ADMIN' || user.rol === 'TECNICO'
 
@@ -138,8 +109,8 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
       ...(statusFilter !== 'ALL' ? { estado: statusFilter } : {}),
       page: currentPage,
       limit: pageSize,
-      sortBy: sortKey,
-      sortDir,
+      sortBy: 'code',
+      sortDir: 'asc',
     })
       .then((result) => {
         if (!active) return
@@ -172,7 +143,7 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
     return () => {
       active = false
     }
-  }, [accessToken, onSessionExpired, reloadKey, searchTerm, statusFilter, sortKey, sortDir, currentPage, pageSize])
+  }, [accessToken, onSessionExpired, reloadKey, searchTerm, statusFilter, currentPage, pageSize])
 
   useEffect(() => {
     const handle = setTimeout(() => {
@@ -188,19 +159,45 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
     try {
       sessionStorage.setItem(FILTERS_KEY, JSON.stringify({
         status: statusFilter,
-        sortKey,
-        sortDir,
       }))
     } catch {
       return
     }
-  }, [statusFilter, sortKey, sortDir])
+  }, [statusFilter])
 
   useEffect(() => {
     function computePageSize() {
       if (actionsRef.current && actionsRef.current.offsetHeight === 0) {
         return
       }
+
+      if (!window.matchMedia('(max-width: 700px)').matches) {
+        const scroll = tableScrollRef.current
+        const table = scroll?.querySelector('table')
+        const header = table?.querySelector('thead')?.getBoundingClientRect().height ?? 0
+
+        if (scroll && table && !baseRowHeightRef.current) {
+          const naturalRowHeight = table.querySelector('tbody tr')?.getBoundingClientRect().height ?? 0
+          if (naturalRowHeight > 0) baseRowHeightRef.current = naturalRowHeight
+        }
+
+        const baseRowHeight = baseRowHeightRef.current
+        if (scroll && table && baseRowHeight && baseRowHeight > 0) {
+          const available = scroll.clientHeight - header
+          const fit = Math.floor(available / baseRowHeight)
+          const measured = Math.min(MAX_PAGE_SIZE, Math.max(MIN_PAGE_SIZE, fit))
+
+          if (measured !== pageSizeRef.current) {
+            pageSizeRef.current = measured
+            setPageSize(measured)
+            setCurrentPage(1)
+          }
+          setRowHeight(available > 0 ? available / measured : null)
+          return
+        }
+      }
+
+      setRowHeight(null);
 
       const chrome =
         (actionsRef.current?.offsetHeight ?? FALLBACK_ACTIONS) +
@@ -220,23 +217,20 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
 
     computePageSize()
     window.addEventListener('resize', computePageSize)
-    return () => window.removeEventListener('resize', computePageSize)
+
+    const observer = new ResizeObserver(computePageSize)
+    if (tableScrollRef.current) observer.observe(tableScrollRef.current)
+
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', computePageSize)
+    }
   }, [loading])
 
   function retryLoad() {
     setError('')
     setRefreshError('')
     setReloadKey((key) => key + 1)
-  }
-
-  function toggleSort(key: SortKey) {
-    if (key === sortKey) {
-      setSortDir((dir) => (dir === 'asc' ? 'desc' : 'asc'))
-    } else {
-      setSortKey(key)
-      setSortDir('asc')
-    }
-    setCurrentPage(1)
   }
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
@@ -317,6 +311,7 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
       <strong className="summary-value">{summary.baja_tecnica}</strong>
     </article>
   </section>
+  <div className="inventory-status-row">
   <div className="inventory-status-tabs" role="tablist" aria-label="Filtrar por estado" ref={tabsRef}>
     {statusOptions.map((option, index) => {
       const selected = statusFilter === option.value
@@ -339,6 +334,17 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
         </button>
       )
     })}
+  </div>
+  <label className="table-search inventory-search-desktop">
+    <span className="sr-only">Buscar dispositivos</span>
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+    <input
+      type="search"
+      value={searchInput}
+      onChange={(event) => setSearchInput(event.target.value)}
+      placeholder="Buscar por código, marca, modelo o ubicación"
+    />
+  </label>
   </div>
 {modal?.kind === 'edit' && canManageInventory && (
       <EditDeviceForm
@@ -418,27 +424,21 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
             </div>
           )
         ) : (
-          <div className="table-scroll">
+          <div className="table-scroll" ref={tableScrollRef}>
             <table>
               <caption className="sr-only">Listado de dispositivos del inventario</caption>
               <thead>
                 <tr>
-                  <th scope="col" aria-sort={sortKey === 'code' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
-                    <SortButton label="Código" sortKey="code" activeKey={sortKey} dir={sortDir} onToggle={toggleSort} />
-                  </th>
+                  <th scope="col" aria-sort="ascending">Código</th>
                   <th scope="col">Tipo</th>
                   <th scope="col">Marca y modelo</th>
-                  <th scope="col" aria-sort={sortKey === 'location' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
-                    <SortButton label="Ubicación" sortKey="location" activeKey={sortKey} dir={sortDir} onToggle={toggleSort} />
-                  </th>
-                  <th scope="col" aria-sort={sortKey === 'status' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
-                    <SortButton label="Estado" sortKey="status" activeKey={sortKey} dir={sortDir} onToggle={toggleSort} />
-                  </th>
+                  <th scope="col">Ubicación</th>
+                  <th scope="col">Estado</th>
                 </tr>
               </thead>
               <tbody>
                 {devices.map((device) => (
-                  <tr key={device.id}>
+                  <tr key={device.id} style={rowHeight ? { height: rowHeight } : undefined}>
                     <td className="device-code">
                       {canManageInventory ? (
                         <button className="device-code-button" type="button" aria-label={`Editar ${device.code}`} title={`Editar ${device.code}`} onClick={() => setModal({ kind: 'edit', device })}>

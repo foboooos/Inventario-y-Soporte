@@ -8,8 +8,8 @@ type HistoryPageProps = {
 
 export function HistoryPage({ accessToken, onSessionExpired, refreshKey }: HistoryPageProps) {
   return (
-    <main className="support-shell">
-      <section className="support-content" aria-label="Historial de tickets">
+    <main className="support-shell history-shell">
+      <section className="support-content history-content" aria-label="Historial de tickets">
         <TicketHistory accessToken={accessToken} onSessionExpired={onSessionExpired} refreshKey={refreshKey} />
       </section>
     </main>

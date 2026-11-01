@@ -16,6 +16,15 @@
     overflow: visible;
   }
 
+  .inbox-shell {
+    flex-direction: column;
+  }
+
+  .inbox-shell > .inbox-content {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
   .support-shell {
     height: auto;
     min-height: 0;
@@ -82,6 +91,7 @@
   .dashboard-main {
     flex: 1 1 auto;
     width: 100%;
+    min-height: 0;
     margin-left: 0;
     display: flex;
     flex-direction: column;
@@ -190,7 +200,7 @@
 
   .inventory-content.inbox-content {
     padding-top: 16px;
-    padding-bottom: 0;
+    padding-bottom: 16px;
   }
 
   .table-scroll,
@@ -262,6 +272,56 @@
 
   .login-card {
     padding: 24px;
+  }
+}
+
+@media (max-width: 700px) {
+  .history-shell {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .history-content {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .history-shell .ticket-history-section {
+    flex: 1 1 auto;
+    min-height: 0;
+    margin-top: 0;
+  }
+
+  .history-shell .ticket-history-card {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .history-shell .ticket-history-table-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+  }
+
+  .history-shell .table-footer {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+  }
+
+  .history-shell .table-footer > span {
+    position: static;
+    align-self: auto;
+  }
+
+  .history-shell .pagination {
+    justify-content: flex-end;
   }
 }
 
