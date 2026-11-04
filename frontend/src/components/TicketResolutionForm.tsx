@@ -4,6 +4,8 @@ import { isSessionExpired } from '../services/http'
 import { resolveTicket } from '../services/tickets'
 import type { DeviceStatus, DeviceType } from '../types/inventory'
 import type { Ticket, TicketStatus } from '../types/ticket'
+import { Modal } from './Modal'
+import type { ModalHandle } from './Modal'
 
 type TicketResolutionFormProps = {
   accessToken: string
@@ -42,16 +44,12 @@ export function TicketResolutionForm({ accessToken, ticket, onResolved, onCancel
   const solutionRef = useRef<HTMLTextAreaElement | null>(null)
   const cancelRef = useRef<HTMLButtonElement | null>(null)
   const saveRef = useRef<HTMLButtonElement | null>(null)
+  const modalRef = useRef<ModalHandle>(null)
 
   useEffect(() => {
     causeRef.current?.focus()
 
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape' && !saving) {
-        onCancel()
-        return
-      }
-
       if (event.key !== 'Tab') return
 
       const focusableElements = [causeRef.current, solutionRef.current, cancelRef.current, saveRef.current]
@@ -70,7 +68,7 @@ export function TicketResolutionForm({ accessToken, ticket, onResolved, onCancel
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [onCancel, saving])
+  }, [])
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -84,7 +82,7 @@ export function TicketResolutionForm({ accessToken, ticket, onResolved, onCancel
         solucion_aplicada: solution.trim(),
         estado_final: finalStatus,
       })
-      onResolved(resolvedTicket)
+      modalRef.current?.close(() => onResolved(resolvedTicket))
     } catch (exception: unknown) {
       if (isSessionExpired(exception)) {
         onSessionExpired()
@@ -100,20 +98,14 @@ export function TicketResolutionForm({ accessToken, ticket, onResolved, onCancel
   const statusModifier = ticket.estado.toLowerCase().replace('_', '-')
 
   return (
-    <div
-      className="modal-backdrop ticket-resolution-backdrop"
-      role="presentation"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget && !saving) onCancel()
-      }}
+    <Modal
+      ref={modalRef}
+      label={`Resolver ticket ${ticket.codigo_ticket}`}
+      backdropClassName="ticket-resolution-backdrop"
+      cardClassName="modal-card ticket-resolution-modal"
+      dismissible={!saving}
+      onClose={onCancel}
     >
-      <section
-        className="modal-card ticket-resolution-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-label={`Resolver ticket ${ticket.codigo_ticket}`}
-        onMouseDown={(event) => event.stopPropagation()}
-      >
         <div className="ticket-resolution-body">
           <dl className="ticket-resolution-summary">
             <div>
@@ -182,14 +174,13 @@ export function TicketResolutionForm({ accessToken, ticket, onResolved, onCancel
             </fieldset>
             {error && <p className="error" role="alert">{error}</p>}
             <div className="ticket-resolution-actions">
-              <button ref={cancelRef} className="secondary-button" type="button" disabled={saving} onClick={onCancel}>Cancelar</button>
+              <button ref={cancelRef} className="secondary-button" type="button" disabled={saving} onClick={() => modalRef.current?.close()}>Cancelar</button>
               <button ref={saveRef} className="primary-action" type="submit" disabled={saving || !cause.trim() || !solution.trim() || !finalStatus}>
                 {saving ? 'Guardando…' : 'Cerrar ticket'}
               </button>
             </div>
           </form>
         </div>
-      </section>
-    </div>
+    </Modal>
   )
 }

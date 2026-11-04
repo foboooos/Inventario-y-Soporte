@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import type { KeyboardEvent } from 'react'
+import type { CSSProperties, KeyboardEvent } from 'react'
 
 export type SelectOption = { value: string; label: string }
 
@@ -12,21 +12,40 @@ type SelectMenuProps = {
   placeholder?: string
   disabled?: boolean
   visibleItems?: number
+  fixedList?: boolean
 }
 
 const ITEM_HEIGHT = 30
 const LIST_PADDING = 10
+const VIEWPORT_MARGIN = 32
 
-export function SelectMenu({ id, value, options, onChange, ariaLabel, placeholder, disabled, visibleItems = 10 }: SelectMenuProps) {
+function visibleViewportHeight() {
+  return window.visualViewport?.height ?? window.innerHeight
+}
+
+type ListBox = { top: number | null; bottom: number | null; left: number; width: number }
+
+function boxFromRect(rect: DOMRect, above: boolean): ListBox {
+  return {
+    top: above ? null : rect.bottom + 4,
+    bottom: above ? visibleViewportHeight() - rect.top + 4 : null,
+    left: rect.left,
+    width: rect.width,
+  }
+}
+
+export function SelectMenu({ id, value, options, onChange, ariaLabel, placeholder, disabled, visibleItems = 10, fixedList = false }: SelectMenuProps) {
   const [open, setOpen] = useState(false)
   const [activeIndex, setActiveIndex] = useState(-1)
   const [above, setAbove] = useState(false)
+  const [listBox, setListBox] = useState<ListBox | null>(null)
   const rootRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
   const listRef = useRef<HTMLUListElement>(null)
   const scrollActiveRef = useRef(false)
   const scrollTopRef = useRef<number | null>(null)
-  const listHeight = visibleItems * ITEM_HEIGHT + LIST_PADDING
+  const visibleCount = Math.min(options.length, visibleItems)
+  const listHeight = visibleCount * ITEM_HEIGHT + LIST_PADDING
 
   const selectedIndex = options.findIndex((option) => option.value === value)
   const selected = selectedIndex >= 0 ? options[selectedIndex] : undefined
@@ -42,6 +61,22 @@ export function SelectMenu({ id, value, options, onChange, ariaLabel, placeholde
     return () => document.removeEventListener('pointerdown', handlePointerDown)
   }, [open])
 
+  useEffect(() => {
+    if (!open || !fixedList) return
+
+    function reposition() {
+      const rect = buttonRef.current?.getBoundingClientRect()
+      if (rect) setListBox(boxFromRect(rect, above))
+    }
+
+    window.addEventListener('scroll', reposition, true)
+    window.addEventListener('resize', reposition)
+    return () => {
+      window.removeEventListener('scroll', reposition, true)
+      window.removeEventListener('resize', reposition)
+    }
+  }, [open, fixedList, above])
+
   useLayoutEffect(() => {
     if (!open || scrollTopRef.current === null) return
     if (listRef.current) listRef.current.scrollTop = scrollTopRef.current
@@ -56,7 +91,22 @@ export function SelectMenu({ id, value, options, onChange, ariaLabel, placeholde
 
   function openList() {
     const rect = buttonRef.current?.getBoundingClientRect()
-    setAbove(Boolean(rect && rect.bottom + listHeight > window.innerHeight && rect.top > listHeight))
+    const containerRect = buttonRef.current?.closest('.modal-card')?.getBoundingClientRect()
+    const viewportSpaceBelow = rect ? visibleViewportHeight() - rect.bottom : 0
+    const containerSpaceBelow = rect
+      ? (containerRect ? containerRect.bottom - rect.bottom : Infinity)
+      : 0
+    const spaceAbove = rect
+      ? (fixedList ? rect.top : rect.top - Math.max(0, containerRect?.top ?? 0))
+      : 0
+    const clippedByContainer = !fixedList && containerSpaceBelow < listHeight + VIEWPORT_MARGIN
+    const nextAbove = Boolean(
+      rect
+      && (viewportSpaceBelow < listHeight + VIEWPORT_MARGIN || clippedByContainer)
+      && spaceAbove > listHeight,
+    )
+    setAbove(nextAbove)
+    if (fixedList && rect) setListBox(boxFromRect(rect, nextAbove))
     scrollActiveRef.current = scrollTopRef.current === null
     setActiveIndex(selectedIndex >= 0 ? selectedIndex : 0)
     setOpen(true)
@@ -112,6 +162,19 @@ export function SelectMenu({ id, value, options, onChange, ariaLabel, placeholde
     }
   }
 
+  const listStyle: CSSProperties = {}
+
+  if (options.length > visibleItems) listStyle.maxHeight = listHeight
+
+  if (fixedList && listBox) {
+    listStyle.position = 'fixed'
+    listStyle.right = 'auto'
+    listStyle.left = listBox.left
+    listStyle.width = listBox.width
+    if (listBox.top !== null) listStyle.top = listBox.top
+    if (listBox.bottom !== null) listStyle.bottom = listBox.bottom
+  }
+
   return (
     <div className="select-menu" ref={rootRef}>
       <button
@@ -143,7 +206,7 @@ export function SelectMenu({ id, value, options, onChange, ariaLabel, placeholde
           className={`select-menu-list ${above ? 'is-above' : 'is-below'}`}
           role="listbox"
           aria-label={ariaLabel}
-          style={{ maxHeight: listHeight }}
+          style={listStyle}
           onScroll={(event) => { scrollTopRef.current = event.currentTarget.scrollTop }}
         >
           {options.map((option, index) => (

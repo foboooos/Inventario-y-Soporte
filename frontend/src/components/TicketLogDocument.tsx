@@ -1,6 +1,8 @@
-import { createPortal } from 'react-dom'
+import { useRef } from 'react'
 import type { DeviceStatus, DeviceType } from '../types/inventory'
 import type { TicketBitacora } from '../types/ticket'
+import { Modal } from './Modal'
+import type { ModalHandle } from './Modal'
 
 type TicketLogDocumentProps = {
   bitacora: TicketBitacora
@@ -41,6 +43,7 @@ function CheckOption({ checked, label }: { checked: boolean; label: string }) {
 }
 
 export function TicketLogDocument({ bitacora, onClose }: TicketLogDocumentProps) {
+  const modalRef = useRef<ModalHandle>(null)
   const solutionSteps = (bitacora.solucion_aplicada ?? '')
     .split('\n')
     .map((line) => line.trim())
@@ -55,24 +58,18 @@ export function TicketLogDocument({ bitacora, onClose }: TicketLogDocumentProps)
     window.print()
   }
 
-  return createPortal(
-    <div
-      className="modal-backdrop ticket-log-backdrop"
-      role="presentation"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose()
-      }}
+  return (
+    <Modal
+      ref={modalRef}
+      portal
+      label={`Bitácora del ticket ${bitacora.codigo_ticket}`}
+      backdropClassName="ticket-log-backdrop"
+      cardClassName="modal-card ticket-log-modal"
+      onClose={onClose}
     >
-      <section
-        className="modal-card ticket-log-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-label={`Bitácora del ticket ${bitacora.codigo_ticket}`}
-        onMouseDown={(event) => event.stopPropagation()}
-      >
         <div className="ticket-log-toolbar no-print">
           <button className="primary-action" type="button" onClick={printDocument}>Imprimir / Guardar PDF</button>
-          <button className="secondary-button" type="button" onClick={onClose}>Cerrar</button>
+          <button className="secondary-button" type="button" onClick={() => modalRef.current?.close()}>Cerrar</button>
         </div>
 
         <article className="ticket-log-document">
@@ -148,8 +145,6 @@ export function TicketLogDocument({ bitacora, onClose }: TicketLogDocumentProps)
             </section>
           </div>
         </article>
-      </section>
-    </div>,
-    document.body,
+    </Modal>
   )
 }

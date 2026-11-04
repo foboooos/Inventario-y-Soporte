@@ -23,10 +23,19 @@ export class LocationService {
 
   async create(createLocationDto: CreateLocationDto) {
     const nombre = createLocationDto.nombre.trim();
+    const sigla = createLocationDto.sigla?.trim().toUpperCase() || null;
     const existing = await this.locations.findOneBy({ nombre });
 
     if (existing) {
       throw new ConflictException('La ubicación ya existe');
+    }
+
+    if (sigla) {
+      const duplicateSigla = await this.locations.findOneBy({ sigla });
+
+      if (duplicateSigla) {
+        throw new ConflictException('La sigla ya está en uso');
+      }
     }
 
     let padreId: number | null = null;
@@ -45,7 +54,14 @@ export class LocationService {
       padreId = padre.id_ubicacion;
     }
 
-    return this.locations.save(this.locations.create({ nombre, padre_id: padreId }));
+    return this.locations.save(
+      this.locations.create({
+        nombre,
+        sigla,
+        padre_id: padreId,
+        tipo: createLocationDto.tipo ?? 'PRINCIPAL',
+      }),
+    );
   }
 
   async rename(id: number, updateLocationDto: UpdateLocationDto) {
@@ -59,20 +75,32 @@ export class LocationService {
 
       const nombre = updateLocationDto.nombre?.trim();
 
-      if (!nombre || nombre === location.nombre) {
-        return location;
+      if (nombre && nombre !== location.nombre) {
+        const duplicate = await locations.findOneBy({ nombre });
+
+        if (duplicate) {
+          throw new ConflictException('La ubicación ya existe');
+        }
+
+        await manager.getRepository(Device).update({ ubicacion: location.nombre }, { ubicacion: nombre });
+        await manager.getRepository(Ticket).update({ ubicacion: location.nombre }, { ubicacion: nombre });
+
+        location.nombre = nombre;
       }
 
-      const duplicate = await locations.findOneBy({ nombre });
+      if (updateLocationDto.sigla !== undefined) {
+        const sigla = updateLocationDto.sigla.trim().toUpperCase() || null;
 
-      if (duplicate) {
-        throw new ConflictException('La ubicación ya existe');
+        if (sigla) {
+          const duplicateSigla = await locations.findOneBy({ sigla });
+
+          if (duplicateSigla && duplicateSigla.id_ubicacion !== id) {
+            throw new ConflictException('La sigla ya está en uso');
+          }
+        }
+
+        location.sigla = sigla;
       }
-
-      await manager.getRepository(Device).update({ ubicacion: location.nombre }, { ubicacion: nombre });
-      await manager.getRepository(Ticket).update({ ubicacion: location.nombre }, { ubicacion: nombre });
-
-      location.nombre = nombre;
 
       return locations.save(location);
     });

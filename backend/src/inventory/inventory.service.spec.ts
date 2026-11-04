@@ -1,6 +1,8 @@
 import { FindOperator, type Repository } from 'typeorm';
 import { describe, expect, it, vi } from 'vitest';
+import { Ubicacion } from '../locations/ubicacion.entity.js';
 import { DeviceStatus } from './device-status.enum.js';
+import { DeviceType } from './device-type.enum.js';
 import { Device } from './device.entity.js';
 import { QueryInventoryDto } from './dto/query-inventory.dto.js';
 import { InventoryService } from './inventory.service.js';
@@ -9,8 +11,8 @@ function query(overrides: Partial<QueryInventoryDto> = {}): QueryInventoryDto {
   return { page: 1, limit: 10, sortBy: 'code', sortDir: 'asc', ...overrides };
 }
 
-function createService(devices: Partial<Repository<Device>>) {
-  return new InventoryService(devices as Repository<Device>);
+function createService(devices: Partial<Repository<Device>>, locations: Partial<Repository<Ubicacion>> = {}) {
+  return new InventoryService(devices as Repository<Device>, locations as Repository<Ubicacion>);
 }
 
 function createQueryBuilder(rawRows: Array<{ estado: string; count: string }>) {
@@ -121,5 +123,50 @@ describe('InventoryService', () => {
     expect(qb.where).toHaveBeenCalledWith(expect.stringContaining('ILIKE :pattern'), { pattern: '%lab%' });
     expect(qb.where).not.toHaveBeenCalledWith(expect.stringContaining('estado'), expect.anything());
     expect(result.summary).toEqual({ total: 6, activo: 2, inactivo: 1, baja_tecnica: 3 });
+  });
+
+  it('generates the next code from the device count of the location', async () => {
+    const find = vi.fn().mockResolvedValue(
+      Array.from({ length: 10 }, (_, index) => ({
+        codigo_inventario: `PC-LAB-${String(index + 1).padStart(4, '0')}`,
+      })),
+    );
+    const service = createService(
+      { find },
+      {
+        findOneBy: vi.fn().mockResolvedValue({
+          nombre: 'Laboratorio de Computación',
+          sigla: 'LAB',
+          padre_id: null,
+        }),
+      },
+    );
+
+    await expect(service.nextCode(DeviceType.PC, 'Laboratorio de Computación')).resolves.toBe('PC-LAB-0011');
+  });
+
+  it('groups all courses under the CUR sigla', async () => {
+    const find = vi.fn().mockResolvedValue([{ codigo_inventario: 'PRY-CUR-0001' }]);
+    const service = createService(
+      { find },
+      {
+        findOneBy: vi.fn().mockResolvedValue({ nombre: '1° Básico A', sigla: null, padre_id: 3 }),
+        find: vi.fn().mockResolvedValue([
+          { nombre: '1° Básico A', padre_id: 3 },
+          { nombre: '1° Básico B', padre_id: 3 },
+        ]),
+      },
+    );
+
+    await expect(service.nextCode(DeviceType.PROYECTOR, '1° Básico A')).resolves.toBe('PRY-CUR-0002');
+  });
+
+  it('rejects locations without a sigla', async () => {
+    const service = createService(
+      {},
+      { findOneBy: vi.fn().mockResolvedValue({ nombre: 'Casino', sigla: null, padre_id: null }) },
+    );
+
+    await expect(service.nextCode(DeviceType.PC, 'Casino')).rejects.toThrow('La ubicación no tiene sigla configurada');
   });
 });

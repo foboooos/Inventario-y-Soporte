@@ -4,12 +4,6 @@ import { DeviceType } from '../device-type.enum.js';
 
 export class UpdateDeviceDto {
   @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(50)
-  codigo_inventario?: string;
-
-  @IsOptional()
   @IsEnum(DeviceType)
   tipo?: DeviceType;
 

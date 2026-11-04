@@ -268,7 +268,17 @@ export function InboxPage({ accessToken, onSessionExpired }: InboxPageProps) {
       const measuredRowHeight = table?.querySelector('tbody tr')?.getBoundingClientRect().height ?? 0
       const footer = tableFooterRef.current?.getBoundingClientRect().height ?? 0
 
-      if (measuredRowHeight <= 0) return
+      if (measuredRowHeight <= 0) {
+        const available = card.clientHeight - 38
+        const fit = Math.floor(available / 34)
+
+        setPageSize((current) => {
+          const next = Math.min(MAX_PAGE_SIZE, Math.max(MIN_PAGE_SIZE, fit))
+          return current === next ? current : next
+        })
+        setRowHeight(null)
+        return
+      }
 
       if (window.matchMedia('(max-width: 700px)').matches) {
         const content = card.parentElement
@@ -309,7 +319,7 @@ export function InboxPage({ accessToken, onSessionExpired }: InboxPageProps) {
       observer.disconnect()
       window.removeEventListener('resize', measure)
     }
-  }, [tickets.length])
+  }, [tickets.length, loading])
 
   useEffect(() => {
     let isMounted = true
@@ -505,7 +515,16 @@ export function InboxPage({ accessToken, onSessionExpired }: InboxPageProps) {
             {loading && (
               <TableSkeleton
                 label="Cargando bandeja de tickets…"
-                columns={['12%', '12%', '14%', '14%', '30%', '14%', '8%']}
+                columns={[
+                  '114px',
+                  '104px',
+                  '140px',
+                  'calc((100% - 566px) * 0.15)',
+                  'calc((100% - 566px) * 0.24)',
+                  'calc((100% - 566px) * 0.61)',
+                  '130px',
+                  '78px',
+                ]}
                 rows={pageSize}
               />
             )}

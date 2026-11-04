@@ -47,23 +47,26 @@
 }
 
 .summary-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+  display: block;
+  overflow: hidden;
   color: var(--minimal-muted);
   font-size: 12px;
   font-weight: 600;
   line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .summary-label::before {
+  display: inline-block;
   width: 10px;
   height: 10px;
-  flex: 0 0 auto;
+  margin-right: 6px;
   box-sizing: border-box;
   border-radius: var(--radius-circle);
   border: 2px solid var(--minimal-primary);
   background: var(--minimal-primary);
+  vertical-align: middle;
   content: '';
 }
 
@@ -180,6 +183,12 @@
   outline-offset: -2px;
 }
 
+@media (min-width: 701px) {
+  .inventory-status-tab::after {
+    height: 2.5px;
+  }
+}
+
 .table-card {
   flex: 1 1 0;
   min-height: 0;
@@ -202,6 +211,11 @@
   border-collapse: collapse;
   table-layout: fixed;
   text-align: left;
+}
+
+.table-scroll th,
+.table-scroll td {
+  vertical-align: middle;
 }
 
 .table-scroll th:nth-child(1),
@@ -233,6 +247,7 @@ th,
 td {
   padding: 3px 16px;
   border-bottom: 1px solid var(--border-subtle);
+  vertical-align: middle;
 }
 
 thead th {
@@ -531,12 +546,6 @@ tbody tr:hover {
   white-space: nowrap;
 }
 
-@media (max-width: 900px) {
-  .inventory-summary {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
 @media (max-width: 700px) {
   .table-card {
     flex: none;
@@ -600,16 +609,23 @@ tbody tr:hover {
   background: transparent;
 }
 
+@media (min-width: 1101px) {
+  .inbox-filter-row .inbox-filters {
+    flex-basis: 200px;
+    min-width: 0;
+  }
+}
+
 .inbox-status-row {
   flex: 0 0 auto;
   min-width: 0;
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   gap: 16px;
 }
 
 .inbox-clear-button {
-  align-self: flex-end;
+  align-self: flex-start;
   min-height: 32px;
   padding-top: 6px;
   padding-bottom: 7px;
@@ -835,13 +851,21 @@ tbody tr:hover {
   }
 }
 
-@media (max-width: 1100px) {
-  .inventory-content.inbox-content {
-    padding-top: 8px;
+@media (min-width: 701px) and (max-width: 1100px) {
+  .inbox-filter-row .inbox-filters label > span {
+    position: static;
+    display: block;
+    margin-bottom: 2px;
+    padding: 0;
+    background: transparent;
+    transform: none;
   }
+}
 
+@media (max-width: 1100px) {
   .inbox-filter-row {
     flex-direction: column;
+    flex-wrap: nowrap;
     align-items: stretch;
   }
 
@@ -864,7 +888,7 @@ tbody tr:hover {
 
   .inbox-status-row {
     order: 2;
-    align-items: flex-end;
+    align-items: center;
     border-bottom: 1px solid var(--border-subtle);
   }
 

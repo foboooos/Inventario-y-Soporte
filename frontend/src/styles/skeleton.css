@@ -2,7 +2,9 @@
   flex: 1 1 auto;
   min-height: 0;
   display: grid;
-  align-content: start;
+  grid-template-rows: 30px;
+  grid-auto-rows: minmax(34px, 1fr);
+  align-content: stretch;
   padding-bottom: 4px;
   overflow: hidden;
 }
@@ -10,15 +12,27 @@
 .skeleton-table-row {
   display: grid;
   align-items: center;
-  column-gap: 16px;
-  height: 34px;
-  padding: 0 16px;
+  height: 100%;
+  min-height: 34px;
+  padding: 0;
   border-bottom: 1px solid var(--border-subtle);
 }
 
 .skeleton-table-row.is-header {
-  height: 30px;
+  height: 100%;
+  min-height: 30px;
+  max-height: 30px;
   border-bottom-color: var(--border-subtle);
+}
+
+.skeleton-cell {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  height: 100%;
+  padding: 0 16px;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .skeleton-bar {

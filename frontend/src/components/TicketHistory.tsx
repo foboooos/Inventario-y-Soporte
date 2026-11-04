@@ -135,7 +135,13 @@ export function TicketHistory({ accessToken, onSessionExpired, refreshKey, deskt
         {loading && (
           <TableSkeleton
             label="Cargando historial de tickets…"
-            columns={['16%', '17%', '22%', '21%', '24%']}
+            columns={[
+              '114px',
+              '104px',
+              'calc((100% - 218px) * 0.355)',
+              'calc((100% - 218px) * 0.258)',
+              'calc((100% - 218px) * 0.387)',
+            ]}
             rows={PAGE_SIZE}
           />
         )}

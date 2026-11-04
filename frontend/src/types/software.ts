@@ -9,7 +9,7 @@ export type SoftwareProgram = {
 }
 
 export const SOFTWARE_LICENSES: { value: SoftwareLicense; label: string }[] = [
-  { value: 'LIBRE', label: 'Libre / Open Source' },
+  { value: 'LIBRE', label: 'Código abierto' },
   { value: 'GRATUITA', label: 'Gratuita' },
   { value: 'COMERCIAL', label: 'Comercial' },
   { value: 'SUSCRIPCION', label: 'Suscripción' },

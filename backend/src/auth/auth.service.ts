@@ -13,7 +13,7 @@ export class AuthService {
     private readonly jwt: JwtService,
   ) {}
 
-  async login({ usuario, password }: LoginDto) {
+  async login({ usuario, password, remember }: LoginDto) {
     const normalizedUsuario = usuario.trim().toLowerCase();
     const user = await this.users
       .createQueryBuilder('user')
@@ -26,7 +26,9 @@ export class AuthService {
     }
 
     const payload = { sub: user.rut, email: user.email, rol: user.rol };
-    const access_token = await this.jwt.signAsync(payload);
+    const access_token = remember
+      ? await this.jwt.signAsync(payload, { expiresIn: '30d' })
+      : await this.jwt.signAsync(payload);
 
     return {
       access_token,

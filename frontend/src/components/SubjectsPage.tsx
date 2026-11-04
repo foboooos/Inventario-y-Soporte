@@ -8,24 +8,25 @@ import {
   getLevels,
   getSubjects,
   renameLevel,
-  updateSubject,
 } from '../services/academics'
 import { isSessionExpired } from '../services/http'
 import type { EducationalLevel, Subject } from '../types/academic'
-import { ListSkeleton } from './Skeleton'
-import { SelectMenu } from './SelectMenu'
+import { ChecklistSkeleton, ListSkeleton } from './Skeleton'
+import { EditSubjectForm } from './EditSubjectForm'
+import { PencilIcon, TrashIcon } from './ActionIcons'
+import { SortButton } from './SortButton'
+import type { SortKey, SortOption } from './SortButton'
 
 type SubjectsPageProps = {
   accessToken: string
   onSessionExpired: () => void
 }
 
-type SubjectSort = 'curso' | 'adicion' | 'alfabetico'
-
-const subjectSortOptions = [
-  { value: 'curso', label: 'Por curso' },
-  { value: 'adicion', label: 'Por fecha de adición' },
-  { value: 'alfabetico', label: 'Por alfabético' },
+const subjectSortOptions: SortOption[] = [
+  { value: 'alfabetico', label: 'A-Z' },
+  { value: 'alfabetico-desc', label: 'Z-A' },
+  { value: 'adicion', label: 'Adición' },
+  { value: 'curso', label: 'Curso' },
 ]
 
 function compareNames(a: Subject, b: Subject) {
@@ -54,13 +55,10 @@ export function SubjectsPage({ accessToken, onSessionExpired }: SubjectsPageProp
   const [newSubjectName, setNewSubjectName] = useState('')
   const [newSubjectLevelIds, setNewSubjectLevelIds] = useState<number[]>([])
   const [creatingSubject, setCreatingSubject] = useState(false)
-  const [editingSubjectId, setEditingSubjectId] = useState<number | null>(null)
-  const [editSubjectName, setEditSubjectName] = useState('')
-  const [editSubjectLevelIds, setEditSubjectLevelIds] = useState<number[]>([])
-  const [savingSubjectId, setSavingSubjectId] = useState<number | null>(null)
+  const [editingSubject, setEditingSubject] = useState<Subject | null>(null)
   const [confirmSubjectId, setConfirmSubjectId] = useState<number | null>(null)
   const [deletingSubjectId, setDeletingSubjectId] = useState<number | null>(null)
-  const [subjectSort, setSubjectSort] = useState<SubjectSort>('alfabetico')
+  const [subjectSort, setSubjectSort] = useState<SortKey>('alfabetico')
 
   useEffect(() => {
     let active = true
@@ -96,6 +94,10 @@ export function SubjectsPage({ accessToken, onSessionExpired }: SubjectsPageProp
 
     if (subjectSort === 'alfabetico') {
       return items.sort(compareNames)
+    }
+
+    if (subjectSort === 'alfabetico-desc') {
+      return items.sort((a, b) => compareNames(b, a))
     }
 
     if (subjectSort === 'curso') {
@@ -207,29 +209,7 @@ export function SubjectsPage({ accessToken, onSessionExpired }: SubjectsPageProp
 
   function startEditSubject(subject: Subject) {
     setConfirmSubjectId(null)
-    setEditingSubjectId(subject.id)
-    setEditSubjectName(subject.nombre)
-    setEditSubjectLevelIds(subject.nivelIds)
-  }
-
-  async function handleUpdateSubject(event: FormEvent<HTMLFormElement>, subject: Subject) {
-    event.preventDefault()
-    const nombre = editSubjectName.trim()
-    if (!nombre) return
-
-    setSavingSubjectId(subject.id)
-    setError('')
-    try {
-      const updated = await updateSubject(accessToken, subject.id, { nombre, nivelIds: editSubjectLevelIds })
-      setSubjects((current) => current.map((item) => (item.id === updated.id ? updated : item)))
-      setEditingSubjectId(null)
-      setEditSubjectName('')
-      setEditSubjectLevelIds([])
-    } catch (exception: unknown) {
-      reportError(exception, 'No se pudo actualizar la asignatura')
-    } finally {
-      setSavingSubjectId(null)
-    }
+    setEditingSubject(subject)
   }
 
   async function handleDeleteSubject(subject: Subject) {
@@ -246,7 +226,7 @@ export function SubjectsPage({ accessToken, onSessionExpired }: SubjectsPageProp
     }
   }
 
-  function renderLevelChecklist(selected: number[], onToggle: (id: number) => void, onClear: () => void) {
+  function renderLevelChecklist(selected: number[], onToggle: (id: number) => void, onClear: () => void, onSelectAll: () => void) {
     if (levels.length === 0) {
       return <p className="subjects-hint">Crea primero un nivel educativo.</p>
     }
@@ -257,6 +237,11 @@ export function SubjectsPage({ accessToken, onSessionExpired }: SubjectsPageProp
           <span className="subjects-levels-title">Niveles educativos</span>
           <span className="subjects-levels-meta">
             <span className="subjects-levels-count">{selected.length} de {levels.length} seleccionados</span>
+            {selected.length < levels.length && (
+              <button className="text-button" type="button" onClick={onSelectAll}>
+                Todos
+              </button>
+            )}
             {selected.length > 0 && (
               <button className="text-button" type="button" onClick={onClear}>
                 Limpiar
@@ -319,8 +304,8 @@ export function SubjectsPage({ accessToken, onSessionExpired }: SubjectsPageProp
             </div>
           )}
 
-          <div className="subjects-grid">
-            <section className="support-card subjects-card" aria-label="Niveles educativos">
+          <div className="subjects-grid subjects-grid-split">
+            <section className="support-card subjects-card subjects-levels-card" aria-label="Niveles educativos">
               <form className="subjects-form" onSubmit={handleCreateLevel}>
                 <label>
                   <span>Nivel educativo</span>
@@ -337,7 +322,7 @@ export function SubjectsPage({ accessToken, onSessionExpired }: SubjectsPageProp
                 </button>
               </form>
 
-              {loading && <ListSkeleton label="Cargando niveles educativos…" />}
+              {loading && <ListSkeleton label="Cargando niveles educativos…" rows={12} />}
               {!loading && levels.length === 0 && (
                 <p className="subjects-state" role="status">Aún no hay niveles educativos registrados.</p>
               )}
@@ -355,16 +340,28 @@ export function SubjectsPage({ accessToken, onSessionExpired }: SubjectsPageProp
                             required
                             aria-label={`Nuevo nombre para ${level.nombre}`}
                           />
-                          <button className="primary-action" type="submit" disabled={savingLevelId === level.id || !editLevelName.trim()}>
-                            {savingLevelId === level.id ? 'Guardando…' : 'Guardar'}
+                          <button
+                            className="subjects-icon-button"
+                            type="submit"
+                            aria-label="Guardar"
+                            title="Guardar"
+                            disabled={savingLevelId === level.id || !editLevelName.trim()}
+                          >
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                              <path d="M20 6 9 17l-5-5" />
+                            </svg>
                           </button>
                           <button
-                            className="secondary-button"
+                            className="subjects-icon-button subjects-icon-button-muted"
                             type="button"
+                            aria-label="Cancelar"
+                            title="Cancelar"
                             disabled={savingLevelId === level.id}
                             onClick={() => setEditingLevelId(null)}
                           >
-                            Cancelar
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                              <path d="M18 6 6 18M6 6l12 12" />
+                            </svg>
                           </button>
                         </form>
                       ) : (
@@ -388,16 +385,26 @@ export function SubjectsPage({ accessToken, onSessionExpired }: SubjectsPageProp
                               </>
                             ) : (
                               <>
-                                <button className="text-button" type="button" onClick={() => startEditLevel(level)}>Renombrar</button>
                                 <button
-                                  className="text-button text-button-danger"
+                                  className="subjects-icon-button"
                                   type="button"
+                                  aria-label={`Renombrar ${level.nombre}`}
+                                  title="Renombrar"
+                                  onClick={() => startEditLevel(level)}
+                                >
+                                  <PencilIcon />
+                                </button>
+                                <button
+                                  className="subjects-icon-button subjects-icon-button-danger"
+                                  type="button"
+                                  aria-label={`Eliminar ${level.nombre}`}
+                                  title="Eliminar"
                                   onClick={() => {
                                     setEditingLevelId(null)
                                     setConfirmLevelId(level.id)
                                   }}
                                 >
-                                  Eliminar
+                                  <TrashIcon />
                                 </button>
                               </>
                             )}
@@ -410,7 +417,7 @@ export function SubjectsPage({ accessToken, onSessionExpired }: SubjectsPageProp
               )}
             </section>
 
-            <section className="support-card subjects-card" aria-label="Asignaturas">
+            <section className="support-card subjects-card subjects-create-card" aria-label="Crear asignatura">
               <form className="subjects-form subjects-form-column" onSubmit={handleCreateSubject}>
                 <label>
                   <span>Asignatura</span>
@@ -422,110 +429,97 @@ export function SubjectsPage({ accessToken, onSessionExpired }: SubjectsPageProp
                     required
                   />
                 </label>
-                {renderLevelChecklist(
+                {loading ? (
+                  <ChecklistSkeleton label="Cargando niveles educativos…" title="Niveles educativos" />
+                ) : renderLevelChecklist(
                   newSubjectLevelIds,
                   (id) => setNewSubjectLevelIds((current) => toggleLevel(current, id)),
                   () => setNewSubjectLevelIds([]),
+                  () => setNewSubjectLevelIds(levels.map((level) => level.id)),
                 )}
                 <button className="primary-action" type="submit" disabled={creatingSubject || !newSubjectName.trim()}>
                   {creatingSubject ? 'Agregando…' : 'Agregar'}
                 </button>
               </form>
+            </section>
 
-              {loading && <ListSkeleton label="Cargando asignaturas…" />}
+            <section className="support-card subjects-card subjects-list-card" aria-label="Asignaturas">
+              {loading && <ListSkeleton label="Cargando asignaturas…" rows={16} />}
               {!loading && subjects.length === 0 && (
                 <p className="subjects-state" role="status">Aún no hay asignaturas registradas.</p>
               )}
 
               {!loading && subjects.length > 0 && (
-                <div className="subjects-sort">
-                  <span className="subjects-sort-label">Ordenar por</span>
-                  <SelectMenu
-                    id="subject-sort"
-                    value={subjectSort}
-                    options={subjectSortOptions}
-                    onChange={(value) => setSubjectSort(value as SubjectSort)}
-                    ariaLabel="Ordenar asignaturas"
-                    visibleItems={3}
-                  />
-                </div>
+                <SortButton options={subjectSortOptions} value={subjectSort} onChange={setSubjectSort} />
               )}
 
               {!loading && subjects.length > 0 && (
                 <ul className="subjects-list">
                   {sortedSubjects.map((subject) => (
                     <li className="subjects-item subjects-item-block" key={subject.id}>
-                      {editingSubjectId === subject.id ? (
-                        <form className="subjects-edit-column" onSubmit={(event) => handleUpdateSubject(event, subject)}>
-                          <label>
-                            <span>Nombre</span>
-                            <input
-                              value={editSubjectName}
-                              onChange={(event) => setEditSubjectName(event.target.value)}
-                              maxLength={100}
-                              required
-                            />
-                          </label>
-                          {renderLevelChecklist(
-                            editSubjectLevelIds,
-                            (id) => setEditSubjectLevelIds((current) => toggleLevel(current, id)),
-                            () => setEditSubjectLevelIds([]),
-                          )}
-                          <div className="subjects-edit-actions">
-                            <button className="primary-action" type="submit" disabled={savingSubjectId === subject.id || !editSubjectName.trim()}>
-                              {savingSubjectId === subject.id ? 'Guardando…' : 'Guardar'}
+                      <div className="subjects-subject-info">
+                        <span className="subjects-name">{subject.nombre}</span>
+                        {renderSubjectChips(subject)}
+                      </div>
+                      <div className="subjects-actions">
+                        {confirmSubjectId === subject.id ? (
+                          <>
+                            <span className="subjects-confirm">¿Eliminar?</span>
+                            <button
+                              className="text-button text-button-danger"
+                              type="button"
+                              disabled={deletingSubjectId === subject.id}
+                              onClick={() => handleDeleteSubject(subject)}
+                            >
+                              {deletingSubjectId === subject.id ? 'Eliminando…' : 'Confirmar'}
                             </button>
-                            <button className="secondary-button" type="button" disabled={savingSubjectId === subject.id} onClick={() => setEditingSubjectId(null)}>
+                            <button className="text-button" type="button" disabled={deletingSubjectId === subject.id} onClick={() => setConfirmSubjectId(null)}>
                               Cancelar
                             </button>
-                          </div>
-                        </form>
-                      ) : (
-                        <>
-                          <div className="subjects-subject-info">
-                            <span className="subjects-name">{subject.nombre}</span>
-                            {renderSubjectChips(subject)}
-                          </div>
-                          <div className="subjects-actions">
-                            {confirmSubjectId === subject.id ? (
-                              <>
-                                <span className="subjects-confirm">¿Eliminar?</span>
-                                <button
-                                  className="text-button text-button-danger"
-                                  type="button"
-                                  disabled={deletingSubjectId === subject.id}
-                                  onClick={() => handleDeleteSubject(subject)}
-                                >
-                                  {deletingSubjectId === subject.id ? 'Eliminando…' : 'Confirmar'}
-                                </button>
-                                <button className="text-button" type="button" disabled={deletingSubjectId === subject.id} onClick={() => setConfirmSubjectId(null)}>
-                                  Cancelar
-                                </button>
-                              </>
-                            ) : (
-                              <>
-                                <button className="text-button" type="button" onClick={() => startEditSubject(subject)}>Editar</button>
-                                <button
-                                  className="text-button text-button-danger"
-                                  type="button"
-                                  onClick={() => {
-                                    setEditingSubjectId(null)
-                                    setConfirmSubjectId(subject.id)
-                                  }}
-                                >
-                                  Eliminar
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        </>
-                      )}
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              className="subjects-icon-button"
+                              type="button"
+                              aria-label={`Editar ${subject.nombre}`}
+                              title="Editar"
+                              onClick={() => startEditSubject(subject)}
+                            >
+                              <PencilIcon />
+                            </button>
+                            <button
+                              className="subjects-icon-button subjects-icon-button-danger"
+                              type="button"
+                              aria-label={`Eliminar ${subject.nombre}`}
+                              title="Eliminar"
+                              onClick={() => setConfirmSubjectId(subject.id)}
+                            >
+                              <TrashIcon />
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </li>
                   ))}
                 </ul>
               )}
             </section>
           </div>
+
+          {editingSubject && (
+            <EditSubjectForm
+              accessToken={accessToken}
+              subject={editingSubject}
+              levels={levels}
+              onUpdated={(updated) => {
+                setSubjects((current) => current.map((item) => (item.id === updated.id ? updated : item)))
+                setEditingSubject(null)
+              }}
+              onCancel={() => setEditingSubject(null)}
+              onSessionExpired={onSessionExpired}
+            />
+          )}
         </section>
       </main>
   )

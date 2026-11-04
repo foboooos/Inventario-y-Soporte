@@ -13,4 +13,5 @@ export type LoginResponse = {
 export type LoginCredentials = {
   usuario: string
   password: string
+  remember?: boolean
 }

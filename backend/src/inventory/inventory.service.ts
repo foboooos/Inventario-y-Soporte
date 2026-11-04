@@ -1,8 +1,10 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOptionsOrder, FindOptionsWhere, ILike, Repository } from 'typeorm';
+import { FindOptionsOrder, FindOptionsWhere, ILike, In, Repository } from 'typeorm';
+import { Ubicacion } from '../locations/ubicacion.entity.js';
 import { DeviceStatus } from './device-status.enum.js';
 import { Device } from './device.entity.js';
+import { COURSE_LOCATION_SIGLA, formatDeviceCode } from './device-code.js';
 import { CreateDeviceDto } from './dto/create-device.dto.js';
 import { QueryInventoryDto } from './dto/query-inventory.dto.js';
 import { UpdateDeviceDto } from './dto/update-device.dto.js';
@@ -11,6 +13,7 @@ import { UpdateDeviceDto } from './dto/update-device.dto.js';
 export class InventoryService {
   constructor(
     @InjectRepository(Device) private readonly devices: Repository<Device>,
+    @InjectRepository(Ubicacion) private readonly locations: Repository<Ubicacion>,
   ) {}
 
   async findAll(query: QueryInventoryDto) {
@@ -98,8 +101,44 @@ export class InventoryService {
     });
   }
 
+  async nextCode(tipo: CreateDeviceDto['tipo'], ubicacion: string) {
+    const location = await this.locations.findOneBy({ nombre: ubicacion.trim() });
+
+    if (!location) {
+      throw new NotFoundException('La ubicación no existe');
+    }
+
+    const isCourse = location.padre_id !== null;
+    const sigla = isCourse ? COURSE_LOCATION_SIGLA : location.sigla;
+
+    if (!sigla) {
+      throw new BadRequestException('La ubicación no tiene sigla configurada');
+    }
+
+    const locationNames = isCourse
+      ? (await this.locations.find()).filter((item) => item.padre_id !== null).map((item) => item.nombre)
+      : [location.nombre];
+
+    const group = await this.devices.find({
+      select: { codigo_inventario: true },
+      where: { tipo, ubicacion: In(locationNames) },
+    });
+
+    const used = new Set(group.map((device) => device.codigo_inventario));
+    let numero = group.length + 1;
+
+    while (used.has(formatDeviceCode(tipo, sigla, numero))) numero += 1;
+
+    if (numero > 9999) {
+      throw new BadRequestException('Se agotó la numeración para esta ubicación');
+    }
+
+    return formatDeviceCode(tipo, sigla, numero);
+  }
+
   async create(createDeviceDto: CreateDeviceDto) {
-    const codigo_inventario = createDeviceDto.codigo_inventario.trim().toUpperCase();
+    const ubicacion = createDeviceDto.ubicacion.trim();
+    const codigo_inventario = await this.nextCode(createDeviceDto.tipo, ubicacion);
     const existingDevice = await this.devices.findOneBy({ codigo_inventario });
 
     if (existingDevice) {
@@ -111,7 +150,7 @@ export class InventoryService {
       codigo_inventario,
       marca: createDeviceDto.marca?.trim() || null,
       modelo: createDeviceDto.modelo?.trim() || null,
-      ubicacion: createDeviceDto.ubicacion.trim(),
+      ubicacion,
     });
 
     return this.devices.save(device);
@@ -122,17 +161,6 @@ export class InventoryService {
 
     if (!device) {
       throw new NotFoundException('Dispositivo no encontrado');
-    }
-
-    if (updateDeviceDto.codigo_inventario) {
-      const codigo_inventario = updateDeviceDto.codigo_inventario.trim().toUpperCase();
-      const duplicate = await this.devices.findOneBy({ codigo_inventario });
-
-      if (duplicate && duplicate.id_dispositivo !== id) {
-        throw new ConflictException('El código de inventario ya existe');
-      }
-
-      device.codigo_inventario = codigo_inventario;
     }
 
     if (updateDeviceDto.tipo !== undefined) device.tipo = updateDeviceDto.tipo;

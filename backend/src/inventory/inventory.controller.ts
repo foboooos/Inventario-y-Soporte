@@ -5,6 +5,7 @@ import { Roles } from '../auth/guards/roles.decorator.js';
 import { RolesGuard } from '../auth/guards/roles.guard.js';
 import { InventoryService } from './inventory.service.js';
 import { CreateDeviceDto } from './dto/create-device.dto.js';
+import { NextDeviceCodeDto } from './dto/next-device-code.dto.js';
 import { QueryInventoryDto } from './dto/query-inventory.dto.js';
 import { UpdateDeviceDto } from './dto/update-device.dto.js';
 
@@ -17,6 +18,12 @@ export class InventoryController {
   @Roles(UserRole.ADMIN, UserRole.TECNICO, UserRole.DOCENTE)
   findOptions() {
     return this.inventoryService.findOptions();
+  }
+
+  @Get('next-code')
+  @Roles(UserRole.ADMIN, UserRole.TECNICO)
+  async nextCode(@Query() query: NextDeviceCodeDto) {
+    return { codigo: await this.inventoryService.nextCode(query.tipo, query.ubicacion) };
   }
 
   @Get()

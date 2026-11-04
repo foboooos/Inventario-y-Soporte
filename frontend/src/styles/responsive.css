@@ -190,7 +190,8 @@
   }
 
   .inventory-content {
-    padding-top: 24px;
+    padding-top: 16px;
+    padding-bottom: 16px;
   }
 
   .support-content {
@@ -240,6 +241,21 @@
   .device-form-wide,
   .ticket-form-wide {
     grid-column: auto;
+  }
+
+  .device-form.create-device-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .device-form.create-device-form .device-form-wide {
+    grid-column: 1 / -1;
+  }
+
+  .create-device-form .select-menu-button > span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .device-form-actions {

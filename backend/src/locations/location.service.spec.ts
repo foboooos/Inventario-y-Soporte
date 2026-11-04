@@ -44,7 +44,7 @@ describe('LocationService', () => {
 
     await service.create({ nombre: '  Sala 3  ' });
 
-    expect(create).toHaveBeenCalledWith({ nombre: 'Sala 3', padre_id: null });
+    expect(create).toHaveBeenCalledWith({ nombre: 'Sala 3', sigla: null, padre_id: null, tipo: 'PRINCIPAL' });
   });
 
   it('creates a sub-location under a global location', async () => {
@@ -57,7 +57,18 @@ describe('LocationService', () => {
 
     await service.create({ nombre: '1° Básico A', padre_id: 2 });
 
-    expect(create).toHaveBeenCalledWith({ nombre: '1° Básico A', padre_id: 2 });
+    expect(create).toHaveBeenCalledWith({ nombre: '1° Básico A', sigla: null, padre_id: 2, tipo: 'PRINCIPAL' });
+  });
+
+  it('stores the requested location type', async () => {
+    const findOneBy = vi.fn().mockResolvedValue(null);
+    const save = vi.fn().mockResolvedValue({ id_ubicacion: 3, nombre: 'Patio', padre_id: null, tipo: 'TERCIARIA' } as Ubicacion);
+    const create = vi.fn((value: Partial<Ubicacion>) => value as Ubicacion);
+    const service = createService({ findOneBy, save, create });
+
+    await service.create({ nombre: 'Patio', tipo: 'TERCIARIA' });
+
+    expect(create).toHaveBeenCalledWith({ nombre: 'Patio', sigla: null, padre_id: null, tipo: 'TERCIARIA' });
   });
 
   it('rejects creating a sub-location when the parent does not exist', async () => {
@@ -103,11 +114,12 @@ describe('LocationService', () => {
   it('keeps devices and tickets untouched when the name does not change', async () => {
     const location = { id_ubicacion: 5, nombre: 'Laboratorio 1', padre_id: null } as Ubicacion;
     const findOneBy = vi.fn().mockResolvedValue(location);
+    const save = vi.fn().mockResolvedValue(location);
     const deviceUpdate = vi.fn();
     const ticketUpdate = vi.fn();
     const manager = {
       getRepository: vi.fn((entity: unknown) => {
-        if (entity === Ubicacion) return { findOneBy, save: vi.fn() };
+        if (entity === Ubicacion) return { findOneBy, save };
         if (entity === Device) return { update: deviceUpdate };
         return { update: ticketUpdate };
       }),

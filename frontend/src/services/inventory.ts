@@ -2,7 +2,6 @@ import type { Device, DeviceStatus, DeviceType } from '../types/inventory'
 import { apiFetch, readApiJson } from './http'
 
 export type CreateDeviceInput = {
-  codigo_inventario: string
   tipo: DeviceType
   marca: string
   modelo: string
@@ -43,6 +42,18 @@ export async function createInventoryDevice(accessToken: string, input: CreateDe
   const device = await readApiJson<InventoryApiDevice>(response, 'No se pudo registrar el dispositivo')
 
   return mapApiDevice(device)
+}
+
+export async function getNextDeviceCode(
+  accessToken: string,
+  tipo: DeviceType,
+  ubicacion: string,
+): Promise<string> {
+  const params = new URLSearchParams({ tipo, ubicacion })
+  const response = await apiFetch(`/inventory/next-code?${params.toString()}`, accessToken)
+  const result = await readApiJson<{ codigo: string }>(response, 'No se pudo calcular el código')
+
+  return result.codigo
 }
 
 export async function updateInventoryDevice(accessToken: string, id: number, input: UpdateDeviceInput): Promise<Device> {

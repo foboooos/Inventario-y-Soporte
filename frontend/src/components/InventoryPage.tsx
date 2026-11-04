@@ -20,8 +20,8 @@ type Modal = { kind: 'create' } | { kind: 'edit'; device: Device } | null
 const FILTERS_KEY = 'inventory-filters-v1'
 const MIN_PAGE_SIZE = 5
 const MAX_PAGE_SIZE = 30
-const ROW_HEIGHT = 40
-const TABLE_CHROME = 60
+const SKELETON_ROW_HEIGHT = 34
+const SKELETON_HEADER_HEIGHT = 30
 const BOTTOM_SAFETY = 8
 const CHROME_GAPS = 22
 const CONTENT_PADDING = 20
@@ -135,9 +135,7 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
         }
       })
       .finally(() => {
-        if (active) {
-          setLoading(false)
-        }
+        if (active) setLoading(false)
       })
 
     return () => {
@@ -205,7 +203,7 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
         (tabsRef.current?.offsetHeight ?? FALLBACK_TABS) +
         CHROME_GAPS +
         CONTENT_PADDING
-      const rows = Math.floor((window.innerHeight - chrome - TABLE_CHROME - BOTTOM_SAFETY) / ROW_HEIGHT)
+      const rows = Math.floor((window.innerHeight - chrome - SKELETON_HEADER_HEIGHT - BOTTOM_SAFETY) / SKELETON_ROW_HEIGHT)
       const next = Math.min(MAX_PAGE_SIZE, Math.max(MIN_PAGE_SIZE, rows))
 
       if (next !== pageSizeRef.current) {
@@ -391,7 +389,7 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
     {loading && (
       <TableSkeleton
         label="Cargando inventario…"
-        columns={['18%', '12%', '26%', '29%', '15%']}
+        columns={['13%', '14%', '22%', '34%', '17%']}
         rows={pageSize}
       />
     )}
@@ -419,7 +417,10 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
             <div className="empty-state-block">
               <p>Aún no hay dispositivos registrados.</p>
               {canManageInventory && (
-                <button className="primary-action" type="button" onClick={() => setModal({ kind: 'create' })}>Registrar el primero</button>
+                <button className="primary-action" type="button" onClick={() => setModal({ kind: 'create' })}>
+                  <svg viewBox="0 0 24 24" aria-hidden="true" className="button-icon"><path d="M12 5v14M5 12h14" /></svg>
+                  Nuevo dispositivo
+                </button>
               )}
             </div>
           )

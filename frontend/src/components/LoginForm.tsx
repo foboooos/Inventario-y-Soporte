@@ -12,6 +12,7 @@ type LoginFormProps = {
 export function LoginForm({ onAuthenticated }: LoginFormProps) {
   const [usuario, setUsuario] = useState('')
   const [password, setPassword] = useState('')
+  const [remember, setRemember] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [errorField, setErrorField] = useState<'usuario' | 'password' | null>(null)
@@ -51,7 +52,7 @@ export function LoginForm({ onAuthenticated }: LoginFormProps) {
     setLoading(true)
 
     try {
-      const session = await login({ usuario: usuario.trim().toLowerCase(), password })
+      const session = await login({ usuario: usuario.trim().toLowerCase(), password, remember })
       onAuthenticated(session.user, session.access_token)
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : 'Error de conexión')
@@ -105,6 +106,10 @@ export function LoginForm({ onAuthenticated }: LoginFormProps) {
                 )}
               </button>
             </div>
+            <label className="login-remember">
+              <input type="checkbox" checked={remember} onChange={(event) => setRemember(event.target.checked)} />
+              <span>Recordar usuario</span>
+            </label>
             <button className="primary-action primary-action-solid" type="submit" disabled={loading}>{loading ? 'Ingresando…' : 'Ingresar'}</button>
           </form>
         </section>

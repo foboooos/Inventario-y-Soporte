@@ -1,6 +1,7 @@
 import type { MouseEvent } from 'react'
 import type { AuthUser } from '../types/auth'
 import { routesForRole, type RouteKey } from '../routes'
+import { RoleIcon } from './RoleIcon'
 
 type SidebarProps = {
   user: AuthUser
@@ -9,18 +10,6 @@ type SidebarProps = {
   onLogout: () => void
   mobileOpen: boolean
   onToggleMobile: () => void
-}
-
-function RoleIcon({ role }: { role: string }) {
-  if (role === 'DOCENTE') {
-    return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4.5h6a2 2 0 0 1 2 2v13c-.6-.7-1.4-1-2.5-1H5a2 2 0 0 1-2-2V6.5a2 2 0 0 1 2-2Z" /><path d="M13 6.5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-4c-1.1 0-1.9.3-2.5 1M6 8h4M6 11h4" /></svg>
-  }
-
-  if (role === 'TECNICO') {
-    return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14.7 6.3 3-3a4.2 4.2 0 0 0 1.3 4.1 4.2 4.2 0 0 0 4.1 1.3l-3 3-3.2-.8-5.8 5.8a2.1 2.1 0 0 1-3-3l5.8-5.8-.8-3.2 3-3Z" /><path d="m5 19 1.5-1.5" /></svg>
-  }
-
-  return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 7 9-7 9-7-9 7-9Z" /></svg>
 }
 
 function RouteIcon({ route }: { route: RouteKey }) {

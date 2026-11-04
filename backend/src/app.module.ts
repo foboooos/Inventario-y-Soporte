@@ -19,6 +19,7 @@ import { Ubicacion } from './locations/ubicacion.entity.js';
 import { Ticket } from './tickets/ticket.entity.js';
 import { TicketSequence } from './tickets/ticket-sequence.entity.js';
 import { User } from './users/user.entity.js';
+import { UsersModule } from './users/users.module.js';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { User } from './users/user.entity.js';
     LocationModule,
     SoftwareModule,
     TicketModule,
+    UsersModule,
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({

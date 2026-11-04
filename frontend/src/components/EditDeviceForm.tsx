@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { updateInventoryDevice, type UpdateDeviceInput } from '../services/inventory'
 import { getLocations } from '../services/locations'
 import { isSessionExpired } from '../services/http'
 import type { Device, DeviceStatus, DeviceType } from '../types/inventory'
 import type { Location } from '../types/location'
+import { Modal } from './Modal'
+import type { ModalHandle } from './Modal'
 import { SelectMenu } from './SelectMenu'
 
 type EditDeviceFormProps = {
@@ -17,7 +19,6 @@ type EditDeviceFormProps = {
 
 function deviceToForm(device: Device): UpdateDeviceInput {
   return {
-    codigo_inventario: device.code,
     tipo: device.type,
     marca: device.brand === 'Sin marca' ? '' : device.brand,
     modelo: device.model === 'Sin modelo' ? '' : device.model,
@@ -32,15 +33,7 @@ export function EditDeviceForm({ accessToken, device, onUpdated, onCancel, onSes
   const [loadingLocations, setLoadingLocations] = useState(true)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
-
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape' && !saving) onCancel()
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [onCancel, saving])
+  const modalRef = useRef<ModalHandle>(null)
 
   useEffect(() => {
     let active = true
@@ -87,7 +80,7 @@ export function EditDeviceForm({ accessToken, device, onUpdated, onCancel, onSes
 
     try {
       const updatedDevice = await updateInventoryDevice(accessToken, device.id, form)
-      onUpdated(updatedDevice)
+      modalRef.current?.close(() => onUpdated(updatedDevice))
     } catch (exception) {
       if (isSessionExpired(exception)) {
         onSessionExpired()
@@ -100,13 +93,18 @@ export function EditDeviceForm({ accessToken, device, onUpdated, onCancel, onSes
   }
 
   return (
-    <div className="modal-backdrop device-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onCancel() }}>
-      <section className="create-device-card modal-card" role="dialog" aria-modal="true" aria-label={`Editar dispositivo ${device.code}`} onMouseDown={(event) => event.stopPropagation()}>
+    <Modal
+      ref={modalRef}
+      label={`Editar dispositivo ${device.code}`}
+      backdropClassName="device-modal-backdrop"
+      dismissible={!saving}
+      onClose={onCancel}
+    >
         <div className="device-modal-body">
           <form className="device-form" onSubmit={handleSubmit}>
             <label>
               <span>Código de inventario</span>
-              <input value={form.codigo_inventario} onChange={(event) => updateField('codigo_inventario', event.target.value)} required maxLength={50} />
+              <input value={device.code} readOnly />
             </label>
             <div className="device-field">
               <span>Tipo</span>
@@ -178,12 +176,11 @@ export function EditDeviceForm({ accessToken, device, onUpdated, onCancel, onSes
             </div>
             {error && <p className="error device-form-wide" role="alert">{error}</p>}
             <div className="device-form-actions device-form-wide">
-              <button className="secondary-button" type="button" onClick={onCancel}>Cancelar</button>
+              <button className="secondary-button" type="button" onClick={() => modalRef.current?.close()}>Cancelar</button>
               <button className="primary-action primary-action-solid" type="submit" disabled={saving}>{saving ? 'Guardando…' : 'Guardar'}</button>
             </div>
           </form>
         </div>
-      </section>
-    </div>
+    </Modal>
   )
 }

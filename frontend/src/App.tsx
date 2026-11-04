@@ -174,7 +174,7 @@ function App() {
     }
 
     if (route === 'settings') {
-      return <ConfigurationPage />
+      return <ConfigurationPage accessToken={token} onSessionExpired={onSessionExpired} />
     }
 
     if (route === 'subjects') {

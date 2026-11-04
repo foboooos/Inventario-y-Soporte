@@ -47,6 +47,30 @@
   margin-top: 0;
 }
 
+.login-card form .login-remember {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 2px 0 0;
+  color: var(--minimal-muted);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.login-card .login-remember input {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid rgba(12, 12, 9, 0.2);
+  border-radius: 4px;
+  background: #fff;
+  accent-color: var(--minimal-primary);
+  cursor: pointer;
+}
+
 .login-card .primary-action {
   margin-top: 12px;
   height: auto;

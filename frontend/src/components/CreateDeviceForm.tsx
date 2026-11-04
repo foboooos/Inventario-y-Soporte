@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react'
-import { createInventoryDevice, type CreateDeviceInput } from '../services/inventory'
+import { useEffect, useRef, useState } from 'react'
+import { createInventoryDevice, getNextDeviceCode, type CreateDeviceInput } from '../services/inventory'
 import { getLocations } from '../services/locations'
 import { isSessionExpired } from '../services/http'
 import type { Device, DeviceStatus, DeviceType } from '../types/inventory'
 import type { Location } from '../types/location'
+import { Modal } from './Modal'
+import type { ModalHandle } from './Modal'
 import { SelectMenu } from './SelectMenu'
 
 type CreateDeviceFormProps = {
@@ -14,12 +16,18 @@ type CreateDeviceFormProps = {
 }
 
 const initialForm: CreateDeviceInput = {
-  codigo_inventario: '',
   tipo: 'PC',
   marca: '',
   modelo: '',
   ubicacion: '',
   estado: 'ACTIVO',
+}
+
+const DEVICE_TYPE_SIGLAS: Record<DeviceType, string> = {
+  PC: 'PC',
+  PROYECTOR: 'PRY',
+  IMPRESORA: 'IMP',
+  RED: 'RED',
 }
 
 export function CreateDeviceForm({ accessToken, onCreated, onCancel, onSessionExpired }: CreateDeviceFormProps) {
@@ -28,15 +36,39 @@ export function CreateDeviceForm({ accessToken, onCreated, onCancel, onSessionEx
   const [loadingLocations, setLoadingLocations] = useState(true)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
+  const [nextCode, setNextCode] = useState('')
+  const [nextCodeError, setNextCodeError] = useState('')
+  const modalRef = useRef<ModalHandle>(null)
 
   useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape' && !saving) onCancel()
-    }
+    if (!form.ubicacion) return
 
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [onCancel, saving])
+    let active = true
+
+    getNextDeviceCode(accessToken, form.tipo, form.ubicacion)
+      .then((codigo) => {
+        if (!active) return
+        setNextCode(codigo)
+        setNextCodeError('')
+      })
+      .catch((exception: unknown) => {
+        if (!active) return
+        if (isSessionExpired(exception)) {
+          onSessionExpired()
+          return
+        }
+        setNextCode('')
+        setNextCodeError(exception instanceof Error ? exception.message : 'No se pudo calcular el código')
+      })
+
+    return () => {
+      active = false
+    }
+  }, [accessToken, form.tipo, form.ubicacion, onSessionExpired])
+
+  const displayedCode = form.ubicacion ? nextCode : ''
+  const displayedCodeError = form.ubicacion ? nextCodeError : ''
+  const codePreview = `${DEVICE_TYPE_SIGLAS[form.tipo]}-XXX-0000`
 
   useEffect(() => {
     let active = true
@@ -85,11 +117,15 @@ export function CreateDeviceForm({ accessToken, onCreated, onCancel, onSessionEx
       return
     }
 
+    if (nextCodeError) {
+      setError(nextCodeError)
+      return
+    }
     setSaving(true)
 
     try {
       const createdDevice = await createInventoryDevice(accessToken, form)
-      onCreated(createdDevice)
+      modalRef.current?.close(() => onCreated(createdDevice))
     } catch (exception) {
       if (isSessionExpired(exception)) {
         onSessionExpired()
@@ -102,21 +138,39 @@ export function CreateDeviceForm({ accessToken, onCreated, onCancel, onSessionEx
   }
 
   return (
-    <div className="modal-backdrop device-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onCancel() }}>
-      <section className="create-device-card modal-card" role="dialog" aria-modal="true" aria-label="Registrar nuevo dispositivo" onMouseDown={(event) => event.stopPropagation()}>
+    <Modal
+      ref={modalRef}
+      label="Registrar nuevo dispositivo"
+      backdropClassName="device-modal-backdrop"
+      dismissible={!saving}
+      onClose={onCancel}
+    >
         <div className="device-modal-body">
-          <form className="device-form" onSubmit={handleSubmit}>
+          <form className="device-form create-device-form" onSubmit={handleSubmit}>
             <label>
-              <span>Código de inventario</span>
-              <input value={form.codigo_inventario} onChange={(event) => updateField('codigo_inventario', event.target.value)} placeholder="DV-PC-004" required maxLength={50} />
+              <span>Código</span>
+              <input
+                className="code-preview-input"
+                value={displayedCode}
+                readOnly
+                placeholder={codePreview}
+                title="Se genera automáticamente"
+                aria-describedby={displayedCodeError ? 'device-code-error' : undefined}
+              />
             </label>
+            {displayedCodeError && (
+              <p className="error device-form-wide" id="device-code-error" role="status">{displayedCodeError}</p>
+            )}
             <div className="device-field">
               <span>Tipo</span>
               <SelectMenu
                 id="device-type"
                 ariaLabel="Tipo"
                 value={form.tipo}
-                onChange={(next) => updateField('tipo', next as DeviceType)}
+                onChange={(next) => {
+                  setNextCodeError('')
+                  updateField('tipo', next as DeviceType)
+                }}
                 options={[
                   { value: 'PC', label: 'PC' },
                   { value: 'PROYECTOR', label: 'Proyector' },
@@ -141,30 +195,18 @@ export function CreateDeviceForm({ accessToken, onCreated, onCancel, onSessionEx
                 placeholder="Selecciona una ubicación"
                 value={parentName}
                 disabled={loadingLocations}
-                onChange={(next) => updateField('ubicacion', next)}
+                onChange={(next) => {
+                  setNextCodeError('')
+                  updateField('ubicacion', next)
+                }}
                 options={[
                   { value: '', label: 'Selecciona una ubicación' },
                   ...(parentName && !globalLocations.some((item) => item.nombre === parentName) ? [{ value: parentName, label: parentName }] : []),
                   ...globalLocations.map((item) => ({ value: item.nombre, label: item.nombre })),
                 ]}
+                fixedList
               />
             </div>
-            {subLocations.length > 0 && (
-              <div className="device-field">
-                <span>Curso / Sub-ubicación</span>
-                <SelectMenu
-                  id="device-sublocation"
-                  ariaLabel="Curso o sub-ubicación"
-                  placeholder="Toda la ubicación"
-                  value={subName}
-                  onChange={(next) => updateField('ubicacion', next || parentName)}
-                  options={[
-                    { value: '', label: 'Toda la ubicación' },
-                    ...subLocations.map((item) => ({ value: item.nombre, label: item.nombre })),
-                  ]}
-                />
-              </div>
-            )}
             <div className="device-field">
               <span>Estado</span>
               <SelectMenu
@@ -179,14 +221,32 @@ export function CreateDeviceForm({ accessToken, onCreated, onCancel, onSessionEx
                 ]}
               />
             </div>
+            {subLocations.length > 0 && (
+              <div className="device-field">
+                <span>Curso / Sub-ubicación</span>
+                <SelectMenu
+                  id="device-sublocation"
+                  ariaLabel="Curso o sub-ubicación"
+                  placeholder="Toda la ubicación"
+                  value={subName}
+                  onChange={(next) => {
+                    setNextCodeError('')
+                    updateField('ubicacion', next || parentName)
+                  }}
+                  options={[
+                    { value: '', label: 'Toda la ubicación' },
+                    ...subLocations.map((item) => ({ value: item.nombre, label: item.nombre })),
+                  ]}
+                />
+              </div>
+            )}
             {error && <p className="error device-form-wide" role="alert">{error}</p>}
             <div className="device-form-actions device-form-wide">
-              <button className="secondary-button" type="button" onClick={onCancel}>Cancelar</button>
+              <button className="secondary-button" type="button" onClick={() => modalRef.current?.close()}>Cancelar</button>
               <button className="primary-action primary-action-solid" type="submit" disabled={saving}>{saving ? 'Guardando…' : 'Registrar dispositivo'}</button>
             </div>
           </form>
         </div>
-      </section>
-    </div>
+    </Modal>
   )
 }

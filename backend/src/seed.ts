@@ -1,7 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { DataSource } from 'typeorm';
 import { AppModule } from './app.module.js';
-import { seedDevices } from './seeds/devices.seed.js';
 import { seedLevels } from './seeds/levels.seed.js';
 import { seedLocations } from './seeds/locations.seed.js';
 import { seedSoftware } from './seeds/software.seed.js';
@@ -23,7 +22,6 @@ async function bootstrap() {
     await seedSubjects(dataSource);
     await seedSoftware(dataSource);
     await seedUsers(dataSource);
-    await seedDevices(dataSource);
     await seedTickets(dataSource);
 
     console.log('Seed completado');

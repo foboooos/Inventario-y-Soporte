@@ -3,11 +3,6 @@ import { DeviceStatus } from '../device-status.enum.js';
 import { DeviceType } from '../device-type.enum.js';
 
 export class CreateDeviceDto {
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(50)
-  codigo_inventario!: string;
-
   @IsEnum(DeviceType)
   tipo!: DeviceType;
 

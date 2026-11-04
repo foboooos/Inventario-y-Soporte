@@ -17,6 +17,8 @@ import { SoftwareService } from '../../software/software.service.js';
 import { TicketController } from '../../tickets/ticket.controller.js';
 import { TicketService } from '../../tickets/ticket.service.js';
 import { UserRole } from '../../users/user-role.enum.js';
+import { UsersController } from '../../users/users.controller.js';
+import { UsersService } from '../../users/users.service.js';
 import { JwtAuthGuard } from './jwt-auth.guard.js';
 import { ROLES_KEY } from './roles.decorator.js';
 import { RolesGuard } from './roles.guard.js';
@@ -61,6 +63,7 @@ type RouteCase = {
 
 const protectedRoutes: RouteCase[] = [
   { controller: InventoryController, handler: 'findOptions', method: 'get', path: '/inventory/options', status: 200 },
+  { controller: InventoryController, handler: 'nextCode', method: 'get', path: '/inventory/next-code', status: 200 },
   { controller: InventoryController, handler: 'findAll', method: 'get', path: '/inventory', status: 200 },
   { controller: InventoryController, handler: 'create', method: 'post', path: '/inventory', status: 201 },
   { controller: InventoryController, handler: 'update', method: 'patch', path: '/inventory/1', status: 200 },
@@ -87,6 +90,9 @@ const protectedRoutes: RouteCase[] = [
   { controller: SoftwareController, handler: 'create', method: 'post', path: '/software', status: 201 },
   { controller: SoftwareController, handler: 'update', method: 'patch', path: '/software/1', status: 200 },
   { controller: SoftwareController, handler: 'remove', method: 'delete', path: '/software/1', status: 204 },
+  { controller: UsersController, handler: 'findAll', method: 'get', path: '/users', status: 200 },
+  { controller: UsersController, handler: 'create', method: 'post', path: '/users', status: 201 },
+  { controller: UsersController, handler: 'remove', method: 'delete', path: '/users/1', status: 204 },
 ];
 
 const forbiddenRoleRoutes = protectedRoutes.flatMap((route) => {
@@ -110,6 +116,7 @@ describe('RBAC audit — control de acceso aplicado en el backend', () => {
       'SoftwareController',
       'SubjectController',
       'TicketController',
+      'UsersController',
     ]);
   });
 
@@ -169,14 +176,16 @@ describe('RBAC enforcement — todas las rutas protegidas', () => {
         LevelController,
         SubjectController,
         SoftwareController,
+        UsersController,
       ],
       providers: [
-        { provide: InventoryService, useValue: serviceMock(['findOptions', 'findAll', 'create', 'update']) },
+        { provide: InventoryService, useValue: serviceMock(['findOptions', 'nextCode', 'findAll', 'create', 'update']) },
         { provide: TicketService, useValue: serviceMock(['findInbox', 'findBitacora', 'findAll', 'resolve', 'changeStatus', 'create']) },
         { provide: LocationService, useValue: serviceMock(['findAll', 'create', 'generateCourses', 'rename', 'remove']) },
         { provide: LevelService, useValue: serviceMock(['findAll', 'create', 'rename', 'remove']) },
         { provide: SubjectService, useValue: serviceMock(['findAll', 'create', 'update', 'remove']) },
         { provide: SoftwareService, useValue: serviceMock(['findAll', 'create', 'update', 'remove']) },
+        { provide: UsersService, useValue: serviceMock(['create', 'findAll', 'remove']) },
       ],
     }).compile();
 
