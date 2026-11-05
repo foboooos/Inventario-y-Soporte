@@ -6,6 +6,7 @@ import { DeviceStatus } from './device-status.enum.js';
 import { DeviceType } from './device-type.enum.js';
 import { Device } from './device.entity.js';
 import { QueryInventoryDto } from './dto/query-inventory.dto.js';
+import { UpdateDeviceDto } from './dto/update-device.dto.js';
 import { InventoryService } from './inventory.service.js';
 
 function query(overrides: Partial<QueryInventoryDto> = {}): QueryInventoryDto {
@@ -195,5 +196,30 @@ describe('InventoryService', () => {
     const service = createService({ findOneBy: vi.fn().mockResolvedValue(null) });
 
     await expect(service.remove(99)).rejects.toThrow('Dispositivo no encontrado');
+  });
+
+  it('rejects updating a device to a location that does not exist', async () => {
+    const findOneBy = vi.fn().mockResolvedValue({ id_dispositivo: 5 } as Device);
+    const service = createService(
+      { findOneBy },
+      { findOneBy: vi.fn().mockResolvedValue(null) },
+    );
+
+    await expect(service.update(5, { ubicacion: 'Ubicación inexistente' } as UpdateDeviceDto))
+      .rejects.toThrow('La ubicación no existe');
+  });
+
+  it('updates a device when the new location exists', async () => {
+    const device = { id_dispositivo: 5, ubicacion: 'Laboratorio 1' } as Device;
+    const findOneBy = vi.fn().mockResolvedValue(device);
+    const save = vi.fn().mockResolvedValue(device);
+    const service = createService(
+      { findOneBy, save },
+      { findOneBy: vi.fn().mockResolvedValue({ nombre: 'Laboratorio 2' }) },
+    );
+
+    await service.update(5, { ubicacion: 'Laboratorio 2' } as UpdateDeviceDto);
+
+    expect(save).toHaveBeenCalledWith(expect.objectContaining({ ubicacion: 'Laboratorio 2' }));
   });
 });

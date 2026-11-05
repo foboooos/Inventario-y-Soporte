@@ -2,13 +2,18 @@ import { ConflictException, Injectable, NotFoundException } from '@nestjs/common
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
 import { Repository } from 'typeorm';
+import { Ticket } from '../tickets/ticket.entity.js';
 import { CreateUserDto } from './dto/create-user.dto.js';
 import { normalizeRut } from './rut.js';
 import { User } from './user.entity.js';
+import { UserRole } from './user-role.enum.js';
 
 @Injectable()
 export class UsersService {
-  constructor(@InjectRepository(User) private readonly users: Repository<User>) {}
+  constructor(
+    @InjectRepository(User) private readonly users: Repository<User>,
+    @InjectRepository(Ticket) private readonly tickets: Repository<Ticket>,
+  ) {}
 
   findAll() {
     return this.users.find({
@@ -17,11 +22,32 @@ export class UsersService {
     });
   }
 
-  async remove(rut: string) {
+  async remove(inputRut: string, actingRut: string) {
+    const rut = normalizeRut(inputRut.trim());
     const user = await this.users.findOneBy({ rut });
 
     if (!user) {
       throw new NotFoundException('El usuario no existe');
+    }
+
+    if (rut === normalizeRut(actingRut.trim())) {
+      throw new ConflictException('No puedes eliminar tu propio usuario');
+    }
+
+    if (user.rol === UserRole.ADMIN) {
+      const adminCount = await this.users.count({ where: { rol: UserRole.ADMIN } });
+
+      if (adminCount <= 1) {
+        throw new ConflictException('No puedes eliminar al último administrador');
+      }
+    }
+
+    const ticketCount = await this.tickets.count({ where: { id_solicitante: rut } });
+
+    if (ticketCount > 0) {
+      throw new ConflictException(
+        `No puedes eliminar el usuario: tiene ${ticketCount} ticket(s) asociados`,
+      );
     }
 
     await this.users.delete({ rut });

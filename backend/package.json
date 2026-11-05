@@ -18,6 +18,7 @@
     "migration:create": "typeorm migration:create src/database/migrations/Migration",
     "migration:generate": "nest build && typeorm migration:generate --esm src/database/migrations/Migration -d dist/database/data-source.js",
     "migration:run": "nest build && typeorm migration:run -d dist/database/data-source.js",
+    "migration:run:prod": "node dist/database/run-migrations.js",
     "migration:revert": "nest build && typeorm migration:revert -d dist/database/data-source.js",
     "migration:show": "nest build && typeorm migration:show -d dist/database/data-source.js",
     "migration:baseline": "nest build && node dist/database/baseline.js",

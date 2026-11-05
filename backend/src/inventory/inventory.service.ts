@@ -168,7 +168,16 @@ export class InventoryService {
     if (updateDeviceDto.tipo !== undefined) device.tipo = updateDeviceDto.tipo;
     if (updateDeviceDto.marca !== undefined) device.marca = updateDeviceDto.marca.trim() || null;
     if (updateDeviceDto.modelo !== undefined) device.modelo = updateDeviceDto.modelo.trim() || null;
-    if (updateDeviceDto.ubicacion !== undefined) device.ubicacion = updateDeviceDto.ubicacion.trim();
+    if (updateDeviceDto.ubicacion !== undefined) {
+      const ubicacion = updateDeviceDto.ubicacion.trim();
+      const location = await this.locations.findOneBy({ nombre: ubicacion });
+
+      if (!location) {
+        throw new NotFoundException('La ubicación no existe');
+      }
+
+      device.ubicacion = ubicacion;
+    }
     if (updateDeviceDto.estado !== undefined) device.estado = updateDeviceDto.estado;
 
     return this.devices.save(device);

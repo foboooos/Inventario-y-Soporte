@@ -206,12 +206,31 @@ describe('LocationService', () => {
     expect(remove).not.toHaveBeenCalled();
   });
 
-  it('deletes a location with no children and no devices', async () => {
+  it('blocks deleting a location referenced by tickets', async () => {
+    const location = { id_ubicacion: 5, nombre: 'Laboratorio 1', padre_id: null } as Ubicacion;
+    const findOneBy = vi.fn().mockResolvedValue(location);
+    const count = vi.fn().mockResolvedValue(0);
+    const remove = vi.fn();
+    const service = createService(
+      { findOneBy, count, delete: remove },
+      { count },
+      { count: vi.fn().mockResolvedValue(1) },
+    );
+
+    await expect(service.remove(5)).rejects.toThrow(ConflictException);
+    expect(remove).not.toHaveBeenCalled();
+  });
+
+  it('deletes a location with no children, devices or tickets', async () => {
     const location = { id_ubicacion: 5, nombre: 'Laboratorio 1', padre_id: null } as Ubicacion;
     const findOneBy = vi.fn().mockResolvedValue(location);
     const count = vi.fn().mockResolvedValue(0);
     const remove = vi.fn().mockResolvedValue({ affected: 1 });
-    const service = createService({ findOneBy, count, delete: remove }, { count });
+    const service = createService(
+      { findOneBy, count, delete: remove },
+      { count },
+      { count },
+    );
 
     await service.remove(5);
 

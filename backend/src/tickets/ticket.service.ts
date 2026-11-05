@@ -223,13 +223,22 @@ export class TicketService {
     return this.tickets.manager.transaction(async (transactionManager) => {
       const tickets = transactionManager.getRepository(Ticket);
       const devices = transactionManager.getRepository(Device);
+      const locations = transactionManager.getRepository(Ubicacion);
       const sequences = transactionManager.getRepository(TicketSequence);
       let deviceId: number | null = null;
+      let ubicacion = createTicketDto.ubicacion.trim();
 
       if (createTicketDto.id_dispositivo !== undefined) {
         const device = await devices.findOneBy({ id_dispositivo: createTicketDto.id_dispositivo });
         if (!device) throw new NotFoundException('El dispositivo seleccionado no existe');
         deviceId = device.id_dispositivo;
+        ubicacion = device.ubicacion;
+      }
+
+      const location = await locations.findOneBy({ nombre: ubicacion });
+
+      if (!location) {
+        throw new NotFoundException('La ubicación no existe');
       }
 
       const year = new Date().getFullYear();
@@ -258,7 +267,7 @@ export class TicketService {
         codigo_ticket: formatTicketCode(year, sequence.ultimo_numero),
         id_solicitante: requesterRut,
         id_dispositivo: deviceId,
-        ubicacion: createTicketDto.ubicacion.trim(),
+        ubicacion,
         sintoma: createTicketDto.sintoma.trim(),
         estado: TicketStatus.ABIERTO,
       });

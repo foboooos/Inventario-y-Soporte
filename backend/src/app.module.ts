@@ -8,6 +8,7 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter.js';
 import { AcademicModule } from './academics/academic.module.js';
 import { SoftwareModule } from './software/software.module.js';
 import { AuthModule } from './auth/auth.module.js';
+import { HealthModule } from './health/health.module.js';
 import { InventoryModule } from './inventory/inventory.module.js';
 import { LocationModule } from './locations/location.module.js';
 import { TicketModule } from './tickets/ticket.module.js';
@@ -19,6 +20,7 @@ import { entities } from './database/entities.js';
     ConfigModule.forRoot({ isGlobal: true }),
     AcademicModule,
     AuthModule,
+    HealthModule,
     InventoryModule,
     LocationModule,
     SoftwareModule,

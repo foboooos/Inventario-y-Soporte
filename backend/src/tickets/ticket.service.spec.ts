@@ -457,6 +457,9 @@ describe('TicketService', () => {
     const deviceRepository = {
       findOneBy: vi.fn().mockResolvedValue(null),
     };
+    const locationRepository = {
+      findOneBy: vi.fn().mockResolvedValue({ nombre: 'Laboratorio 1' } as Ubicacion),
+    };
     const sequenceRepository = {
       createQueryBuilder: vi.fn().mockReturnValue(sequenceQueryBuilder),
       findOne: vi.fn().mockResolvedValue(sequence),
@@ -474,6 +477,7 @@ describe('TicketService', () => {
     transactionManager.getRepository.mockImplementation((entity: unknown) => {
       if (entity === Ticket) return ticketRepository;
       if (entity === Device) return deviceRepository;
+      if (entity === Ubicacion) return locationRepository;
       return sequenceRepository;
     });
 
@@ -492,5 +496,24 @@ describe('TicketService', () => {
       estado: TicketStatus.ABIERTO,
     }));
     expect(result).toBe(createdTicket);
+  });
+
+  it('rejects creating a ticket in a location that does not exist', async () => {
+    const transactionManager = { getRepository: vi.fn() };
+    const transaction = vi.fn(
+      async <T>(work: (manager: typeof transactionManager) => Promise<T>) => work(transactionManager),
+    );
+    const ticketRepository = { manager: { transaction } };
+
+    transactionManager.getRepository.mockImplementation((entity: unknown) => {
+      if (entity === Ticket) return ticketRepository;
+      if (entity === Ubicacion) return { findOneBy: vi.fn().mockResolvedValue(null) };
+      return {};
+    });
+
+    const service = createService(ticketRepository);
+    const input = { ubicacion: 'Ubicación inexistente', sintoma: 'No enciende' } as CreateTicketDto;
+
+    await expect(service.create(input, '12345678-9')).rejects.toThrow('La ubicación no existe');
   });
 });

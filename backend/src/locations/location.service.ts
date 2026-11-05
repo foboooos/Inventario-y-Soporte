@@ -150,6 +150,14 @@ export class LocationService {
       );
     }
 
+    const ticketCount = await this.tickets.count({ where: { ubicacion: location.nombre } });
+
+    if (ticketCount > 0) {
+      throw new ConflictException(
+        `No se puede eliminar la ubicación: ${ticketCount} ticket(s) la referencian`,
+      );
+    }
+
     await this.locations.delete({ id_ubicacion: id });
   }
 }

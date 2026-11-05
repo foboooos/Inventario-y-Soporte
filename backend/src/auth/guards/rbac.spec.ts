@@ -27,7 +27,7 @@ const TEST_SECRET = 'rbac-test-secret';
 const GUARDS_METADATA = '__guards__';
 const METHOD_METADATA = 'method';
 
-const PUBLIC_CONTROLLERS = new Set(['AuthController']);
+const PUBLIC_CONTROLLERS = new Set(['AuthController', 'HealthController']);
 
 const controllerModules = import.meta.glob<Record<string, unknown>>('../../**/*.controller.ts', {
   eager: true,
@@ -111,6 +111,7 @@ describe('RBAC audit — control de acceso aplicado en el backend', () => {
   it('descubre automáticamente todos los controladores de la aplicación', () => {
     expect(controllers.map(([name]) => name)).toEqual([
       'AuthController',
+      'HealthController',
       'InventoryController',
       'LevelController',
       'LocationController',
