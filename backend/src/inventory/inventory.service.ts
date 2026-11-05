@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException }
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOptionsOrder, FindOptionsWhere, ILike, In, Repository } from 'typeorm';
 import { Ubicacion } from '../locations/ubicacion.entity.js';
+import { Ticket } from '../tickets/ticket.entity.js';
 import { DeviceStatus } from './device-status.enum.js';
 import { Device } from './device.entity.js';
 import { COURSE_LOCATION_SIGLA, formatDeviceCode } from './device-code.js';
@@ -14,6 +15,7 @@ export class InventoryService {
   constructor(
     @InjectRepository(Device) private readonly devices: Repository<Device>,
     @InjectRepository(Ubicacion) private readonly locations: Repository<Ubicacion>,
+    @InjectRepository(Ticket) private readonly tickets: Repository<Ticket>,
   ) {}
 
   async findAll(query: QueryInventoryDto) {
@@ -170,5 +172,16 @@ export class InventoryService {
     if (updateDeviceDto.estado !== undefined) device.estado = updateDeviceDto.estado;
 
     return this.devices.save(device);
+  }
+
+  async remove(id: number) {
+    const device = await this.devices.findOneBy({ id_dispositivo: id });
+
+    if (!device) {
+      throw new NotFoundException('Dispositivo no encontrado');
+    }
+
+    await this.tickets.update({ id_dispositivo: id }, { id_dispositivo: null });
+    await this.devices.delete({ id_dispositivo: id });
   }
 }

@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
-import { getInventory, type InventorySummary } from '../services/inventory'
+import { getInventory, deleteInventoryDevice, type InventorySummary } from '../services/inventory'
 import { isSessionExpired } from '../services/http'
 import type { AuthUser } from '../types/auth'
 import type { Device, DeviceStatus, DeviceType } from '../types/inventory'
+import { TrashIcon } from './ActionIcons'
 import { CreateDeviceForm } from './CreateDeviceForm'
 import { EditDeviceForm } from './EditDeviceForm'
+import { Modal } from './Modal'
+import type { ModalHandle } from './Modal'
 import { TableSkeleton } from './Skeleton'
 import { getPageNumbers } from '../utils/pagination'
 
@@ -89,6 +92,9 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
   const [refreshError, setRefreshError] = useState('')
   const [reloadKey, setReloadKey] = useState(0)
   const [modal, setModal] = useState<Modal>(null)
+  const [pendingDelete, setPendingDelete] = useState<Device | null>(null)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(INITIAL_PAGE_SIZE)
   const pageSizeRef = useRef(INITIAL_PAGE_SIZE)
@@ -97,6 +103,7 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
   const summaryRef = useRef<HTMLElement | null>(null)
   const tabsRef = useRef<HTMLDivElement | null>(null)
   const tableScrollRef = useRef<HTMLDivElement | null>(null)
+  const deleteModalRef = useRef<ModalHandle>(null)
   const baseRowHeightRef = useRef<number | null>(null)
   const statusTabRefs = useRef<Array<HTMLButtonElement | null>>([])
   const canManageInventory = user.rol === 'ADMIN' || user.rol === 'TECNICO'
@@ -231,6 +238,27 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
     setReloadKey((key) => key + 1)
   }
 
+  async function handleDeleteDevice(device: Device) {
+    setDeleteError('')
+    setDeleting(true)
+
+    try {
+      await deleteInventoryDevice(accessToken, device.id)
+      deleteModalRef.current?.close(() => {
+        setPendingDelete(null)
+        setReloadKey((key) => key + 1)
+      })
+    } catch (exception) {
+      if (isSessionExpired(exception)) {
+        onSessionExpired()
+        return
+      }
+      setDeleteError(exception instanceof Error ? exception.message : 'No se pudo eliminar el dispositivo')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
   const activePage = Math.min(currentPage, totalPages)
   const pageStart = (activePage - 1) * pageSize
@@ -357,6 +385,36 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
         }}
       />
     )}
+    {pendingDelete && (
+      <Modal
+        ref={deleteModalRef}
+        role="alertdialog"
+        label={`Eliminar ${pendingDelete.code}`}
+        backdropClassName="device-modal-backdrop"
+        cardClassName="create-device-card modal-card config-delete-modal"
+        dismissible={!deleting}
+        onClose={() => setPendingDelete(null)}
+      >
+        <div className="device-modal-body">
+          <h2 className="config-dialog-title">Eliminar dispositivo</h2>
+          <p className="config-dialog-text">
+            ¿Eliminar <strong>{pendingDelete.code}</strong>? Esta acción no se puede deshacer.
+          </p>
+          {deleteError && <p className="error" role="alert">{deleteError}</p>}
+          <div className="device-form-actions">
+            <button className="secondary-button" type="button" onClick={() => deleteModalRef.current?.close()} disabled={deleting}>Cancelar</button>
+            <button
+              className="config-danger-button"
+              type="button"
+              disabled={deleting}
+              onClick={() => { void handleDeleteDevice(pendingDelete) }}
+            >
+              {deleting ? 'Eliminando…' : 'Eliminar'}
+            </button>
+          </div>
+        </div>
+      </Modal>
+    )}
     {modal?.kind === 'create' && canManageInventory && (
       <CreateDeviceForm
         accessToken={accessToken}
@@ -452,7 +510,23 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
                     <td>{typeLabels[device.type]}</td>
                     <td>{renderBrandModel(device)}</td>
                     <td>{device.location}</td>
-                    <td><span className={`status status-${device.status.toLowerCase().replace('_', '-')}`}>{statusLabels[device.status]}</span></td>
+                    <td><div className="inventory-row-actions">
+                      <span className={`status status-${device.status.toLowerCase().replace('_', '-')}`}>{statusLabels[device.status]}</span>
+                      {canManageInventory && (
+                        <button
+                          className="inventory-row-delete"
+                          type="button"
+                          aria-label={`Eliminar ${device.code}`}
+                          title="Eliminar"
+                          onClick={() => {
+                            setDeleteError('')
+                            setPendingDelete(device)
+                          }}
+                        >
+                          <TrashIcon />
+                        </button>
+                      )}
+                    </div></td>
                   </tr>
                 ))}
               </tbody>

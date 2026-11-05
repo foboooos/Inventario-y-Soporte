@@ -67,6 +67,7 @@ const protectedRoutes: RouteCase[] = [
   { controller: InventoryController, handler: 'findAll', method: 'get', path: '/inventory', status: 200 },
   { controller: InventoryController, handler: 'create', method: 'post', path: '/inventory', status: 201 },
   { controller: InventoryController, handler: 'update', method: 'patch', path: '/inventory/1', status: 200 },
+  { controller: InventoryController, handler: 'remove', method: 'delete', path: '/inventory/1', status: 204 },
   { controller: TicketController, handler: 'findInbox', method: 'get', path: '/tickets/inbox', status: 200 },
   { controller: TicketController, handler: 'findBitacora', method: 'get', path: '/tickets/1/bitacora', status: 200 },
   { controller: TicketController, handler: 'findAll', method: 'get', path: '/tickets', status: 200 },
@@ -179,7 +180,7 @@ describe('RBAC enforcement — todas las rutas protegidas', () => {
         UsersController,
       ],
       providers: [
-        { provide: InventoryService, useValue: serviceMock(['findOptions', 'nextCode', 'findAll', 'create', 'update']) },
+        { provide: InventoryService, useValue: serviceMock(['findOptions', 'nextCode', 'findAll', 'create', 'update', 'remove']) },
         { provide: TicketService, useValue: serviceMock(['findInbox', 'findBitacora', 'findAll', 'resolve', 'changeStatus', 'create']) },
         { provide: LocationService, useValue: serviceMock(['findAll', 'create', 'generateCourses', 'rename', 'remove']) },
         { provide: LevelService, useValue: serviceMock(['findAll', 'create', 'rename', 'remove']) },

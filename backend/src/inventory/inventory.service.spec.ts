@@ -1,6 +1,7 @@
 import { FindOperator, type Repository } from 'typeorm';
 import { describe, expect, it, vi } from 'vitest';
 import { Ubicacion } from '../locations/ubicacion.entity.js';
+import { Ticket } from '../tickets/ticket.entity.js';
 import { DeviceStatus } from './device-status.enum.js';
 import { DeviceType } from './device-type.enum.js';
 import { Device } from './device.entity.js';
@@ -11,8 +12,16 @@ function query(overrides: Partial<QueryInventoryDto> = {}): QueryInventoryDto {
   return { page: 1, limit: 10, sortBy: 'code', sortDir: 'asc', ...overrides };
 }
 
-function createService(devices: Partial<Repository<Device>>, locations: Partial<Repository<Ubicacion>> = {}) {
-  return new InventoryService(devices as Repository<Device>, locations as Repository<Ubicacion>);
+function createService(
+  devices: Partial<Repository<Device>>,
+  locations: Partial<Repository<Ubicacion>> = {},
+  tickets: Partial<Repository<Ticket>> = {},
+) {
+  return new InventoryService(
+    devices as Repository<Device>,
+    locations as Repository<Ubicacion>,
+    tickets as Repository<Ticket>,
+  );
 }
 
 function createQueryBuilder(rawRows: Array<{ estado: string; count: string }>) {
@@ -168,5 +177,23 @@ describe('InventoryService', () => {
     );
 
     await expect(service.nextCode(DeviceType.PC, 'Casino')).rejects.toThrow('La ubicación no tiene sigla configurada');
+  });
+
+  it('removes a device and unlinks its tickets', async () => {
+    const findOneBy = vi.fn().mockResolvedValue({ id_dispositivo: 5 });
+    const deleteDevice = vi.fn().mockResolvedValue({ affected: 1 });
+    const updateTickets = vi.fn().mockResolvedValue({ affected: 2 });
+    const service = createService({ findOneBy, delete: deleteDevice }, {}, { update: updateTickets });
+
+    await service.remove(5);
+
+    expect(updateTickets).toHaveBeenCalledWith({ id_dispositivo: 5 }, { id_dispositivo: null });
+    expect(deleteDevice).toHaveBeenCalledWith({ id_dispositivo: 5 });
+  });
+
+  it('rejects removing a device that does not exist', async () => {
+    const service = createService({ findOneBy: vi.fn().mockResolvedValue(null) });
+
+    await expect(service.remove(99)).rejects.toThrow('Dispositivo no encontrado');
   });
 });

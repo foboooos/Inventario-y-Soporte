@@ -220,22 +220,22 @@
 
 .table-scroll th:nth-child(1),
 .table-scroll td:nth-child(1) {
-  width: 13%;
+  width: 14%;
 }
 
 .table-scroll th:nth-child(2),
 .table-scroll td:nth-child(2) {
-  width: 14%;
+  width: 12%;
 }
 
 .table-scroll th:nth-child(3),
 .table-scroll td:nth-child(3) {
-  width: 22%;
+  width: 21%;
 }
 
 .table-scroll th:nth-child(4),
 .table-scroll td:nth-child(4) {
-  width: 34%;
+  width: 36%;
 }
 
 .table-scroll th:nth-child(5),
@@ -354,6 +354,43 @@ tbody tr:hover {
 .status-baja-tecnica {
   color: var(--ink-danger);
   background: var(--tint-danger);
+}
+
+.inventory-row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.inventory-row-delete {
+  flex: 0 0 auto;
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  color: var(--minimal-muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+.inventory-row-delete:hover:not(:disabled) {
+  color: var(--minimal-danger);
+  background: transparent;
+}
+
+.inventory-row-delete svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
 }
 
 .table-footer {

@@ -166,6 +166,10 @@ export class TicketService {
       throw new NotFoundException('El ticket no existe');
     }
 
+    if (nextStatus === TicketStatus.RESUELTO) {
+      throw new ConflictException('Para resolver el ticket debes registrar la bitácora');
+    }
+
     if (ticket.estado === nextStatus) {
       return ticket;
     }

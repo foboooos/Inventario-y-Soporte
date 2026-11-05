@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseIntPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { UserRole } from '../users/user-role.enum.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { Roles } from '../auth/guards/roles.decorator.js';
@@ -42,5 +42,12 @@ export class InventoryController {
   @Roles(UserRole.ADMIN, UserRole.TECNICO)
   update(@Param('id', ParseIntPipe) id: number, @Body() updateDeviceDto: UpdateDeviceDto) {
     return this.inventoryService.update(id, updateDeviceDto);
+  }
+
+  @Delete(':id')
+  @Roles(UserRole.ADMIN, UserRole.TECNICO)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  remove(@Param('id', ParseIntPipe) id: number) {
+    return this.inventoryService.remove(id);
   }
 }

@@ -407,6 +407,20 @@ describe('TicketService', () => {
     await expect(service.changeStatus(7, TicketStatus.EN_PROCESO)).rejects.toThrow(ConflictException);
   });
 
+  it.each([TicketStatus.ABIERTO, TicketStatus.EN_PROCESO])(
+    'rejects resolving a %s ticket through the status endpoint',
+    async (estado) => {
+      const ticket = { id_ticket: 7, estado } as Ticket;
+      const findOneBy = vi.fn().mockResolvedValue(ticket);
+      const update = vi.fn();
+      const service = createService({ findOneBy, update });
+
+      await expect(service.changeStatus(7, TicketStatus.RESUELTO))
+        .rejects.toThrow('Para resolver el ticket debes registrar la bitácora');
+      expect(update).not.toHaveBeenCalled();
+    },
+  );
+
   it('rejects changing the status of a ticket that does not exist', async () => {
     const findOneBy = vi.fn().mockResolvedValue(null);
     const service = createService({ findOneBy });

@@ -67,6 +67,14 @@ export async function updateInventoryDevice(accessToken: string, id: number, inp
   return mapApiDevice(device)
 }
 
+export async function deleteInventoryDevice(accessToken: string, id: number): Promise<void> {
+  const response = await apiFetch(`/inventory/${id}`, accessToken, { method: 'DELETE' })
+
+  if (!response.ok) {
+    await readApiJson<never>(response, 'No se pudo eliminar el dispositivo')
+  }
+}
+
 export type InventoryQuery = {
   search?: string
   estado?: DeviceStatus

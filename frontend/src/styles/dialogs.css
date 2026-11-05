@@ -8,8 +8,6 @@
   box-sizing: border-box;
   padding: 24px;
   background: rgba(12, 12, 9, 0.52);
-  -webkit-backdrop-filter: blur(3px);
-  backdrop-filter: blur(3px);
   overflow-y: auto;
   animation: modal-backdrop-in 180ms ease-out both;
 }
