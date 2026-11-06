@@ -1,4 +1,4 @@
-import type { CreatedUser, CreateUserInput, User } from '../types/user'
+import type { CreatedUser, CreateUserInput, UpdateUserInput, User } from '../types/user'
 import { apiFetch, readApiJson } from './http'
 
 export async function getUsers(accessToken: string): Promise<User[]> {
@@ -15,6 +15,15 @@ export async function createUser(accessToken: string, input: CreateUserInput): P
   })
 
   return readApiJson<CreatedUser>(response, 'No se pudo crear el usuario')
+}
+
+export async function updateUser(accessToken: string, rut: string, input: UpdateUserInput): Promise<User> {
+  const response = await apiFetch(`/users/${encodeURIComponent(rut)}`, accessToken, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  })
+
+  return readApiJson<User>(response, 'No se pudo actualizar el usuario')
 }
 
 export async function deleteUser(accessToken: string, rut: string): Promise<void> {

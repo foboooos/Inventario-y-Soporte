@@ -165,19 +165,26 @@ export class InventoryService {
       throw new NotFoundException('Dispositivo no encontrado');
     }
 
-    if (updateDeviceDto.tipo !== undefined) device.tipo = updateDeviceDto.tipo;
-    if (updateDeviceDto.marca !== undefined) device.marca = updateDeviceDto.marca.trim() || null;
-    if (updateDeviceDto.modelo !== undefined) device.modelo = updateDeviceDto.modelo.trim() || null;
+    const nextTipo = updateDeviceDto.tipo ?? device.tipo;
+    let nextUbicacion = device.ubicacion;
+
     if (updateDeviceDto.ubicacion !== undefined) {
-      const ubicacion = updateDeviceDto.ubicacion.trim();
-      const location = await this.locations.findOneBy({ nombre: ubicacion });
+      nextUbicacion = updateDeviceDto.ubicacion.trim();
+      const location = await this.locations.findOneBy({ nombre: nextUbicacion });
 
       if (!location) {
         throw new NotFoundException('La ubicación no existe');
       }
-
-      device.ubicacion = ubicacion;
     }
+
+    if (nextTipo !== device.tipo || nextUbicacion !== device.ubicacion) {
+      device.codigo_inventario = await this.nextCode(nextTipo, nextUbicacion);
+    }
+
+    device.tipo = nextTipo;
+    device.ubicacion = nextUbicacion;
+    if (updateDeviceDto.marca !== undefined) device.marca = updateDeviceDto.marca.trim() || null;
+    if (updateDeviceDto.modelo !== undefined) device.modelo = updateDeviceDto.modelo.trim() || null;
     if (updateDeviceDto.estado !== undefined) device.estado = updateDeviceDto.estado;
 
     return this.devices.save(device);
@@ -190,7 +197,9 @@ export class InventoryService {
       throw new NotFoundException('Dispositivo no encontrado');
     }
 
-    await this.tickets.update({ id_dispositivo: id }, { id_dispositivo: null });
-    await this.devices.delete({ id_dispositivo: id });
+    await this.devices.manager.transaction(async (manager) => {
+      await manager.getRepository(Ticket).update({ id_dispositivo: id }, { id_dispositivo: null });
+      await manager.getRepository(Device).delete({ id_dispositivo: id });
+    });
   }
 }

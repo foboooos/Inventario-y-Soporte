@@ -4,6 +4,7 @@ import type { Request } from 'express';
 
 const INTERNAL_MESSAGE = 'Ocurrió un error inesperado. Intenta nuevamente en unos instantes.';
 const UNAVAILABLE_MESSAGE = 'El servicio no está disponible en este momento. Intenta nuevamente en unos instantes.';
+const CONFLICT_MESSAGE = 'Ya existe un registro con esos datos.';
 
 const STATUS_REASONS: Record<number, string> = {
   [HttpStatus.BAD_REQUEST]: 'Bad Request',
@@ -53,6 +54,10 @@ function isConnectionError(exception: unknown): boolean {
   return code !== undefined && CONNECTION_ERROR_CODES.has(code);
 }
 
+function isUniqueViolation(exception: unknown): boolean {
+  return errorCode(exception) === '23505';
+}
+
 function extractMessage(response: string | object): string | string[] {
   if (typeof response === 'string') return response;
 
@@ -84,6 +89,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const status = this.resolveStatus(exception);
     const httpResponse = exception instanceof HttpException ? exception.getResponse() : undefined;
     const internal = status >= HttpStatus.INTERNAL_SERVER_ERROR;
+    const message = internal
+      ? this.publicMessage(exception)
+      : (httpResponse ? extractMessage(httpResponse) : this.publicMessage(exception));
 
     if (internal) {
       this.logger.error(
@@ -97,7 +105,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       {
         statusCode: status,
         error: extractReason(status, httpResponse),
-        message: internal ? this.publicMessage(exception) : extractMessage(httpResponse ?? INTERNAL_MESSAGE),
+        message,
         timestamp: new Date().toISOString(),
         path: request.url,
       },
@@ -107,11 +115,14 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
   private resolveStatus(exception: unknown): number {
     if (exception instanceof HttpException) return exception.getStatus();
+    if (isUniqueViolation(exception)) return HttpStatus.CONFLICT;
     if (isConnectionError(exception)) return HttpStatus.SERVICE_UNAVAILABLE;
     return HttpStatus.INTERNAL_SERVER_ERROR;
   }
 
   private publicMessage(exception: unknown): string {
-    return isConnectionError(exception) ? UNAVAILABLE_MESSAGE : INTERNAL_MESSAGE;
+    if (isConnectionError(exception)) return UNAVAILABLE_MESSAGE;
+    if (isUniqueViolation(exception)) return CONFLICT_MESSAGE;
+    return INTERNAL_MESSAGE;
   }
 }

@@ -6,13 +6,17 @@ import { getUsers, deleteUser } from '../services/users'
 import type { Location, LocationType } from '../types/location'
 import type { User, UserRole } from '../types/user'
 import { downloadUsersPdf } from '../utils/usersPdf'
+import { getPageNumbers } from '../utils/pagination'
 import { PencilIcon, TrashIcon } from './ActionIcons'
 import { SelectMenu } from './SelectMenu'
 import { ListSkeleton, TableSkeleton } from './Skeleton'
 import { CreateUserForm } from './CreateUserForm'
+import { EditUserForm } from './EditUserForm'
 import { Modal } from './Modal'
 import type { ModalHandle } from './Modal'
 import { RoleIcon } from './RoleIcon'
+
+const USERS_PAGE_SIZE = 10
 
 type ConfigurationPageProps = {
   accessToken: string
@@ -74,6 +78,9 @@ export function ConfigurationPage({ accessToken, onSessionExpired }: Configurati
   const [usersExpanded, setUsersExpanded] = useState(false)
   const [locationsExpanded, setLocationsExpanded] = useState(false)
   const [usersSort, setUsersSort] = useState<'asc' | 'desc'>('asc')
+  const [usersSearch, setUsersSearch] = useState('')
+  const [usersPage, setUsersPage] = useState(1)
+  const [editingUser, setEditingUser] = useState<User | null>(null)
 
   const [locations, setLocations] = useState<Location[]>([])
   const [locationsLoading, setLocationsLoading] = useState(true)
@@ -83,7 +90,8 @@ export function ConfigurationPage({ accessToken, onSessionExpired }: Configurati
   const [usersError, setUsersError] = useState('')
   const [newLocationName, setNewLocationName] = useState('')
   const [newLocationSigla, setNewLocationSigla] = useState('')
-  const [newLocationTipo, setNewLocationTipo] = useState<LocationType | 'ALL'>('ALL')
+  const [newLocationTipo, setNewLocationTipo] = useState<LocationType>('PRINCIPAL')
+  const [locationFilter, setLocationFilter] = useState<LocationType | 'ALL'>('ALL')
   const [creatingLocation, setCreatingLocation] = useState(false)
   const [editingLocation, setEditingLocation] = useState<Location | null>(null)
   const [editLocationName, setEditLocationName] = useState('')
@@ -176,10 +184,10 @@ export function ConfigurationPage({ accessToken, onSessionExpired }: Configurati
   )
 
   const visibleLocations = useMemo(
-    () => newLocationTipo === 'ALL'
+    () => locationFilter === 'ALL'
       ? sortedLocations
-      : sortedLocations.filter((location) => location.tipo === newLocationTipo),
-    [sortedLocations, newLocationTipo],
+      : sortedLocations.filter((location) => location.tipo === locationFilter),
+    [sortedLocations, locationFilter],
   )
 
   const sortedUsers = useMemo(
@@ -190,13 +198,30 @@ export function ConfigurationPage({ accessToken, onSessionExpired }: Configurati
     [users, usersSort],
   )
 
+  const filteredUsers = useMemo(() => {
+    const term = usersSearch.trim().toLowerCase()
+    if (!term) return sortedUsers
+    return sortedUsers.filter((user) =>
+      user.nombre.toLowerCase().includes(term)
+      || user.rut.toLowerCase().includes(term)
+      || user.email.toLowerCase().includes(term))
+  }, [sortedUsers, usersSearch])
+
+  const usersTotalPages = Math.max(1, Math.ceil(filteredUsers.length / USERS_PAGE_SIZE))
+  const activeUsersPage = Math.min(usersPage, usersTotalPages)
+  const usersStart = (activeUsersPage - 1) * USERS_PAGE_SIZE
+  const visibleUsers = filteredUsers.slice(usersStart, usersStart + USERS_PAGE_SIZE)
+  const usersPageNumbers = getPageNumbers(activeUsersPage, usersTotalPages)
+
   async function handleDeleteUser(user: User) {
     setDeletingRut(user.rut)
     setUsersError('')
 
     try {
       await deleteUser(accessToken, user.rut)
-      setUsers((current) => current.filter((item) => item.rut !== user.rut))
+      const remaining = users.filter((item) => item.rut !== user.rut)
+      setUsers(remaining)
+      setUsersPage((page) => Math.min(page, Math.max(1, Math.ceil(remaining.length / USERS_PAGE_SIZE))))
       deleteModalRef.current?.close()
     } catch (exception) {
       if (isSessionExpired(exception)) {
@@ -213,7 +238,7 @@ export function ConfigurationPage({ accessToken, onSessionExpired }: Configurati
     event.preventDefault()
     const nombre = newLocationName.trim()
     const sigla = newLocationSigla.trim().toUpperCase()
-    if (!nombre || !sigla || newLocationTipo === 'ALL') return
+    if (!nombre || !sigla) return
 
     setCreatingLocation(true)
     setLocationsError('')
@@ -225,6 +250,7 @@ export function ConfigurationPage({ accessToken, onSessionExpired }: Configurati
         tipo: newLocationTipo,
       })
       setLocations((current) => [...current, created])
+      setLocationFilter(created.tipo)
       setNewLocationName('')
       setNewLocationSigla('')
     } catch (exception) {
@@ -291,11 +317,12 @@ export function ConfigurationPage({ accessToken, onSessionExpired }: Configurati
         <section className={`support-card config-card config-users-card${usersExpanded ? '' : ' is-collapsed'}`} aria-label="Usuarios">
           <div
             className="config-card-body"
+            id="config-users-body"
             ref={usersCardBodyRef}
             onTransitionEnd={handleCardTransitionEnd}
           >
           <div className="config-users-head">
-            <h3 className="config-users-title">Usuarios</h3>
+            <h2 className="config-users-title">Usuarios</h2>
             <div className="config-users-actions">
               <button
                 className="secondary-button"
@@ -319,7 +346,21 @@ export function ConfigurationPage({ accessToken, onSessionExpired }: Configurati
             </div>
           </div>
 
-          {usersError && <p className="subjects-state" role="status">{usersError}</p>}
+          <label className="table-search config-users-search">
+            <span className="sr-only">Buscar usuarios</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+            <input
+              type="search"
+              value={usersSearch}
+              onChange={(event) => {
+                setUsersSearch(event.target.value)
+                setUsersPage(1)
+              }}
+              placeholder="Buscar por nombre, RUT o email"
+            />
+          </label>
+
+          {usersError && <p className="subjects-state" role="alert">{usersError}</p>}
           {usersLoading && (
             <TableSkeleton
               label="Cargando usuarios…"
@@ -328,10 +369,14 @@ export function ConfigurationPage({ accessToken, onSessionExpired }: Configurati
               className="config-users-skeleton"
             />
           )}
-          {!usersLoading && sortedUsers.length === 0 && (
+          {!usersLoading && users.length === 0 && (
             <p className="subjects-state" role="status">Aún no hay usuarios registrados.</p>
           )}
-          {!usersLoading && sortedUsers.length > 0 && (
+          {!usersLoading && users.length > 0 && filteredUsers.length === 0 && (
+            <p className="subjects-state" role="status">No hay usuarios que coincidan con la búsqueda.</p>
+          )}
+          {!usersLoading && filteredUsers.length > 0 && (
+            <>
             <div className="config-users-table-scroll">
               <table className="config-users-table">
                 <thead>
@@ -354,14 +399,14 @@ export function ConfigurationPage({ accessToken, onSessionExpired }: Configurati
                         </button>
                       </span>
                     </th>
-                    <th>RUT</th>
-                    <th>Email</th>
-                    <th>Rol</th>
-                    <th><span className="sr-only">Acciones</span></th>
+                    <th scope="col">RUT</th>
+                    <th scope="col">Email</th>
+                    <th scope="col">Rol</th>
+                    <th scope="col"><span className="sr-only">Acciones</span></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {sortedUsers.map((user) => (
+                  {visibleUsers.map((user) => (
                     <tr key={user.rut}>
                       <td>{user.nombre}</td>
                       <td>{user.rut}</td>
@@ -373,6 +418,15 @@ export function ConfigurationPage({ accessToken, onSessionExpired }: Configurati
                         </span>
                       </td>
                       <td className="config-users-actions-cell">
+                        <button
+                          className="subjects-icon-button"
+                          type="button"
+                          aria-label={`Editar ${user.nombre}`}
+                          title="Editar"
+                          onClick={() => setEditingUser(user)}
+                        >
+                          <PencilIcon />
+                        </button>
                         <button
                           className="subjects-icon-button subjects-icon-button-danger"
                           type="button"
@@ -391,18 +445,34 @@ export function ConfigurationPage({ accessToken, onSessionExpired }: Configurati
                 </tbody>
               </table>
             </div>
+            <footer className="table-footer config-users-footer">
+              <span>
+                Mostrando {usersStart + 1}–{Math.min(usersStart + USERS_PAGE_SIZE, filteredUsers.length)} de {filteredUsers.length} usuarios
+              </span>
+              <nav className="pagination" aria-label="Paginación de usuarios">
+                <button className="pagination-button" type="button" disabled={activeUsersPage === 1} onClick={() => setUsersPage((page) => Math.max(1, page - 1))}>Anterior</button>
+                {usersPageNumbers.map((page, index) => page === 'ellipsis'
+                  ? <span className="pagination-ellipsis" key={`ellipsis-${index}`} aria-hidden="true">…</span>
+                  : <button className={`pagination-button page-number${page === activeUsersPage ? ' active' : ''}`} type="button" key={page} aria-current={page === activeUsersPage ? 'page' : undefined} onClick={() => setUsersPage(page)}>{page}</button>)}
+                <button className="pagination-button" type="button" disabled={activeUsersPage === usersTotalPages} onClick={() => setUsersPage((page) => Math.min(usersTotalPages, page + 1))}>Siguiente</button>
+              </nav>
+            </footer>
+            </>
           )}
           </div>
           <button
             className="config-card-toggle"
             type="button"
             aria-expanded={usersExpanded}
+            aria-controls="config-users-body"
             aria-label={usersExpanded ? 'Contraer usuarios' : 'Expandir usuarios'}
             onClick={() => {
               const collapsing = usersExpanded
               prepareCardToggle(usersCardBodyRef.current, !collapsing)
               setUsersExpanded(!collapsing)
-              if (collapsing) window.scrollTo({ top: 0, behavior: 'smooth' })
+              if (collapsing && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                window.scrollTo({ top: 0, behavior: 'smooth' })
+              }
             }}
           >
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
@@ -412,10 +482,22 @@ export function ConfigurationPage({ accessToken, onSessionExpired }: Configurati
         <section className={`support-card config-card${locationsExpanded ? '' : ' is-collapsed'}`} aria-label="Ubicaciones">
           <div
             className="config-card-body"
+            id="config-locations-body"
             ref={locationsCardBodyRef}
             onTransitionEnd={handleCardTransitionEnd}
           >
-          <h2 className="config-title">Ubicaciones</h2>
+          <div className="config-locations-head">
+            <h2 className="config-title">Ubicaciones</h2>
+            <SelectMenu
+              id="config-location-filter"
+              ariaLabel="Filtrar ubicaciones por tipo"
+              value={locationFilter}
+              onChange={(next) => setLocationFilter(next as LocationType | 'ALL')}
+              options={locationFilterOptions}
+              visibleItems={4}
+              fixedList
+            />
+          </div>
 
           {locationsError && (
             <div className="banner-error" role="alert">
@@ -453,9 +535,9 @@ export function ConfigurationPage({ accessToken, onSessionExpired }: Configurati
                 id="config-location-type"
                 ariaLabel="Tipo de ubicación"
                 value={newLocationTipo}
-                onChange={(next) => setNewLocationTipo(next as LocationType | 'ALL')}
-                options={locationFilterOptions}
-                visibleItems={4}
+                onChange={(next) => setNewLocationTipo(next as LocationType)}
+                options={locationTypeOptions}
+                visibleItems={3}
                 fixedList
               />
             </div>
@@ -463,7 +545,7 @@ export function ConfigurationPage({ accessToken, onSessionExpired }: Configurati
               <button
                 className="primary-action primary-action-solid"
                 type="submit"
-                disabled={creatingLocation || !newLocationName.trim() || !newLocationSigla.trim() || newLocationTipo === 'ALL'}
+                disabled={creatingLocation || !newLocationName.trim() || !newLocationSigla.trim()}
               >
                 {creatingLocation ? 'Agregando…' : 'Agregar ubicación'}
               </button>
@@ -478,8 +560,8 @@ export function ConfigurationPage({ accessToken, onSessionExpired }: Configurati
 
           {!locationsLoading && locations.length > 0 && visibleLocations.length === 0 && (
             <div className="empty-state-block" role="status">
-              <p>No hay ubicaciones de tipo {locationTypeLabels[newLocationTipo as LocationType]}.</p>
-              <button className="secondary-button" type="button" onClick={() => setNewLocationTipo('ALL')}>
+              <p>No hay ubicaciones de tipo {locationTypeLabels[locationFilter as LocationType]}.</p>
+              <button className="secondary-button" type="button" onClick={() => setLocationFilter('ALL')}>
                 Ver todas
               </button>
             </div>
@@ -515,6 +597,7 @@ export function ConfigurationPage({ accessToken, onSessionExpired }: Configurati
             className="config-card-toggle"
             type="button"
             aria-expanded={locationsExpanded}
+            aria-controls="config-locations-body"
             aria-label={locationsExpanded ? 'Contraer ubicaciones' : 'Expandir ubicaciones'}
             onClick={() => {
               const expanding = !locationsExpanded
@@ -617,6 +700,20 @@ export function ConfigurationPage({ accessToken, onSessionExpired }: Configurati
         </Modal>
       )}
 
+      {editingUser && (
+        <EditUserForm
+          key={editingUser.rut}
+          accessToken={accessToken}
+          user={editingUser}
+          onCancel={() => setEditingUser(null)}
+          onSessionExpired={onSessionExpired}
+          onUpdated={(updated) => {
+            setUsers((current) => current.map((item) => (item.rut === updated.rut ? updated : item)))
+            setEditingUser(null)
+          }}
+        />
+      )}
+
       {createUserOpen && (
         <CreateUserForm
           accessToken={accessToken}
@@ -624,6 +721,8 @@ export function ConfigurationPage({ accessToken, onSessionExpired }: Configurati
           onSessionExpired={onSessionExpired}
           onCreated={(created) => {
             setUsers((current) => [...current, created])
+            setUsersSearch('')
+            setUsersPage(1)
             setCreatedUser({ nombre: created.nombre, password: created.rut.replace(/\./g, '') })
             setCreateUserOpen(false)
           }}

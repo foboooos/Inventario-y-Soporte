@@ -14,7 +14,7 @@
 }
 
 @media (min-width: 701px) {
-  body:has(.config-shell) {
+  body.config-active {
     overflow: hidden;
   }
 }
@@ -1124,6 +1124,42 @@
   padding-bottom: 12px;
   border-bottom: 1px solid var(--border-subtle);
   font-size: 20px;
+}
+
+.config-locations-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.config-locations-head .config-title {
+  margin-bottom: 0;
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.config-locations-head .select-menu {
+  flex: 0 0 200px;
+}
+
+@media (max-width: 700px) {
+  .config-locations-head {
+    flex-wrap: wrap;
+  }
+
+  .config-locations-head .select-menu {
+    flex: 1 1 100%;
+  }
+}
+
+.config-users-search {
+  margin-bottom: 12px;
+}
+
+.config-users-footer {
+  padding: 10px 0 0;
 }
 
 .config-toast {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { getSubjects } from '../services/academics'
 import { isSessionExpired } from '../services/http'
@@ -6,6 +6,8 @@ import { createSoftware, deleteSoftware, getSoftware } from '../services/softwar
 import type { Subject } from '../types/academic'
 import { ChecklistSkeleton, ListSkeleton } from './Skeleton'
 import { EditSoftwareForm } from './EditSoftwareForm'
+import { Modal } from './Modal'
+import type { ModalHandle } from './Modal'
 import { SelectMenu } from './SelectMenu'
 import { PencilIcon, TrashIcon } from './ActionIcons'
 import { SortButton } from './SortButton'
@@ -44,8 +46,10 @@ export function SoftwarePage({ accessToken, onSessionExpired }: SoftwarePageProp
   const [editingProgram, setEditingProgram] = useState<SoftwareProgram | null>(null)
   const [softwareSort, setSoftwareSort] = useState<SortKey>('alfabetico')
 
-  const [confirmId, setConfirmId] = useState<number | null>(null)
+  const [pendingDelete, setPendingDelete] = useState<SoftwareProgram | null>(null)
   const [deletingId, setDeletingId] = useState<number | null>(null)
+  const [deleteError, setDeleteError] = useState('')
+  const deleteModalRef = useRef<ModalHandle>(null)
 
   useEffect(() => {
     let active = true
@@ -137,19 +141,22 @@ export function SoftwarePage({ accessToken, onSessionExpired }: SoftwarePageProp
   }
 
   function startEdit(program: SoftwareProgram) {
-    setConfirmId(null)
     setEditingProgram(program)
   }
 
   async function handleDelete(program: SoftwareProgram) {
     setDeletingId(program.id)
-    setError('')
+    setDeleteError('')
     try {
       await deleteSoftware(accessToken, program.id)
       setPrograms((current) => current.filter((item) => item.id !== program.id))
-      setConfirmId(null)
+      deleteModalRef.current?.close(() => setPendingDelete(null))
     } catch (exception: unknown) {
-      reportError(exception, 'No se pudo eliminar el software')
+      if (isSessionExpired(exception)) {
+        onSessionExpired()
+        return
+      }
+      setDeleteError(exception instanceof Error ? exception.message : 'No se pudo eliminar el software')
     } finally {
       setDeletingId(null)
     }
@@ -306,43 +313,27 @@ export function SoftwarePage({ accessToken, onSessionExpired }: SoftwarePageProp
                         {renderAsignaturaChips(program)}
                       </div>
                       <div className="subjects-actions">
-                        {confirmId === program.id ? (
-                          <>
-                            <span className="subjects-confirm">¿Eliminar?</span>
-                            <button
-                              className="text-button text-button-danger"
-                              type="button"
-                              disabled={deletingId === program.id}
-                              onClick={() => handleDelete(program)}
-                            >
-                              {deletingId === program.id ? 'Eliminando…' : 'Confirmar'}
-                            </button>
-                            <button className="text-button" type="button" disabled={deletingId === program.id} onClick={() => setConfirmId(null)}>
-                              Cancelar
-                            </button>
-                          </>
-                        ) : (
-                          <>
-                            <button
-                              className="subjects-icon-button"
-                              type="button"
-                              aria-label={`Editar ${program.nombre}`}
-                              title="Editar"
-                              onClick={() => startEdit(program)}
-                            >
-                              <PencilIcon />
-                            </button>
-                            <button
-                              className="subjects-icon-button subjects-icon-button-danger"
-                              type="button"
-                              aria-label={`Eliminar ${program.nombre}`}
-                              title="Eliminar"
-                              onClick={() => setConfirmId(program.id)}
-                            >
-                              <TrashIcon />
-                            </button>
-                          </>
-                        )}
+                        <button
+                          className="subjects-icon-button"
+                          type="button"
+                          aria-label={`Editar ${program.nombre}`}
+                          title="Editar"
+                          onClick={() => startEdit(program)}
+                        >
+                          <PencilIcon />
+                        </button>
+                        <button
+                          className="subjects-icon-button subjects-icon-button-danger"
+                          type="button"
+                          aria-label={`Eliminar ${program.nombre}`}
+                          title="Eliminar"
+                          onClick={() => {
+                            setDeleteError('')
+                            setPendingDelete(program)
+                          }}
+                        >
+                          <TrashIcon />
+                        </button>
                       </div>
                     </li>
                   ))}
@@ -363,6 +354,43 @@ export function SoftwarePage({ accessToken, onSessionExpired }: SoftwarePageProp
               onCancel={() => setEditingProgram(null)}
               onSessionExpired={onSessionExpired}
             />
+          )}
+
+          {pendingDelete && (
+            <Modal
+              ref={deleteModalRef}
+              role="alertdialog"
+              label={`Eliminar ${pendingDelete.nombre}`}
+              cardClassName="create-device-card modal-card config-delete-modal"
+              dismissible={deletingId === null}
+              onClose={() => setPendingDelete(null)}
+            >
+              <div className="device-modal-body">
+                <h2 className="config-dialog-title">Eliminar software</h2>
+                <p className="config-dialog-text">
+                  ¿Eliminar <strong>{pendingDelete.nombre}</strong>? Esta acción no se puede deshacer.
+                </p>
+                {deleteError && <p className="error" role="alert">{deleteError}</p>}
+                <div className="device-form-actions">
+                  <button
+                    className="secondary-button"
+                    type="button"
+                    disabled={deletingId !== null}
+                    onClick={() => deleteModalRef.current?.close()}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    className="config-danger-button"
+                    type="button"
+                    disabled={deletingId !== null}
+                    onClick={() => { void handleDelete(pendingDelete) }}
+                  >
+                    {deletingId !== null ? 'Eliminando…' : 'Eliminar'}
+                  </button>
+                </div>
+              </div>
+            </Modal>
           )}
         </section>
     </main>

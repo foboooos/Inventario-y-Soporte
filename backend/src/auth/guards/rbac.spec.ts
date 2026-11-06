@@ -93,6 +93,7 @@ const protectedRoutes: RouteCase[] = [
   { controller: SoftwareController, handler: 'remove', method: 'delete', path: '/software/1', status: 204 },
   { controller: UsersController, handler: 'findAll', method: 'get', path: '/users', status: 200 },
   { controller: UsersController, handler: 'create', method: 'post', path: '/users', status: 201 },
+  { controller: UsersController, handler: 'update', method: 'patch', path: '/users/1', status: 200 },
   { controller: UsersController, handler: 'remove', method: 'delete', path: '/users/1', status: 204 },
 ];
 
@@ -187,7 +188,7 @@ describe('RBAC enforcement — todas las rutas protegidas', () => {
         { provide: LevelService, useValue: serviceMock(['findAll', 'create', 'rename', 'remove']) },
         { provide: SubjectService, useValue: serviceMock(['findAll', 'create', 'update', 'remove']) },
         { provide: SoftwareService, useValue: serviceMock(['findAll', 'create', 'update', 'remove']) },
-        { provide: UsersService, useValue: serviceMock(['create', 'findAll', 'remove']) },
+        { provide: UsersService, useValue: serviceMock(['create', 'findAll', 'update', 'remove']) },
       ],
     }).compile();
 

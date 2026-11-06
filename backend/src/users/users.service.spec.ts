@@ -70,4 +70,61 @@ describe('UsersService', () => {
       .rejects.toThrow(ConflictException);
     expect(remove).not.toHaveBeenCalled();
   });
+
+  it('updates a user name, email and role', async () => {
+    const user = {
+      rut: '12.345.678-K',
+      nombre: 'Ana',
+      email: 'ana@colegio.cl',
+      rol: UserRole.DOCENTE,
+    } as User;
+    const findOneBy = vi.fn().mockResolvedValueOnce(user).mockResolvedValueOnce(null);
+    const update = vi.fn().mockResolvedValue({ affected: 1 });
+    const service = createService({ findOneBy, update });
+
+    const result = await service.update('12.345.678-0', {
+      nombre: 'Ana Pérez',
+      email: 'ana.perez@colegio.cl',
+      rol: UserRole.TECNICO,
+    });
+
+    expect(findOneBy).toHaveBeenNthCalledWith(1, { rut: '12.345.678-K' });
+    expect(update).toHaveBeenCalledWith(
+      { rut: '12.345.678-K' },
+      { nombre: 'Ana Pérez', email: 'ana.perez@colegio.cl', rol: UserRole.TECNICO },
+    );
+    expect(result).toEqual({
+      rut: '12.345.678-K',
+      nombre: 'Ana Pérez',
+      email: 'ana.perez@colegio.cl',
+      rol: UserRole.TECNICO,
+    });
+  });
+
+  it('rejects updating a user that does not exist', async () => {
+    const service = createService({ findOneBy: vi.fn().mockResolvedValue(null) });
+
+    await expect(service.update('12.345.678-9', { nombre: 'Ana' })).rejects.toThrow(NotFoundException);
+  });
+
+  it('rejects updating a user with an email already in use', async () => {
+    const user = { rut: '12.345.678-9', nombre: 'Ana', email: 'ana@colegio.cl', rol: UserRole.DOCENTE } as User;
+    const findOneBy = vi.fn()
+      .mockResolvedValueOnce(user)
+      .mockResolvedValueOnce({ ...user, rut: '98.765.432-1' } as User);
+    const service = createService({ findOneBy });
+
+    await expect(service.update('12.345.678-9', { email: 'otro@colegio.cl' }))
+      .rejects.toThrow('Ya existe un usuario con ese email');
+  });
+
+  it('rejects removing the admin role from the last administrator', async () => {
+    const user = { rut: '12.345.678-9', nombre: 'Admin', email: 'admin@colegio.cl', rol: UserRole.ADMIN } as User;
+    const findOneBy = vi.fn().mockResolvedValue(user);
+    const count = vi.fn().mockResolvedValue(1);
+    const service = createService({ findOneBy, count });
+
+    await expect(service.update('12.345.678-9', { rol: UserRole.DOCENTE }))
+      .rejects.toThrow('No puedes quitar el rol al último administrador');
+  });
 });

@@ -20,7 +20,7 @@ export type TicketStatus = 'ABIERTO' | 'EN_PROCESO' | 'RESUELTO'
 export type ResolveTicketInput = {
   causa_raiz: string
   solucion_aplicada: string
-  estado_final: DeviceStatus
+  estado_final?: DeviceStatus
 }
 
 export type Ticket = {

@@ -17,6 +17,7 @@ import { getPageNumbers } from '../utils/pagination'
 type InboxPageProps = {
   accessToken: string
   onSessionExpired: () => void
+  isActive: boolean
 }
 
 type EstadoFilter = 'ALL' | TicketStatus
@@ -170,7 +171,7 @@ function InboxTable({ tickets, startingId, bitacoraId, rowHeight, onSelectTicket
   )
 }
 
-export function InboxPage({ accessToken, onSessionExpired }: InboxPageProps) {
+export function InboxPage({ accessToken, onSessionExpired, isActive }: InboxPageProps) {
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -196,6 +197,8 @@ export function InboxPage({ accessToken, onSessionExpired }: InboxPageProps) {
   const [bitacoraId, setBitacoraId] = useState<number | null>(null)
   const [bitacora, setBitacora] = useState<TicketBitacora | null>(null)
   const [actionError, setActionError] = useState('')
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
+  const activePage = Math.min(currentPage, totalPages)
 
   useEffect(() => {
     let isMounted = true
@@ -208,13 +211,14 @@ export function InboxPage({ accessToken, onSessionExpired }: InboxPageProps) {
         ...(desde ? { desde } : {}),
         ...(hasta ? { hasta } : {}),
       },
-      { page: currentPage, limit: pageSize },
+      { page: activePage, limit: pageSize },
     )
       .then((result) => {
         if (!isMounted) return
         hasDataRef.current = true
         setTickets(result.tickets)
         setTotal(result.total)
+        setCurrentPage((page) => Math.min(page, Math.max(1, Math.ceil(result.total / pageSize))))
         setError('')
       })
       .catch((exception: unknown) => {
@@ -237,9 +241,11 @@ export function InboxPage({ accessToken, onSessionExpired }: InboxPageProps) {
     return () => {
       isMounted = false
     }
-  }, [accessToken, onSessionExpired, reloadKey, estadoFilter, parentLocation, subLocation, desde, hasta, currentPage, pageSize])
+  }, [accessToken, onSessionExpired, reloadKey, estadoFilter, parentLocation, subLocation, desde, hasta, activePage, pageSize])
 
   useEffect(() => {
+    if (!isActive) return
+
     function refresh() {
       if (document.visibilityState === 'visible') {
         setReloadKey((key) => key + 1)
@@ -253,7 +259,7 @@ export function InboxPage({ accessToken, onSessionExpired }: InboxPageProps) {
       window.clearInterval(intervalId)
       window.removeEventListener('focus', refresh)
     }
-  }, [])
+  }, [isActive])
 
   useEffect(() => {
     const cardElement = tableCardRef.current
@@ -262,6 +268,7 @@ export function InboxPage({ accessToken, onSessionExpired }: InboxPageProps) {
     function measure() {
       const card = tableCardRef.current
       if (!card) return
+      if (card.clientHeight === 0) return
 
       const table = card.querySelector('table')
       const header = table?.querySelector('thead')?.getBoundingClientRect().height ?? 0
@@ -356,8 +363,6 @@ export function InboxPage({ accessToken, onSessionExpired }: InboxPageProps) {
 
   const hasActiveFilters = estadoFilter !== 'ALL' || Boolean(subLocation || parentLocation) || Boolean(desde) || Boolean(hasta)
 
-  const totalPages = Math.max(1, Math.ceil(total / pageSize))
-  const activePage = Math.min(currentPage, totalPages)
   const pageStart = (activePage - 1) * pageSize
   const pageNumbers = getPageNumbers(activePage, totalPages)
 

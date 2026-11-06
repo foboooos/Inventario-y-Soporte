@@ -1,5 +1,4 @@
 import { DataSource } from 'typeorm';
-import { DeviceStatus } from '../inventory/device-status.enum.js';
 import { Ticket } from '../tickets/ticket.entity.js';
 import { TicketSequence } from '../tickets/ticket-sequence.entity.js';
 import { TicketStatus } from '../tickets/ticket-status.enum.js';
@@ -55,6 +54,14 @@ const TICKETS: SeedTicket[] = [
     ubicacion: 'Laboratorio de Computación',
     sintoma: 'no hay internet en el laboratorio, los computadores tienen la red pero no navegan',
     estado: TicketStatus.ABIERTO,
+  },
+  {
+    ubicacion: 'Biblioteca CRA',
+    sintoma: 'la impresora de la biblioteca no imprime desde ayer, los alumnos necesitan sacar trabajos',
+    estado: TicketStatus.RESUELTO,
+    causa_raiz: 'La cola de impresión estaba bloqueada por un trabajo atascado.',
+    solucion_aplicada: 'Se limpió la cola, se reinició el servicio de impresión y se probó una página de prueba.',
+    tecnico_nombre: 'Carolina Fuentes',
   },
 ].map((ticket, index) => ({ ...ticket, solicitante: SOLICITANTES[index % SOLICITANTES.length] }));
 
@@ -129,7 +136,7 @@ export async function seedTickets(dataSource: DataSource): Promise<number> {
         solucion_aplicada: seed.solucion_aplicada ?? null,
         tecnico_nombre: seed.tecnico_nombre ?? null,
         fecha_resolucion: resolvedAt,
-        estado_final: resolvedAt ? DeviceStatus.ACTIVO : null,
+        estado_final: null,
       }),
     );
 

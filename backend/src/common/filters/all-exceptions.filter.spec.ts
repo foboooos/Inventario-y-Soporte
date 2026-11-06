@@ -13,6 +13,7 @@ import { AllExceptionsFilter } from './all-exceptions.filter.js';
 
 const INTERNAL_MESSAGE = 'Ocurrió un error inesperado. Intenta nuevamente en unos instantes.';
 const UNAVAILABLE_MESSAGE = 'El servicio no está disponible en este momento. Intenta nuevamente en unos instantes.';
+const CONFLICT_MESSAGE = 'Ya existe un registro con esos datos.';
 
 function setup() {
   const reply = vi.fn();
@@ -108,9 +109,20 @@ describe('AllExceptionsFilter', () => {
     expect(message).toBe(UNAVAILABLE_MESSAGE);
   });
 
-  it('responde 500 genérico ante otros errores de base de datos', () => {
+  it('responde 409 ante una violación de unicidad de la base de datos', () => {
     const { filter, host, reply } = setup();
     const driverError = Object.assign(new Error('duplicate key value violates unique constraint'), { code: '23505' });
+
+    filter.catch(new QueryFailedError('INSERT INTO usuarios', [], driverError), host);
+
+    const { status, message } = exposed(reply);
+    expect(status).toBe(HttpStatus.CONFLICT);
+    expect(message).toBe(CONFLICT_MESSAGE);
+  });
+
+  it('responde 500 genérico ante otros errores de base de datos', () => {
+    const { filter, host, reply } = setup();
+    const driverError = Object.assign(new Error('null value in column violates not-null constraint'), { code: '23502' });
 
     filter.catch(new QueryFailedError('INSERT INTO usuarios', [], driverError), host);
 

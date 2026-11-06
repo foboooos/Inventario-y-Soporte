@@ -4,6 +4,7 @@ import * as bcrypt from 'bcrypt';
 import { Repository } from 'typeorm';
 import { Ticket } from '../tickets/ticket.entity.js';
 import { CreateUserDto } from './dto/create-user.dto.js';
+import { UpdateUserDto } from './dto/update-user.dto.js';
 import { normalizeRut } from './rut.js';
 import { User } from './user.entity.js';
 import { UserRole } from './user-role.enum.js';
@@ -51,6 +52,46 @@ export class UsersService {
     }
 
     await this.users.delete({ rut });
+  }
+
+  async update(inputRut: string, dto: UpdateUserDto) {
+    const rut = normalizeRut(inputRut.trim());
+    const user = await this.users.findOneBy({ rut });
+
+    if (!user) {
+      throw new NotFoundException('El usuario no existe');
+    }
+
+    const email = dto.email?.trim().toLowerCase();
+
+    if (email !== undefined && email !== user.email) {
+      const duplicateEmail = await this.users.findOneBy({ email });
+
+      if (duplicateEmail) {
+        throw new ConflictException('Ya existe un usuario con ese email');
+      }
+    }
+
+    if (user.rol === UserRole.ADMIN && dto.rol !== undefined && dto.rol !== UserRole.ADMIN) {
+      const adminCount = await this.users.count({ where: { rol: UserRole.ADMIN } });
+
+      if (adminCount <= 1) {
+        throw new ConflictException('No puedes quitar el rol al último administrador');
+      }
+    }
+
+    if (dto.nombre !== undefined) user.nombre = dto.nombre.trim();
+    if (email !== undefined) user.email = email;
+    if (dto.rol !== undefined) user.rol = dto.rol;
+
+    await this.users.update({ rut }, { nombre: user.nombre, email: user.email, rol: user.rol });
+
+    return {
+      rut: user.rut,
+      nombre: user.nombre,
+      email: user.email,
+      rol: user.rol,
+    };
   }
 
   async create(dto: CreateUserDto) {

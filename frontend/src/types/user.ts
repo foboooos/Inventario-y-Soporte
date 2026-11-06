@@ -7,6 +7,12 @@ export type CreateUserInput = {
   rol: UserRole
 }
 
+export type UpdateUserInput = {
+  nombre: string
+  email: string
+  rol: UserRole
+}
+
 export type User = {
   rut: string
   nombre: string

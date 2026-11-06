@@ -28,3 +28,19 @@ npm run migration:baseline  # una sola vez en bases creadas con synchronize
 ```
 
 Una base existente creada con `synchronize` debe marcarse con `migration:baseline` antes de correr migraciones. Una base nueva no necesita baseline: `migration:run` crea todo el esquema.
+
+## Docker
+
+Desarrollo (Vite dev + `nest start --watch`):
+
+```bash
+docker compose up -d --build
+```
+
+Producción (frontend estático con nginx en `:80`, backend interno, migraciones en un servicio one-shot):
+
+```bash
+docker compose -f compose.prod.yml up -d --build
+```
+
+La imagen de producción del frontend compila con `VITE_API_URL=/api` y nginx hace proxy de `/api` hacia `backend:3000`. El servicio `migrate` aplica las migraciones antes de que arranque el backend. `CORS_ORIGIN` solo es necesario si vas a consumir la API desde otro origen; con el proxy del mismo origen queda deshabilitado por defecto en producción.

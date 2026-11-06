@@ -95,6 +95,12 @@ function App() {
   }, [pageTitle])
 
   useEffect(() => {
+    const configActive = Boolean(user) && activeRoute === 'settings'
+    document.body.classList.toggle('config-active', configActive)
+    return () => document.body.classList.remove('config-active')
+  }, [activeRoute, user])
+
+  useEffect(() => {
     if (!user && pathname !== '/login' && activeRoute) {
       navigate('/login', { replace: true })
     } else if (user && pathname === '/login') {
@@ -186,7 +192,7 @@ function App() {
     }
 
     if (route === 'inbox') {
-      return <InboxPage accessToken={token} onSessionExpired={onSessionExpired} />
+      return <InboxPage accessToken={token} onSessionExpired={onSessionExpired} isActive={route === activeRoute} />
     }
 
     return <InventoryPage user={account} accessToken={token} onSessionExpired={onSessionExpired} />

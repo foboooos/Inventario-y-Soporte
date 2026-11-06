@@ -1,4 +1,4 @@
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { FindOperator, type Repository } from 'typeorm';
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { DeviceStatus } from '../inventory/device-status.enum.js';
@@ -225,12 +225,12 @@ describe('TicketService', () => {
 
 
   it('stores the resolution with the technician, date and final status', async () => {
-    const ticket = { id_ticket: 7, estado: TicketStatus.EN_PROCESO } as Ticket;
+    const ticket = { id_ticket: 7, estado: TicketStatus.EN_PROCESO, id_dispositivo: 5 } as Ticket;
     const findOne = vi.fn().mockResolvedValue(ticket);
     const save = vi.fn().mockResolvedValue(ticket);
     const service = createService(
       { findOne, save },
-      {},
+      { update: vi.fn().mockResolvedValue({ affected: 1 }) },
       { findOneBy: vi.fn().mockResolvedValue({ rut: '12345678-9', nombre: 'Ana Pérez' } as User) },
     );
     const input = {
@@ -293,10 +293,25 @@ describe('TicketService', () => {
     await service.resolve(7, {
       causa_raiz: 'Falla',
       solucion_aplicada: 'Reparación',
-      estado_final: DeviceStatus.ACTIVO,
     }, '12345678-9');
 
     expect(update).not.toHaveBeenCalled();
+    expect(ticket.estado_final).toBeNull();
+  });
+
+  it('rejects resolving a device ticket without a final status', async () => {
+    const ticket = { id_ticket: 7, estado: TicketStatus.EN_PROCESO, id_dispositivo: 5 } as Ticket;
+    const findOne = vi.fn().mockResolvedValue(ticket);
+    const service = createService(
+      { findOne },
+      {},
+      { findOneBy: vi.fn().mockResolvedValue({ rut: '12345678-9', nombre: 'Ana Pérez' } as User) },
+    );
+
+    await expect(service.resolve(7, {
+      causa_raiz: 'Falla',
+      solucion_aplicada: 'Reparación',
+    }, '12345678-9')).rejects.toThrow(BadRequestException);
   });
 
   it('rejects resolving a ticket that does not exist', async () => {

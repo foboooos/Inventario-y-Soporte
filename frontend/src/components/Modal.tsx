@@ -1,6 +1,6 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import type { ReactNode } from 'react'
+import type { KeyboardEvent, ReactNode } from 'react'
 
 export type ModalHandle = {
   close: (after?: () => void) => void
@@ -18,6 +18,14 @@ type ModalProps = {
 }
 
 const EXIT_DURATION = 180
+const FOCUSABLE_SELECTOR = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+
+const modalStack: symbol[] = []
+
+function focusableElements(container: HTMLElement): HTMLElement[] {
+  return Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR))
+    .filter((element) => element.getClientRects().length > 0)
+}
 
 export const Modal = forwardRef<ModalHandle, ModalProps>(function Modal({
   label,
@@ -32,6 +40,8 @@ export const Modal = forwardRef<ModalHandle, ModalProps>(function Modal({
   const [closing, setClosing] = useState(false)
   const closingRef = useRef(false)
   const timerRef = useRef<number | null>(null)
+  const sectionRef = useRef<HTMLElement | null>(null)
+  const modalIdRef = useRef(Symbol('modal'))
 
   const close = useCallback((after?: () => void) => {
     if (closingRef.current) return
@@ -52,13 +62,58 @@ export const Modal = forwardRef<ModalHandle, ModalProps>(function Modal({
   }, [])
 
   useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape' && dismissible) close()
+    const modalId = modalIdRef.current
+    const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    const previousOverflow = document.body.style.overflow
+
+    modalStack.push(modalId)
+    document.body.style.overflow = 'hidden'
+
+    const section = sectionRef.current
+    const focusables = section ? focusableElements(section) : []
+    ;(focusables[0] ?? section)?.focus()
+
+    return () => {
+      const index = modalStack.indexOf(modalId)
+      if (index >= 0) modalStack.splice(index, 1)
+      document.body.style.overflow = previousOverflow
+      previouslyFocused?.focus()
+    }
+  }, [])
+
+  useEffect(() => {
+    function handleKeyDown(event: globalThis.KeyboardEvent) {
+      if (event.key !== 'Escape') return
+      if (modalStack[modalStack.length - 1] !== modalIdRef.current) return
+      if (dismissible) close()
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [close, dismissible])
+
+  function handleTab(event: KeyboardEvent<HTMLElement>) {
+    if (event.key !== 'Tab' || !sectionRef.current) return
+
+    const focusables = focusableElements(sectionRef.current)
+
+    if (focusables.length === 0) {
+      event.preventDefault()
+      sectionRef.current.focus()
+      return
+    }
+
+    const first = focusables[0]
+    const last = focusables[focusables.length - 1]
+
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault()
+      last.focus()
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault()
+      first.focus()
+    }
+  }
 
   const content = (
     <div
@@ -69,11 +124,14 @@ export const Modal = forwardRef<ModalHandle, ModalProps>(function Modal({
       }}
     >
       <section
+        ref={sectionRef}
         className={`${cardClassName}${closing ? ' is-closing' : ''}`}
         role={role}
         aria-modal="true"
         aria-label={label}
+        tabIndex={-1}
         onMouseDown={(event) => event.stopPropagation()}
+        onKeyDown={handleTab}
       >
         {children}
       </section>

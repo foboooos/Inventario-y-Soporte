@@ -1,4 +1,4 @@
-import { IsEnum, IsNotEmpty, IsString, Matches, MaxLength } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
 import { DeviceStatus } from '../../inventory/device-status.enum.js';
 
 export class ResolveTicketDto {
@@ -14,6 +14,7 @@ export class ResolveTicketDto {
   @MaxLength(2000)
   solucion_aplicada!: string;
 
+  @IsOptional()
   @IsEnum(DeviceStatus)
-  estado_final!: DeviceStatus;
+  estado_final?: DeviceStatus;
 }

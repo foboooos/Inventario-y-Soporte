@@ -18,6 +18,21 @@ function createService(
   locations: Partial<Repository<Ubicacion>> = {},
   tickets: Partial<Repository<Ticket>> = {},
 ) {
+  const repositories = new Map<unknown, unknown>([
+    [Device, devices],
+    [Ubicacion, locations],
+    [Ticket, tickets],
+  ]);
+
+  if (!devices.manager) {
+    Object.assign(devices, {
+      manager: {
+        transaction: <T>(work: (manager: { getRepository: (entity: unknown) => unknown }) => Promise<T>) =>
+          work({ getRepository: (entity) => repositories.get(entity) }),
+      },
+    });
+  }
+
   return new InventoryService(
     devices as Repository<Device>,
     locations as Repository<Ubicacion>,
@@ -210,16 +225,48 @@ describe('InventoryService', () => {
   });
 
   it('updates a device when the new location exists', async () => {
-    const device = { id_dispositivo: 5, ubicacion: 'Laboratorio 1' } as Device;
+    const device = {
+      id_dispositivo: 5,
+      tipo: 'PC',
+      ubicacion: 'Laboratorio 1',
+      codigo_inventario: 'PC-LAB-0001',
+    } as Device;
     const findOneBy = vi.fn().mockResolvedValue(device);
+    const find = vi.fn().mockResolvedValue([]);
     const save = vi.fn().mockResolvedValue(device);
     const service = createService(
-      { findOneBy, save },
-      { findOneBy: vi.fn().mockResolvedValue({ nombre: 'Laboratorio 2' }) },
+      { findOneBy, find, save },
+      { findOneBy: vi.fn().mockResolvedValue({ nombre: 'Laboratorio 2', sigla: 'LAB2', padre_id: null }) },
     );
 
     await service.update(5, { ubicacion: 'Laboratorio 2' } as UpdateDeviceDto);
 
-    expect(save).toHaveBeenCalledWith(expect.objectContaining({ ubicacion: 'Laboratorio 2' }));
+    expect(save).toHaveBeenCalledWith(expect.objectContaining({
+      ubicacion: 'Laboratorio 2',
+      codigo_inventario: 'PC-LAB2-0001',
+    }));
+  });
+
+  it('regenerates the code when only the device type changes', async () => {
+    const device = {
+      id_dispositivo: 5,
+      tipo: 'PC',
+      ubicacion: 'Laboratorio 1',
+      codigo_inventario: 'PC-LAB-0001',
+    } as Device;
+    const findOneBy = vi.fn().mockResolvedValue(device);
+    const find = vi.fn().mockResolvedValue([]);
+    const save = vi.fn().mockResolvedValue(device);
+    const service = createService(
+      { findOneBy, find, save },
+      { findOneBy: vi.fn().mockResolvedValue({ nombre: 'Laboratorio 1', sigla: 'LAB', padre_id: null }) },
+    );
+
+    await service.update(5, { tipo: 'PROYECTOR' } as UpdateDeviceDto);
+
+    expect(save).toHaveBeenCalledWith(expect.objectContaining({
+      tipo: 'PROYECTOR',
+      codigo_inventario: 'PRY-LAB-0001',
+    }));
   });
 });

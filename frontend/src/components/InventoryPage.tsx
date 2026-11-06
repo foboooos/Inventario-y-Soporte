@@ -107,6 +107,8 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
   const baseRowHeightRef = useRef<number | null>(null)
   const statusTabRefs = useRef<Array<HTMLButtonElement | null>>([])
   const canManageInventory = user.rol === 'ADMIN' || user.rol === 'TECNICO'
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
+  const activePage = Math.min(currentPage, totalPages)
 
   useEffect(() => {
     let active = true
@@ -114,7 +116,7 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
     getInventory(accessToken, {
       ...(searchTerm ? { search: searchTerm } : {}),
       ...(statusFilter !== 'ALL' ? { estado: statusFilter } : {}),
-      page: currentPage,
+      page: activePage,
       limit: pageSize,
       sortBy: 'code',
       sortDir: 'asc',
@@ -124,6 +126,7 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
         hasDataRef.current = true
         setDevices(result.devices)
         setTotal(result.total)
+        setCurrentPage((page) => Math.min(page, Math.max(1, Math.ceil(result.total / pageSize))))
         setSummary(result.summary)
         setError('')
         setRefreshError('')
@@ -148,7 +151,7 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
     return () => {
       active = false
     }
-  }, [accessToken, onSessionExpired, reloadKey, searchTerm, statusFilter, currentPage, pageSize])
+  }, [accessToken, onSessionExpired, reloadKey, searchTerm, statusFilter, activePage, pageSize])
 
   useEffect(() => {
     const handle = setTimeout(() => {
@@ -233,6 +236,7 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
   }, [loading])
 
   function retryLoad() {
+    setLoading(true)
     setError('')
     setRefreshError('')
     setReloadKey((key) => key + 1)
@@ -259,8 +263,6 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
     }
   }
 
-  const totalPages = Math.max(1, Math.ceil(total / pageSize))
-  const activePage = Math.min(currentPage, totalPages)
   const pageStart = (activePage - 1) * pageSize
   const pageNumbers = getPageNumbers(activePage, totalPages)
   const hasQuery = Boolean(searchTerm) || statusFilter !== 'ALL'

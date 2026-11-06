@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Between, FindOptionsWhere, In, Repository } from 'typeorm';
 
@@ -134,10 +134,15 @@ export class TicketService {
       }
 
       const tecnico = await users.findOneBy({ rut: tecnicoRut });
+      const hasDevice = typeof ticket.id_dispositivo === 'number';
+
+      if (hasDevice && !resolveTicketDto.estado_final) {
+        throw new BadRequestException('Debes indicar el estado final del dispositivo');
+      }
 
       ticket.causa_raiz = resolveTicketDto.causa_raiz.trim();
       ticket.solucion_aplicada = resolveTicketDto.solucion_aplicada.trim();
-      ticket.estado_final = resolveTicketDto.estado_final;
+      ticket.estado_final = hasDevice ? resolveTicketDto.estado_final! : null;
       ticket.tecnico_nombre = tecnico?.nombre ?? null;
       ticket.fecha_resolucion = new Date();
       ticket.estado = TicketStatus.RESUELTO;
@@ -147,7 +152,7 @@ export class TicketService {
       if (typeof saved.id_dispositivo === 'number') {
         const result = await devices.update(
           { id_dispositivo: saved.id_dispositivo },
-          { estado: resolveTicketDto.estado_final },
+          { estado: resolveTicketDto.estado_final! },
         );
 
         if (!result.affected) {

@@ -24,7 +24,9 @@ El seed contiene datos y credenciales de demostración; se niega a ejecutarse cu
 - **Asignaturas** — el plan de estudios, vinculado a los niveles que corresponden.
 - **Software educativo** — programas y sus licencias (`LIBRE`, `GRATUITA`, `COMERCIAL`, `SUSCRIPCION`, `FREEMIUM`), vinculados a asignaturas.
 - **Usuarios** — 1 administrador, 2 técnicos y 19 docentes. La contraseña inicial de cada uno es su RUT sin puntos. El administrador y el primer docente se pueden sobreescribir con `SEED_ADMIN_*` y `SEED_TEACHER_*`.
-- **Dispositivos** — PCs, proyectores, impresoras y equipos de red distribuidos por las ubicaciones.
-- **Tickets** — 20 tickets de ejemplo repartidos entre los docentes agregados, con equipos, ubicaciones y estados variados. Los síntomas están redactados como los escribiría un docente, sin diagnóstico técnico.
+- **Tickets** — 5 tickets de ejemplo sin dispositivo, con ubicaciones y estados variados; uno está resuelto con su bitácora para probar el PDF. Los síntomas están redactados como los escribiría un docente, sin diagnóstico técnico.
+- **Inventario** — el seed no crea dispositivos: el inventario parte vacío y se carga desde la UI.
+
+El esquema se versiona con migraciones (`src/database/migrations/`). Consulta el README raíz para los comandos de migración.
 
 Los seeders están en `src/seeds/` y el orquestador en `src/seed.ts`.
