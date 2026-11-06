@@ -734,10 +734,6 @@
   .config-card-toggle[aria-expanded='true'] svg {
     transform: rotate(180deg);
   }
-
-  .config-card-toggle:active:not(:disabled) {
-    transform: translateX(-50%);
-  }
 }
 
 @media (max-width: 700px) and (prefers-reduced-motion: reduce) {
@@ -1058,6 +1054,68 @@
 
 .config-dialog-text strong {
   color: var(--minimal-text);
+}
+
+.device-delete-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.device-delete-header .config-dialog-title {
+  margin-bottom: 4px;
+}
+
+.device-delete-header .config-dialog-text {
+  margin-bottom: 0;
+}
+
+.device-delete-icon {
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-circle);
+  color: var(--minimal-danger);
+  background: var(--tint-danger);
+}
+
+.device-delete-icon svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.device-delete-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 0;
+  margin-bottom: 18px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--minimal-muted);
+  background: var(--surface-sunken);
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+
+.device-delete-summary span:not(:last-child)::after {
+  margin: 0 8px;
+  color: var(--minimal-border);
+  content: '·';
+}
+
+.device-delete-code {
+  color: var(--minimal-text);
+  font-family: Inconsolata, Consolas, monospace;
+  font-weight: 400;
 }
 
 .config-danger-button {

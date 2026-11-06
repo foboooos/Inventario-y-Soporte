@@ -84,10 +84,6 @@ button {
   transition: background-color 120ms ease, color 120ms ease;
 }
 
-button:active:not(:disabled) {
-  transform: translateY(1px);
-}
-
 button:disabled {
   cursor: not-allowed;
   opacity: 0.55;
@@ -288,10 +284,6 @@ button:disabled {
   font-size: 13px;
   line-height: 1.4;
   text-align: left;
-}
-
-.select-menu-button:active:not(:disabled) {
-  transform: none;
 }
 
 .select-menu-button svg {

@@ -398,12 +398,29 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
         onClose={() => setPendingDelete(null)}
       >
         <div className="device-modal-body">
-          <h2 className="config-dialog-title">Eliminar dispositivo</h2>
-          <p className="config-dialog-text">
-            ¿Eliminar <strong>{pendingDelete.code}</strong>? Esta acción no se puede deshacer.
-          </p>
+          <div className="device-delete-header">
+            <span className="device-delete-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
+                <path d="M12 9v4" />
+                <path d="M12 17h.01" />
+              </svg>
+            </span>
+            <div>
+              <h2 className="config-dialog-title">Eliminar dispositivo</h2>
+              <p className="config-dialog-text">
+                ¿Eliminar este dispositivo? Esta acción no se puede deshacer.
+              </p>
+            </div>
+          </div>
+          <div className="device-delete-summary">
+            <span className="device-delete-code">{pendingDelete.code}</span>
+            <span>{typeLabels[pendingDelete.type]}</span>
+            <span>{pendingDelete.brand} {pendingDelete.model}</span>
+            <span>{pendingDelete.location}</span>
+          </div>
           {deleteError && <p className="error" role="alert">{deleteError}</p>}
-          <div className="device-form-actions">
+          <div className="device-form-actions device-delete-actions">
             <button className="secondary-button" type="button" onClick={() => deleteModalRef.current?.close()} disabled={deleting}>Cancelar</button>
             <button
               className="config-danger-button"

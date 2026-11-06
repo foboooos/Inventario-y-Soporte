@@ -234,10 +234,6 @@
   background: #fff;
 }
 
-.sidebar-toggle:active:not(:disabled) {
-  transform: translate(-50%, -50%) translateY(1px);
-}
-
 .sidebar-toggle:focus-visible {
   outline: 2px solid var(--minimal-secondary);
   outline-offset: 2px;

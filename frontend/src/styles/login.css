@@ -189,7 +189,6 @@
 .password-toggle:active:not(:disabled) {
   color: var(--minimal-primary);
   background: transparent;
-  transform: translateY(-50%);
 }
 
 @media (max-width: 480px) {

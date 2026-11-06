@@ -21,6 +21,8 @@ const EXIT_DURATION = 180
 const FOCUSABLE_SELECTOR = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
 
 const modalStack: symbol[] = []
+let previousBodyOverflow = ''
+let previousHtmlOverflow = ''
 
 function focusableElements(container: HTMLElement): HTMLElement[] {
   return Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR))
@@ -64,10 +66,17 @@ export const Modal = forwardRef<ModalHandle, ModalProps>(function Modal({
   useEffect(() => {
     const modalId = modalIdRef.current
     const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null
-    const previousOverflow = document.body.style.overflow
+    const isFirstModal = modalStack.length === 0
+
+    if (isFirstModal) {
+      previousBodyOverflow = document.body.style.overflow
+      previousHtmlOverflow = document.documentElement.style.overflow
+      document.body.classList.add('modal-open')
+      document.body.style.overflow = 'hidden'
+      document.documentElement.style.overflow = 'hidden'
+    }
 
     modalStack.push(modalId)
-    document.body.style.overflow = 'hidden'
 
     const section = sectionRef.current
     const focusables = section ? focusableElements(section) : []
@@ -76,7 +85,13 @@ export const Modal = forwardRef<ModalHandle, ModalProps>(function Modal({
     return () => {
       const index = modalStack.indexOf(modalId)
       if (index >= 0) modalStack.splice(index, 1)
-      document.body.style.overflow = previousOverflow
+
+      if (modalStack.length === 0) {
+        document.body.classList.remove('modal-open')
+        document.body.style.overflow = previousBodyOverflow
+        document.documentElement.style.overflow = previousHtmlOverflow
+      }
+
       previouslyFocused?.focus()
     }
   }, [])

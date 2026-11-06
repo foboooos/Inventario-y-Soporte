@@ -113,7 +113,7 @@
     top: var(--mobile-bar-height);
     left: 0;
     z-index: 60;
-    width: min(280px, 84vw);
+    width: min(240px, 74vw);
     height: calc(100svh - var(--mobile-bar-height));
     box-sizing: border-box;
     display: block;
@@ -162,10 +162,6 @@
     align-self: flex-start;
     margin: 0;
     border-radius: var(--radius-circle);
-  }
-
-  .sidebar-menu-toggle:active:not(:disabled) {
-    transform: none;
   }
 
   .dashboard-layout.is-mobile-open .sidebar-menu-toggle-icon {
@@ -264,6 +260,15 @@
 
   .device-form-actions button {
     width: 100%;
+  }
+
+  .device-delete-actions {
+    flex-direction: row;
+  }
+
+  .device-delete-actions button {
+    flex: 1 1 0;
+    width: auto;
   }
 
   .device-modal-body {

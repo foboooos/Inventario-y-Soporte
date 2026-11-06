@@ -9,7 +9,21 @@
   padding: 24px;
   background: rgba(12, 12, 9, 0.52);
   overflow-y: auto;
+  overscroll-behavior: contain;
   animation: modal-backdrop-in 180ms ease-out both;
+}
+
+body.modal-open {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+body.modal-open .dashboard-layout,
+body.modal-open .dashboard-main,
+body.modal-open .inventory-shell,
+body.modal-open .inbox-shell,
+body.modal-open .support-shell {
+  overflow: hidden;
 }
 
 .modal-card {
