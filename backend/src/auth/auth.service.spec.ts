@@ -21,14 +21,17 @@ function createService(userRecord: typeof user | null, passwordHash: string) {
     where: vi.fn().mockReturnThis(),
     getOne: vi.fn().mockResolvedValue(userRecord ? { ...userRecord, password_hash: passwordHash } : null),
   };
-  const users = { createQueryBuilder: vi.fn(() => query) } as unknown as Repository<User>;
+  const users = {
+    createQueryBuilder: vi.fn(() => query),
+    findOneBy: vi.fn().mockResolvedValue(userRecord),
+  } as unknown as Repository<User>;
   const jwt = { signAsync: vi.fn().mockResolvedValue('signed-token') } as unknown as JwtService;
 
   return { service: new AuthService(users, jwt), jwt };
 }
 
 describe('AuthService', () => {
-  it('firma un token de 30 días cuando se pide recordar el usuario', async () => {
+  it('firma un token de 7 días cuando se pide recordar el usuario', async () => {
     const hash = await bcrypt.hash(password, 4);
     const { service, jwt } = createService(user, hash);
 
@@ -36,7 +39,7 @@ describe('AuthService', () => {
 
     expect(jwt.signAsync).toHaveBeenCalledWith(
       { sub: user.rut, email: user.email, rol: user.rol },
-      { expiresIn: '30d' },
+      { expiresIn: '7d' },
     );
   });
 
@@ -55,5 +58,17 @@ describe('AuthService', () => {
 
     await expect(service.login({ usuario: 'ana.perez', password: 'otra-clave', remember: true }))
       .rejects.toThrow(UnauthorizedException);
+  });
+
+  it('devuelve el usuario actual desde la base de datos', async () => {
+    const { service } = createService(user, 'hash');
+
+    await expect(service.me('12.345.678-9')).resolves.toEqual(user);
+  });
+
+  it('rechaza una sesión cuyo usuario ya no existe', async () => {
+    const { service } = createService(null, 'hash');
+
+    await expect(service.me('12.345.678-9')).rejects.toThrow(UnauthorizedException);
   });
 });

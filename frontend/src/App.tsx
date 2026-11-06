@@ -20,6 +20,9 @@ import { NotFoundPage } from './components/NotFoundPage'
 import { SoftwarePage } from './components/SoftwarePage'
 import { SubjectsPage } from './components/SubjectsPage'
 import { SupportPage } from './components/SupportPage'
+import { getCurrentUser } from './services/auth'
+import { isSessionExpired } from './services/http'
+import { clearToken, readToken, saveToken } from './utils/session'
 import {
   canAccessRoute,
   defaultRouteForRole,
@@ -34,28 +37,48 @@ import type { AuthUser } from './types/auth'
 const LOGIN_TITLE = 'Iniciar sesión'
 const NOT_FOUND_TITLE = 'Página no encontrada'
 
-function getStoredUser(): AuthUser | null {
-  const storedUser = localStorage.getItem('auth_user')
-
-  if (!storedUser) return null
-
-  try {
-    return JSON.parse(storedUser) as AuthUser
-  } catch {
-    localStorage.removeItem('auth_user')
-    return null
-  }
-}
-
 function titleForRoute(key: RouteKey): string {
   return routes.find((route) => route.key === key)?.title ?? NOT_FOUND_TITLE
 }
 
 function App() {
-  const [user, setUser] = useState<AuthUser | null>(() => getStoredUser())
-  const [accessToken, setAccessToken] = useState(() => localStorage.getItem('access_token') ?? '')
+  const [user, setUser] = useState<AuthUser | null>(null)
+  const [accessToken, setAccessToken] = useState(() => readToken())
+  const [authChecking, setAuthChecking] = useState(() => Boolean(readToken()))
   const [pathname, setPathname] = useState(() => normalizePath(window.location.pathname))
   const [ticketsVersion, setTicketsVersion] = useState(0)
+
+  useEffect(() => {
+    const token = readToken()
+
+    if (!token) {
+      return
+    }
+
+    let active = true
+
+    getCurrentUser(token)
+      .then((currentUser) => {
+        if (!active) return
+        setUser(currentUser)
+        setAccessToken(token)
+      })
+      .catch((error: unknown) => {
+        if (!active) return
+        if (isSessionExpired(error)) {
+          clearToken()
+          setAccessToken('')
+        }
+        setUser(null)
+      })
+      .finally(() => {
+        if (active) setAuthChecking(false)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [])
 
   useEffect(() => {
     function handlePopState() {
@@ -101,12 +124,13 @@ function App() {
   }, [activeRoute, user])
 
   useEffect(() => {
+    if (authChecking) return
     if (!user && pathname !== '/login' && activeRoute) {
       navigate('/login', { replace: true })
     } else if (user && pathname === '/login') {
       navigate(routePaths[defaultRouteForRole(user.rol)], { replace: true })
     }
-  }, [activeRoute, navigate, pathname, user])
+  }, [activeRoute, authChecking, navigate, pathname, user])
 
   useEffect(() => {
     const mobileQuery = window.matchMedia('(max-width: 700px)')
@@ -131,23 +155,26 @@ function App() {
     setVisitedRoutes([...visitedRoutes, activeRoute])
   }
 
-  function handleAuthenticated(authenticatedUser: AuthUser, token: string) {
-    localStorage.setItem('access_token', token)
-    localStorage.setItem('auth_user', JSON.stringify(authenticatedUser))
+  function handleAuthenticated(authenticatedUser: AuthUser, token: string, remember: boolean) {
+    saveToken(token, remember)
     setAccessToken(token)
     setUser(authenticatedUser)
+    setAuthChecking(false)
     setVisitedRoutes([])
     navigate(routePaths[defaultRouteForRole(authenticatedUser.rol)])
   }
 
   const handleLogout = useCallback(() => {
-    localStorage.removeItem('access_token')
-    localStorage.removeItem('auth_user')
+    clearToken()
     setAccessToken('')
     setUser(null)
     setVisitedRoutes([])
     navigate('/login')
   }, [navigate])
+
+  if (authChecking) {
+    return <div className="session-check" role="status">Validando sesión…</div>
+  }
 
   if (!user) {
     if (pathname !== '/login' && !activeRoute) {

@@ -6,7 +6,7 @@ import type { AuthUser } from '../types/auth'
 const USUARIO_PATTERN = /^[a-z0-9._-]+\.[a-z0-9._-]+$/
 
 type LoginFormProps = {
-  onAuthenticated: (user: AuthUser, accessToken: string) => void
+  onAuthenticated: (user: AuthUser, accessToken: string, remember: boolean) => void
 }
 
 export function LoginForm({ onAuthenticated }: LoginFormProps) {
@@ -53,7 +53,7 @@ export function LoginForm({ onAuthenticated }: LoginFormProps) {
 
     try {
       const session = await login({ usuario: usuario.trim().toLowerCase(), password, remember })
-      onAuthenticated(session.user, session.access_token)
+      onAuthenticated(session.user, session.access_token, remember)
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : 'Error de conexión')
     } finally {

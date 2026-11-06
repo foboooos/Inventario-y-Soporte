@@ -5,6 +5,7 @@ import * as bcrypt from 'bcrypt';
 import { Repository } from 'typeorm';
 import { LoginDto } from './dto/login.dto.js';
 import { User } from '../users/user.entity.js';
+import { normalizeRut } from '../users/rut.js';
 
 @Injectable()
 export class AuthService {
@@ -27,7 +28,7 @@ export class AuthService {
 
     const payload = { sub: user.rut, email: user.email, rol: user.rol };
     const access_token = remember
-      ? await this.jwt.signAsync(payload, { expiresIn: '30d' })
+      ? await this.jwt.signAsync(payload, { expiresIn: '7d' })
       : await this.jwt.signAsync(payload);
 
     return {
@@ -38,6 +39,22 @@ export class AuthService {
         email: user.email,
         rol: user.rol,
       },
+    };
+  }
+
+  async me(rut: string) {
+    const normalizedRut = normalizeRut(rut.trim());
+    const user = await this.users.findOneBy({ rut: normalizedRut });
+
+    if (!user) {
+      throw new UnauthorizedException('Sesión inválida');
+    }
+
+    return {
+      rut: user.rut,
+      nombre: user.nombre,
+      email: user.email,
+      rol: user.rol,
     };
   }
 }

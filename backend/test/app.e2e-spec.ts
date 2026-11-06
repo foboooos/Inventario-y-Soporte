@@ -27,6 +27,10 @@ describe('API (e2e)', () => {
     return request(app.getHttpServer()).get('/inventory').expect(401);
   });
 
+  it('protege /auth/me sin token', () => {
+    return request(app.getHttpServer()).get('/auth/me').expect(401);
+  });
+
   it('expone el estado de salud', () => {
     return request(app.getHttpServer()).get('/health').expect(200).expect({ status: 'ok' });
   });

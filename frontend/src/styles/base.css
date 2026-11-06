@@ -252,6 +252,15 @@ button:disabled {
   border: 0;
 }
 
+.session-check {
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  color: var(--minimal-muted);
+  font-family: 'Open Sans', 'Segoe UI', sans-serif;
+  font-size: 14px;
+}
+
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--minimal-border) transparent;

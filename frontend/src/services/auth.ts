@@ -1,7 +1,12 @@
-import type { LoginCredentials, LoginResponse } from '../types/auth'
-import { REQUEST_TIMEOUT_MS, isTimeoutError } from './http'
+import type { AuthUser, LoginCredentials, LoginResponse } from '../types/auth'
+import { apiFetch, isTimeoutError, readApiJson, REQUEST_TIMEOUT_MS } from './http'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
+
+export async function getCurrentUser(accessToken: string): Promise<AuthUser> {
+  const response = await apiFetch('/auth/me', accessToken)
+  return readApiJson<AuthUser>(response, 'No se pudo validar la sesión')
+}
 
 export async function login(credentials: LoginCredentials): Promise<LoginResponse> {
   try {
