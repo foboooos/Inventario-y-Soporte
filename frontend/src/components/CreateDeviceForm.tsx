@@ -187,7 +187,7 @@ export function CreateDeviceForm({ accessToken, onCreated, onCancel, onSessionEx
               <span>Modelo</span>
               <input value={form.modelo} onChange={(event) => updateField('modelo', event.target.value)} maxLength={50} />
             </label>
-            <div className="device-field">
+            <div className="device-field device-field-wide">
               <span>Ubicación</span>
               <SelectMenu
                 id="device-location"
@@ -207,7 +207,7 @@ export function CreateDeviceForm({ accessToken, onCreated, onCancel, onSessionEx
                 fixedList
               />
             </div>
-            <div className="device-field">
+            <div className="device-field device-field-wide">
               <span>Estado</span>
               <SelectMenu
                 id="device-status"

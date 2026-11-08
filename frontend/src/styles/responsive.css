@@ -16,6 +16,28 @@
     overflow: visible;
   }
 
+  .dashboard-layout[data-route='inventory'] {
+    height: 100svh;
+    min-height: 100svh;
+    overflow: hidden;
+  }
+
+  .dashboard-layout[data-route='inventory'] .inventory-shell {
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .dashboard-layout[data-route='inventory'] .table-card {
+    flex: 1 1 0;
+    min-height: 0;
+  }
+
+  .dashboard-layout[data-route='inventory'] .table-scroll {
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
   .inbox-shell {
     flex-direction: column;
   }
@@ -244,6 +266,10 @@
   }
 
   .device-form.create-device-form .device-form-wide {
+    grid-column: 1 / -1;
+  }
+
+  .device-form.create-device-form .device-field-wide {
     grid-column: 1 / -1;
   }
 

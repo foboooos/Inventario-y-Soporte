@@ -17,9 +17,12 @@ import type { ModalHandle } from './Modal'
 import { RoleIcon } from './RoleIcon'
 
 const USERS_PAGE_SIZE = 10
+const MIN_USERS_PAGE_SIZE = 5
+const MAX_USERS_PAGE_SIZE = 30
 
 type ConfigurationPageProps = {
   accessToken: string
+  currentUserRut: string
   onSessionExpired: () => void
 }
 
@@ -70,7 +73,7 @@ function handleCardTransitionEnd(event: TransitionEvent<HTMLDivElement>) {
   event.currentTarget.style.removeProperty('max-height')
 }
 
-export function ConfigurationPage({ accessToken, onSessionExpired }: ConfigurationPageProps) {
+export function ConfigurationPage({ accessToken, currentUserRut, onSessionExpired }: ConfigurationPageProps) {
   const [createdUser, setCreatedUser] = useState<{ nombre: string; password: string } | null>(null)
   const [createUserOpen, setCreateUserOpen] = useState(false)
   const [deletingRut, setDeletingRut] = useState<string | null>(null)
@@ -80,6 +83,10 @@ export function ConfigurationPage({ accessToken, onSessionExpired }: Configurati
   const [usersSort, setUsersSort] = useState<'asc' | 'desc'>('asc')
   const [usersSearch, setUsersSearch] = useState('')
   const [usersPage, setUsersPage] = useState(1)
+  const [usersPageSize, setUsersPageSize] = useState(USERS_PAGE_SIZE)
+  const [selectedRuts, setSelectedRuts] = useState<Set<string>>(() => new Set())
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
+  const [deletingBulk, setDeletingBulk] = useState(false)
   const [editingUser, setEditingUser] = useState<User | null>(null)
 
   const [locations, setLocations] = useState<Location[]>([])
@@ -93,15 +100,20 @@ export function ConfigurationPage({ accessToken, onSessionExpired }: Configurati
   const [newLocationTipo, setNewLocationTipo] = useState<LocationType>('PRINCIPAL')
   const [locationFilter, setLocationFilter] = useState<LocationType | 'ALL'>('ALL')
   const [creatingLocation, setCreatingLocation] = useState(false)
+  const [addLocationOpen, setAddLocationOpen] = useState(false)
+  const [createLocationError, setCreateLocationError] = useState('')
   const [editingLocation, setEditingLocation] = useState<Location | null>(null)
   const [editLocationName, setEditLocationName] = useState('')
   const [editLocationSigla, setEditLocationSigla] = useState('')
   const [savingLocation, setSavingLocation] = useState(false)
   const [locationEditError, setLocationEditError] = useState('')
   const usersCardBodyRef = useRef<HTMLDivElement>(null)
+  const usersTableScrollRef = useRef<HTMLDivElement>(null)
   const locationsCardBodyRef = useRef<HTMLDivElement>(null)
   const locationModalRef = useRef<ModalHandle>(null)
+  const addLocationModalRef = useRef<ModalHandle>(null)
   const deleteModalRef = useRef<ModalHandle>(null)
+  const bulkDeleteModalRef = useRef<ModalHandle>(null)
 
   useEffect(() => {
     let active = true
@@ -150,6 +162,48 @@ export function ConfigurationPage({ accessToken, onSessionExpired }: Configurati
       active = false
     }
   }, [accessToken, onSessionExpired])
+
+  useEffect(() => {
+    const scroll = usersTableScrollRef.current
+    if (!scroll || usersLoading) return
+
+    const scrollElement = scroll
+
+    function measure() {
+      const table = scrollElement.querySelector('table')
+
+      table?.style.removeProperty('--config-users-row-height')
+
+      if (window.matchMedia('(max-width: 700px)').matches) {
+        setUsersPageSize((current) => (current === USERS_PAGE_SIZE ? current : USERS_PAGE_SIZE))
+        return
+      }
+
+      const header = table?.querySelector('thead')?.getBoundingClientRect().height ?? 0
+      const rows = table ? Array.from(table.querySelectorAll('tbody tr')) : []
+      const rowHeight = rows.reduce((max, row) => Math.max(max, row.getBoundingClientRect().height), 0)
+
+      if (rowHeight <= 0) return
+
+      const fit = Math.floor((scrollElement.clientHeight - header) / rowHeight)
+      const next = Math.min(MAX_USERS_PAGE_SIZE, Math.max(MIN_USERS_PAGE_SIZE, fit))
+
+      setUsersPageSize((current) => (current === next ? current : next))
+
+      const available = scrollElement.clientHeight - header
+
+      if (table && available > 0) {
+        const target = Math.max(rowHeight, (available - 2) / rows.length)
+        table.style.setProperty('--config-users-row-height', `${target}px`)
+      }
+    }
+
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(scrollElement)
+
+    return () => observer.disconnect()
+  }, [usersLoading, users, usersSearch, usersSort, usersPage, usersPageSize])
 
   useEffect(() => {
     if (!createdUser) return
@@ -207,11 +261,62 @@ export function ConfigurationPage({ accessToken, onSessionExpired }: Configurati
       || user.email.toLowerCase().includes(term))
   }, [sortedUsers, usersSearch])
 
-  const usersTotalPages = Math.max(1, Math.ceil(filteredUsers.length / USERS_PAGE_SIZE))
+  const usersTotalPages = Math.max(1, Math.ceil(filteredUsers.length / usersPageSize))
   const activeUsersPage = Math.min(usersPage, usersTotalPages)
-  const usersStart = (activeUsersPage - 1) * USERS_PAGE_SIZE
-  const visibleUsers = filteredUsers.slice(usersStart, usersStart + USERS_PAGE_SIZE)
+  const usersStart = (activeUsersPage - 1) * usersPageSize
+  const visibleUsers = filteredUsers.slice(usersStart, usersStart + usersPageSize)
   const usersPageNumbers = getPageNumbers(activeUsersPage, usersTotalPages)
+
+  function toggleUserSelected(rut: string) {
+    setSelectedRuts((current) => {
+      const next = new Set(current)
+      if (next.has(rut)) next.delete(rut)
+      else next.add(rut)
+      return next
+    })
+  }
+
+  async function handleBulkDelete() {
+    const targets = users.filter((user) => selectedRuts.has(user.rut))
+    if (targets.length === 0) return
+
+    setDeletingBulk(true)
+    setUsersError('')
+    const deleted: string[] = []
+    const failed: string[] = []
+
+    for (const user of targets) {
+      try {
+        await deleteUser(accessToken, user.rut)
+        deleted.push(user.rut)
+      } catch (exception) {
+        if (isSessionExpired(exception)) {
+          onSessionExpired()
+          return
+        }
+        failed.push(exception instanceof Error ? exception.message : `No se pudo eliminar a ${user.nombre}`)
+      }
+    }
+
+    if (deleted.length > 0) {
+      const remaining = users.filter((user) => !deleted.includes(user.rut))
+      setUsers(remaining)
+      setSelectedRuts((current) => {
+        const next = new Set(current)
+        deleted.forEach((rut) => next.delete(rut))
+        return next
+      })
+      setUsersPage((page) => Math.min(page, Math.max(1, Math.ceil(remaining.length / usersPageSize))))
+    }
+
+    if (failed.length > 0) {
+      setUsersError(`${failed.length} usuario(s) no se pudieron eliminar: ${failed[0]}`)
+    } else {
+      bulkDeleteModalRef.current?.close()
+    }
+
+    setDeletingBulk(false)
+  }
 
   async function handleDeleteUser(user: User) {
     setDeletingRut(user.rut)
@@ -221,7 +326,7 @@ export function ConfigurationPage({ accessToken, onSessionExpired }: Configurati
       await deleteUser(accessToken, user.rut)
       const remaining = users.filter((item) => item.rut !== user.rut)
       setUsers(remaining)
-      setUsersPage((page) => Math.min(page, Math.max(1, Math.ceil(remaining.length / USERS_PAGE_SIZE))))
+      setUsersPage((page) => Math.min(page, Math.max(1, Math.ceil(remaining.length / usersPageSize))))
       deleteModalRef.current?.close()
     } catch (exception) {
       if (isSessionExpired(exception)) {
@@ -241,7 +346,7 @@ export function ConfigurationPage({ accessToken, onSessionExpired }: Configurati
     if (!nombre || !sigla) return
 
     setCreatingLocation(true)
-    setLocationsError('')
+    setCreateLocationError('')
 
     try {
       const created = await createLocation(accessToken, {
@@ -253,15 +358,24 @@ export function ConfigurationPage({ accessToken, onSessionExpired }: Configurati
       setLocationFilter(created.tipo)
       setNewLocationName('')
       setNewLocationSigla('')
+      addLocationModalRef.current?.close()
     } catch (exception) {
       if (isSessionExpired(exception)) {
         onSessionExpired()
         return
       }
-      setLocationsError(exception instanceof Error ? exception.message : 'No se pudo crear la ubicación')
+      setCreateLocationError(exception instanceof Error ? exception.message : 'No se pudo crear la ubicación')
     } finally {
       setCreatingLocation(false)
     }
+  }
+
+  function closeAddLocationModal() {
+    setAddLocationOpen(false)
+    setCreateLocationError('')
+    setNewLocationName('')
+    setNewLocationSigla('')
+    setNewLocationTipo('PRINCIPAL')
   }
 
   function startEditLocation(location: Location) {
@@ -322,16 +436,7 @@ export function ConfigurationPage({ accessToken, onSessionExpired }: Configurati
             onTransitionEnd={handleCardTransitionEnd}
           >
           <div className="config-users-head">
-            <h2 className="config-users-title">Usuarios</h2>
             <div className="config-users-actions">
-              <button
-                className="secondary-button"
-                type="button"
-                onClick={() => { void downloadUsersPdf(sortedUsers) }}
-                disabled={usersLoading || sortedUsers.length === 0}
-              >
-                Descargar PDF
-              </button>
               <button
                 className="primary-action config-users-create"
                 type="button"
@@ -341,8 +446,28 @@ export function ConfigurationPage({ accessToken, onSessionExpired }: Configurati
                 }}
               >
                 <svg viewBox="0 0 24 24" aria-hidden="true" className="button-icon"><path d="M12 5v14M5 12h14" /></svg>
-                Crear usuario
+                Crear
               </button>
+              <button
+                className="secondary-button"
+                type="button"
+                onClick={() => { void downloadUsersPdf(sortedUsers) }}
+                disabled={usersLoading || sortedUsers.length === 0}
+              >
+                Descargar PDF
+              </button>
+              {selectedRuts.size > 0 && (
+                <button
+                  className="config-danger-button config-users-bulk-delete"
+                  type="button"
+                  onClick={() => {
+                    setUsersError('')
+                    setBulkDeleteOpen(true)
+                  }}
+                >
+                  Eliminar ({selectedRuts.size})
+                </button>
+              )}
             </div>
           </div>
 
@@ -364,7 +489,7 @@ export function ConfigurationPage({ accessToken, onSessionExpired }: Configurati
           {usersLoading && (
             <TableSkeleton
               label="Cargando usuarios…"
-              columns={['27%', '15%', '31%', '12%', '15%']}
+              columns={['24%', '42%', '12%', '22%']}
               rows={12}
               className="config-users-skeleton"
             />
@@ -377,10 +502,11 @@ export function ConfigurationPage({ accessToken, onSessionExpired }: Configurati
           )}
           {!usersLoading && filteredUsers.length > 0 && (
             <>
-            <div className="config-users-table-scroll">
+            <div className="config-users-table-scroll" ref={usersTableScrollRef}>
               <table className="config-users-table">
                 <thead>
                   <tr>
+                    <th scope="col">RUT</th>
                     <th scope="col" aria-sort={usersSort === 'asc' ? 'ascending' : 'descending'}>
                       <span className="config-users-sort-head">
                         Nombre
@@ -399,18 +525,31 @@ export function ConfigurationPage({ accessToken, onSessionExpired }: Configurati
                         </button>
                       </span>
                     </th>
-                    <th scope="col">RUT</th>
-                    <th scope="col">Email</th>
                     <th scope="col">Rol</th>
                     <th scope="col"><span className="sr-only">Acciones</span></th>
                   </tr>
                 </thead>
                 <tbody>
                   {visibleUsers.map((user) => (
-                    <tr key={user.rut}>
-                      <td>{user.nombre}</td>
-                      <td>{user.rut}</td>
-                      <td className="config-users-email" title={user.email}>{user.email}</td>
+                    <tr
+                      key={user.rut}
+                      className={selectedRuts.has(user.rut) ? 'is-selected' : undefined}
+                      tabIndex={0}
+                      onClick={() => toggleUserSelected(user.rut)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault()
+                          toggleUserSelected(user.rut)
+                        }
+                      }}
+                    >
+                      <td className="config-user-rut" title={user.rut}>{user.rut}</td>
+                      <td>
+                        <span className="config-user-name-cell">
+                          <span className="config-user-name" title={user.nombre}>{user.nombre}</span>
+                          <span className="config-user-mail" title={user.email}>{user.email}</span>
+                        </span>
+                      </td>
                       <td className="config-users-role-cell">
                         <span className="config-users-role" title={roleLabel(user.rol)}>
                           <RoleIcon role={user.rol} />
@@ -423,7 +562,10 @@ export function ConfigurationPage({ accessToken, onSessionExpired }: Configurati
                           type="button"
                           aria-label={`Editar ${user.nombre}`}
                           title="Editar"
-                          onClick={() => setEditingUser(user)}
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            setEditingUser(user)
+                          }}
                         >
                           <PencilIcon />
                         </button>
@@ -432,7 +574,8 @@ export function ConfigurationPage({ accessToken, onSessionExpired }: Configurati
                           type="button"
                           aria-label={`Eliminar ${user.nombre}`}
                           title="Eliminar"
-                          onClick={() => {
+                          onClick={(event) => {
+                            event.stopPropagation()
                             setUsersError('')
                             setPendingDelete(user)
                           }}
@@ -447,7 +590,7 @@ export function ConfigurationPage({ accessToken, onSessionExpired }: Configurati
             </div>
             <footer className="table-footer config-users-footer">
               <span>
-                Mostrando {usersStart + 1}–{Math.min(usersStart + USERS_PAGE_SIZE, filteredUsers.length)} de {filteredUsers.length} usuarios
+                Mostrando {usersStart + 1}–{Math.min(usersStart + usersPageSize, filteredUsers.length)} de {filteredUsers.length} usuarios
               </span>
               <nav className="pagination" aria-label="Paginación de usuarios">
                 <button className="pagination-button" type="button" disabled={activeUsersPage === 1} onClick={() => setUsersPage((page) => Math.max(1, page - 1))}>Anterior</button>
@@ -487,16 +630,28 @@ export function ConfigurationPage({ accessToken, onSessionExpired }: Configurati
             onTransitionEnd={handleCardTransitionEnd}
           >
           <div className="config-locations-head">
-            <h2 className="config-title">Ubicaciones</h2>
-            <SelectMenu
-              id="config-location-filter"
-              ariaLabel="Filtrar ubicaciones por tipo"
-              value={locationFilter}
-              onChange={(next) => setLocationFilter(next as LocationType | 'ALL')}
-              options={locationFilterOptions}
-              visibleItems={4}
-              fixedList
-            />
+            <div className="config-locations-actions">
+              <button
+                className="primary-action primary-action-solid"
+                type="button"
+                onClick={() => {
+                  setCreateLocationError('')
+                  setAddLocationOpen(true)
+                }}
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true" className="button-icon"><path d="M12 5v14M5 12h14" /></svg>
+                Crear
+              </button>
+              <SelectMenu
+                id="config-location-filter"
+                ariaLabel="Filtrar ubicaciones por tipo"
+                value={locationFilter}
+                onChange={(next) => setLocationFilter(next as LocationType | 'ALL')}
+                options={locationFilterOptions}
+                visibleItems={4}
+                fixedList
+              />
+            </div>
           </div>
 
           {locationsError && (
@@ -505,52 +660,6 @@ export function ConfigurationPage({ accessToken, onSessionExpired }: Configurati
               <button className="text-button" type="button" onClick={() => setLocationsError('')}>Cerrar</button>
             </div>
           )}
-
-          <form className="device-form config-form config-location-form" onSubmit={handleCreateLocation}>
-            <label>
-              <span>Nombre</span>
-              <input
-                value={newLocationName}
-                onChange={(event) => setNewLocationName(event.target.value)}
-                placeholder="Ej: Laboratorio de Computación"
-                maxLength={100}
-                required
-              />
-            </label>
-            <label>
-              <span>Sigla</span>
-              <input
-                value={newLocationSigla}
-                onChange={(event) => setNewLocationSigla(event.target.value.toUpperCase())}
-                placeholder="LAB"
-                maxLength={3}
-                pattern="[A-Za-z0-9]{1,3}"
-                title="Sigla de hasta 3 letras o números"
-                required
-              />
-            </label>
-            <div className="device-field">
-              <span>Tipo de ubicación</span>
-              <SelectMenu
-                id="config-location-type"
-                ariaLabel="Tipo de ubicación"
-                value={newLocationTipo}
-                onChange={(next) => setNewLocationTipo(next as LocationType)}
-                options={locationTypeOptions}
-                visibleItems={3}
-                fixedList
-              />
-            </div>
-            <div className="device-form-actions">
-              <button
-                className="primary-action primary-action-solid"
-                type="submit"
-                disabled={creatingLocation || !newLocationName.trim() || !newLocationSigla.trim()}
-              >
-                {creatingLocation ? 'Agregando…' : 'Agregar ubicación'}
-              </button>
-            </div>
-          </form>
 
           {locationsLoading && <ListSkeleton label="Cargando ubicaciones…" rows={24} />}
 
@@ -663,6 +772,73 @@ export function ConfigurationPage({ accessToken, onSessionExpired }: Configurati
         </Modal>
       )}
 
+      {addLocationOpen && (
+        <Modal
+          ref={addLocationModalRef}
+          label="Agregar ubicación"
+          cardClassName="create-device-card modal-card config-location-modal"
+          dismissible={!creatingLocation}
+          onClose={closeAddLocationModal}
+        >
+          <div className="device-modal-body">
+            <form className="device-form config-location-create-form" onSubmit={handleCreateLocation}>
+              <label>
+                <span>Nombre</span>
+                <input
+                  value={newLocationName}
+                  onChange={(event) => setNewLocationName(event.target.value)}
+                  placeholder="Ej: Laboratorio de Computación"
+                  maxLength={100}
+                  required
+                />
+              </label>
+              <label>
+                <span>Sigla</span>
+                <input
+                  value={newLocationSigla}
+                  onChange={(event) => setNewLocationSigla(event.target.value.toUpperCase())}
+                  placeholder="LAB"
+                  maxLength={3}
+                  pattern="[A-Za-z0-9]{1,3}"
+                  title="Sigla de hasta 3 letras o números"
+                  required
+                />
+              </label>
+              <div className="device-field device-form-wide">
+                <span>Tipo de ubicación</span>
+                <SelectMenu
+                  id="config-location-type"
+                  ariaLabel="Tipo de ubicación"
+                  value={newLocationTipo}
+                  onChange={(next) => setNewLocationTipo(next as LocationType)}
+                  options={locationTypeOptions}
+                  visibleItems={3}
+                  fixedList
+                />
+              </div>
+              {createLocationError && <p className="error device-form-wide" role="alert">{createLocationError}</p>}
+              <div className="device-form-actions device-form-wide">
+                <button
+                  className="secondary-button"
+                  type="button"
+                  onClick={() => addLocationModalRef.current?.close()}
+                  disabled={creatingLocation}
+                >
+                  Cancelar
+                </button>
+                <button
+                  className="primary-action primary-action-solid"
+                  type="submit"
+                  disabled={creatingLocation || !newLocationName.trim() || !newLocationSigla.trim()}
+                >
+                  {creatingLocation ? 'Creando…' : 'Crear'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </Modal>
+      )}
+
       {pendingDelete && (
         <Modal
           ref={deleteModalRef}
@@ -700,11 +876,49 @@ export function ConfigurationPage({ accessToken, onSessionExpired }: Configurati
         </Modal>
       )}
 
+      {bulkDeleteOpen && (
+        <Modal
+          ref={bulkDeleteModalRef}
+          role="alertdialog"
+          label="Eliminar usuarios seleccionados"
+          cardClassName="create-device-card modal-card config-delete-modal"
+          dismissible={!deletingBulk}
+          onClose={() => setBulkDeleteOpen(false)}
+        >
+          <div className="device-modal-body">
+            <h2 className="config-dialog-title">Eliminar usuarios</h2>
+            <p className="config-dialog-text">
+              ¿Eliminar {selectedRuts.size} usuario(s) seleccionados? Esta acción no se puede deshacer.
+            </p>
+            {usersError && <p className="error" role="alert">{usersError}</p>}
+            <div className="device-form-actions">
+              <button
+                className="secondary-button"
+                type="button"
+                disabled={deletingBulk}
+                onClick={() => bulkDeleteModalRef.current?.close()}
+              >
+                Cancelar
+              </button>
+              <button
+                className="config-danger-button"
+                type="button"
+                disabled={deletingBulk}
+                onClick={() => { void handleBulkDelete() }}
+              >
+                {deletingBulk ? 'Eliminando…' : 'Eliminar'}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
       {editingUser && (
         <EditUserForm
           key={editingUser.rut}
           accessToken={accessToken}
           user={editingUser}
+          isSelf={editingUser.rut === currentUserRut}
           onCancel={() => setEditingUser(null)}
           onSessionExpired={onSessionExpired}
           onUpdated={(updated) => {

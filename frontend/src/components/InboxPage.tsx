@@ -66,11 +66,10 @@ function formatTicketDate(value?: string) {
   return Number.isNaN(date.getTime()) ? value : dateFormatter.format(date)
 }
 
-function InboxTable({ tickets, startingId, bitacoraId, rowHeight, onSelectTicket, onStartTicket, onOpenBitacora }: {
+function InboxTable({ tickets, startingId, bitacoraId, onSelectTicket, onStartTicket, onOpenBitacora }: {
   tickets: Ticket[]
   startingId: number | null
   bitacoraId: number | null
-  rowHeight?: number
   onSelectTicket: (ticket: Ticket, trigger: HTMLButtonElement) => void
   onStartTicket: (ticket: Ticket) => void
   onOpenBitacora: (ticket: Ticket) => void
@@ -98,7 +97,7 @@ function InboxTable({ tickets, startingId, bitacoraId, rowHeight, onSelectTicket
             const canResolve = ticket.estado === 'EN_PROCESO'
 
             return (
-              <tr key={ticket.id_ticket} style={rowHeight ? { height: rowHeight } : undefined}>
+              <tr key={ticket.id_ticket}>
                 <td className="inbox-code">
                   {canResolve ? (
                     <button
@@ -191,8 +190,6 @@ export function InboxPage({ accessToken, onSessionExpired, isActive }: InboxPage
   const tableFooterRef = useRef<HTMLElement | null>(null)
   const estadoTabRefs = useRef<Array<HTMLButtonElement | null>>([])
   const [pageSize, setPageSize] = useState(PAGE_SIZE)
-  const [rowHeight, setRowHeight] = useState<number | null>(null)
-  const baseRowHeightRef = useRef<number | null>(null)
   const [startingId, setStartingId] = useState<number | null>(null)
   const [bitacoraId, setBitacoraId] = useState<number | null>(null)
   const [bitacora, setBitacora] = useState<TicketBitacora | null>(null)
@@ -271,8 +268,17 @@ export function InboxPage({ accessToken, onSessionExpired, isActive }: InboxPage
       if (card.clientHeight === 0) return
 
       const table = card.querySelector('table')
+
+      if (table) {
+        table.style.removeProperty('--inbox-row-height')
+      }
+
       const header = table?.querySelector('thead')?.getBoundingClientRect().height ?? 0
-      const measuredRowHeight = table?.querySelector('tbody tr')?.getBoundingClientRect().height ?? 0
+      const rowsElements = table ? Array.from(table.querySelectorAll('tbody tr')) : []
+      const measuredRowHeight = rowsElements.reduce(
+        (max, row) => Math.max(max, row.getBoundingClientRect().height),
+        0,
+      )
       const footer = tableFooterRef.current?.getBoundingClientRect().height ?? 0
 
       if (measuredRowHeight <= 0) {
@@ -283,7 +289,6 @@ export function InboxPage({ accessToken, onSessionExpired, isActive }: InboxPage
           const next = Math.min(MAX_PAGE_SIZE, Math.max(MIN_PAGE_SIZE, fit))
           return current === next ? current : next
         })
-        setRowHeight(null)
         return
       }
 
@@ -293,27 +298,24 @@ export function InboxPage({ accessToken, onSessionExpired, isActive }: InboxPage
         const top = card.getBoundingClientRect().top + window.scrollY
         const available = window.innerHeight - top - paddingBottom - 6
         const fit = Math.floor((available - header - footer) / measuredRowHeight)
+        const next = Math.min(MAX_PAGE_SIZE, Math.max(MIN_PAGE_SIZE, fit))
 
-        setPageSize((current) => {
-          const next = Math.min(MAX_PAGE_SIZE, Math.max(MIN_PAGE_SIZE, fit))
-          return current === next ? current : next
-        })
-        setRowHeight((current) => (current === null ? current : null))
+        setPageSize((current) => (current === next ? current : next))
+
+        if (table && available - header - footer > 0) {
+          table.style.setProperty('--inbox-row-height', `${(available - header - footer) / next}px`)
+        }
         return
       }
 
-      if (!baseRowHeightRef.current || baseRowHeightRef.current <= 0) {
-        baseRowHeightRef.current = measuredRowHeight
-      }
-
-      const baseRowHeight = baseRowHeightRef.current
-      if (!baseRowHeight || baseRowHeight <= 0) return
-
       const available = card.clientHeight - header - footer
-      const rows = Math.min(MAX_PAGE_SIZE, Math.max(MIN_PAGE_SIZE, Math.floor(available / baseRowHeight)))
+      const next = Math.min(MAX_PAGE_SIZE, Math.max(MIN_PAGE_SIZE, Math.floor(available / measuredRowHeight)))
 
-      setPageSize((current) => (current === rows ? current : rows))
-      setRowHeight(available > 0 ? available / rows : null)
+      setPageSize((current) => (current === next ? current : next))
+
+      if (table && available > 0) {
+        table.style.setProperty('--inbox-row-height', `${available / next}px`)
+      }
     }
 
     measure()
@@ -560,7 +562,6 @@ export function InboxPage({ accessToken, onSessionExpired, isActive }: InboxPage
                   tickets={tickets}
                   startingId={startingId}
                   bitacoraId={bitacoraId}
-                  rowHeight={rowHeight ?? undefined}
                   onStartTicket={startTicket}
                   onOpenBitacora={openBitacora}
                   onSelectTicket={(ticket, trigger) => {

@@ -31,7 +31,10 @@ export function DashboardLayout({ children, user, activeRoute, onNavigate, onLog
   }
 
   return (
-    <div className={`dashboard-layout${collapsed ? ' is-collapsed' : ''}${mobileOpen ? ' is-mobile-open' : ''}`}>
+    <div
+      className={`dashboard-layout${collapsed ? ' is-collapsed' : ''}${mobileOpen ? ' is-mobile-open' : ''}`}
+      data-route={activeRoute ?? undefined}
+    >
       <Sidebar
         user={user}
         activeRoute={activeRoute}

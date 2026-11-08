@@ -105,15 +105,6 @@ button:disabled {
   background: var(--tint-accent);
 }
 
-.text-button-danger {
-  color: var(--minimal-danger);
-}
-
-.text-button-danger:hover:not(:disabled) {
-  color: var(--minimal-danger);
-  background: var(--tint-danger-hover);
-}
-
 .primary-action {
   margin: 0;
   padding: 8px 12px;

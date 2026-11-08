@@ -118,6 +118,31 @@ describe('UsersService', () => {
       .rejects.toThrow('Ya existe un usuario con ese email');
   });
 
+  it('rejects changing the acting user own role', async () => {
+    const user = { rut: '12.345.678-9', nombre: 'Admin', email: 'admin@colegio.cl', rol: UserRole.ADMIN } as User;
+    const findOneBy = vi.fn().mockResolvedValue(user);
+    const update = vi.fn();
+    const service = createService({ findOneBy, update });
+
+    await expect(service.update('12.345.678-9', { rol: UserRole.DOCENTE }, '12.345.678-9'))
+      .rejects.toThrow('No puedes modificar tu propio rol');
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it('allows updating the acting user own data while keeping the role', async () => {
+    const user = { rut: '12.345.678-9', nombre: 'Admin', email: 'admin@colegio.cl', rol: UserRole.ADMIN } as User;
+    const findOneBy = vi.fn().mockResolvedValue(user);
+    const update = vi.fn().mockResolvedValue({ affected: 1 });
+    const service = createService({ findOneBy, update });
+
+    await service.update('12.345.678-9', { nombre: 'Admin Nuevo', rol: UserRole.ADMIN }, '12.345.678-9');
+
+    expect(update).toHaveBeenCalledWith(
+      { rut: '12.345.678-9' },
+      { nombre: 'Admin Nuevo', email: 'admin@colegio.cl', rol: UserRole.ADMIN },
+    );
+  });
+
   it('rejects removing the admin role from the last administrator', async () => {
     const user = { rut: '12.345.678-9', nombre: 'Admin', email: 'admin@colegio.cl', rol: UserRole.ADMIN } as User;
     const findOneBy = vi.fn().mockResolvedValue(user);

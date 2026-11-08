@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { isSessionExpired } from '../services/http'
 import { updateUser } from '../services/users'
 import type { UpdateUserInput, User, UserRole } from '../types/user'
+import { buildUserEmail, localPartOfEmail, USER_EMAIL_DOMAIN } from '../utils/email'
 import { Modal } from './Modal'
 import type { ModalHandle } from './Modal'
 import { SelectMenu } from './SelectMenu'
@@ -16,15 +17,16 @@ const roleOptions = [
 type EditUserFormProps = {
   accessToken: string
   user: User
+  isSelf: boolean
   onUpdated: (user: User) => void
   onCancel: () => void
   onSessionExpired: () => void
 }
 
-export function EditUserForm({ accessToken, user, onUpdated, onCancel, onSessionExpired }: EditUserFormProps) {
+export function EditUserForm({ accessToken, user, isSelf, onUpdated, onCancel, onSessionExpired }: EditUserFormProps) {
   const [form, setForm] = useState<UpdateUserInput>({
     nombre: user.nombre,
-    email: user.email,
+    email: localPartOfEmail(user.email),
     rol: user.rol,
   })
   const [saving, setSaving] = useState(false)
@@ -38,8 +40,8 @@ export function EditUserForm({ accessToken, user, onUpdated, onCancel, onSession
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const nombre = form.nombre.trim()
-    const email = form.email.trim()
-    if (!nombre || !email) return
+    const email = buildUserEmail(form.email)
+    if (!nombre || !form.email.trim()) return
 
     setSaving(true)
     setError('')
@@ -85,24 +87,31 @@ export function EditUserForm({ accessToken, user, onUpdated, onCancel, onSession
           </label>
           <label>
             <span>Email</span>
-            <input
-              type="email"
-              value={form.email}
-              onChange={(event) => updateField('email', event.target.value)}
-              maxLength={150}
-              required
-            />
+            <div className="email-input-group">
+              <input
+                type="text"
+                value={form.email}
+                onChange={(event) => updateField('email', event.target.value.replace(/@.*$/, ''))}
+                maxLength={150 - USER_EMAIL_DOMAIN.length}
+                autoComplete="off"
+                spellCheck={false}
+                required
+              />
+              <span className="email-input-suffix">{USER_EMAIL_DOMAIN}</span>
+            </div>
           </label>
           <div className="device-field">
             <span>Rol</span>
             <SelectMenu
               id="edit-user-role"
-              ariaLabel="Rol del usuario"
+              ariaLabel={isSelf ? 'Rol del usuario (no editable para tu propio usuario)' : 'Rol del usuario'}
               value={form.rol}
               onChange={(next) => updateField('rol', next as UserRole)}
               options={roleOptions}
               visibleItems={3}
+              disabled={isSelf}
             />
+            {isSelf && <span className="device-field-hint">No puedes modificar tu propio rol.</span>}
           </div>
           {error && <p className="error device-form-wide" role="alert">{error}</p>}
           <div className="device-form-actions device-form-wide">

@@ -103,8 +103,19 @@ body.modal-open .support-shell {
 }
 
 .create-user-modal {
+  width: min(100%, 560px);
   max-height: none;
   overflow: visible;
+}
+
+.create-user-modal .device-form {
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+}
+
+@media (max-width: 700px) {
+  .create-user-modal .device-form {
+    grid-template-columns: 1fr;
+  }
 }
 
 .device-modal-body {
@@ -153,10 +164,56 @@ body.modal-open .support-shell {
   line-height: 1.4;
 }
 
+.device-form .device-field > .device-field-hint {
+  font-size: 12px;
+  font-weight: 400;
+}
+
 .device-form input,
 .device-form select {
   padding: 8px 12px;
   font-size: 13px;
+}
+
+.email-input-group {
+  display: flex;
+  align-items: center;
+  height: var(--control-height);
+  box-sizing: border-box;
+  overflow: hidden;
+  border: 1px solid var(--minimal-border);
+  border-radius: var(--radius-md);
+  background: #fff;
+}
+
+.email-input-group:focus-within {
+  border-color: var(--minimal-secondary);
+  box-shadow: 0 0 0 3px rgba(49, 44, 133, 0.14);
+}
+
+.device-form .email-input-group input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  padding: 8px 4px 8px 12px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.device-form .email-input-group input:focus-visible {
+  border: 0;
+  box-shadow: none;
+}
+
+.email-input-suffix {
+  flex: 0 0 auto;
+  padding-right: 12px;
+  color: var(--minimal-muted);
+  font-size: 12px;
+  white-space: nowrap;
+  user-select: none;
 }
 
 .code-preview-input::placeholder {

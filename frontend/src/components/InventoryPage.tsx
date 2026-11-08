@@ -86,7 +86,6 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
   const [statusFilter, setStatusFilter] = useState<StatusFilter>(
     pickFilter(initial.status, ['ALL', 'ACTIVO', 'INACTIVO', 'BAJA_TECNICA'] as const, 'ALL'),
   )
-  const [rowHeight, setRowHeight] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [refreshError, setRefreshError] = useState('')
@@ -179,33 +178,40 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
         return
       }
 
-      if (!window.matchMedia('(max-width: 700px)').matches) {
-        const scroll = tableScrollRef.current
-        const table = scroll?.querySelector('table')
-        const header = table?.querySelector('thead')?.getBoundingClientRect().height ?? 0
+      const scroll = tableScrollRef.current
+      const table = scroll?.querySelector('table')
 
-        if (scroll && table && !baseRowHeightRef.current) {
-          const naturalRowHeight = table.querySelector('tbody tr')?.getBoundingClientRect().height ?? 0
-          if (naturalRowHeight > 0) baseRowHeightRef.current = naturalRowHeight
-        }
-
-        const baseRowHeight = baseRowHeightRef.current
-        if (scroll && table && baseRowHeight && baseRowHeight > 0) {
-          const available = scroll.clientHeight - header
-          const fit = Math.floor(available / baseRowHeight)
-          const measured = Math.min(MAX_PAGE_SIZE, Math.max(MIN_PAGE_SIZE, fit))
-
-          if (measured !== pageSizeRef.current) {
-            pageSizeRef.current = measured
-            setPageSize(measured)
-            setCurrentPage(1)
-          }
-          setRowHeight(available > 0 ? available / measured : null)
-          return
-        }
+      if (table) {
+        table.style.removeProperty('--inventory-row-height')
       }
 
-      setRowHeight(null);
+      const header = table?.querySelector('thead')?.getBoundingClientRect().height ?? 0
+      const rows = table ? Array.from(table.querySelectorAll('tbody tr')) : []
+      const naturalRowHeight = rows.reduce(
+        (max, row) => Math.max(max, row.getBoundingClientRect().height),
+        0,
+      )
+
+      if (naturalRowHeight > 0) {
+        baseRowHeightRef.current = naturalRowHeight
+      }
+
+      const baseRowHeight = naturalRowHeight || baseRowHeightRef.current
+      if (scroll && table && baseRowHeight && baseRowHeight > 0) {
+        const available = scroll.clientHeight - header
+        const fit = Math.floor(available / baseRowHeight)
+        const measured = Math.min(MAX_PAGE_SIZE, Math.max(MIN_PAGE_SIZE, fit))
+
+        if (measured !== pageSizeRef.current) {
+          pageSizeRef.current = measured
+          setPageSize(measured)
+          setCurrentPage(1)
+        }
+        if (table && available > 0) {
+          table.style.setProperty('--inventory-row-height', `${available / measured}px`)
+        }
+        return
+      }
 
       const chrome =
         (actionsRef.current?.offsetHeight ?? FALLBACK_ACTIONS) +
@@ -213,8 +219,8 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
         (tabsRef.current?.offsetHeight ?? FALLBACK_TABS) +
         CHROME_GAPS +
         CONTENT_PADDING
-      const rows = Math.floor((window.innerHeight - chrome - SKELETON_HEADER_HEIGHT - BOTTOM_SAFETY) / SKELETON_ROW_HEIGHT)
-      const next = Math.min(MAX_PAGE_SIZE, Math.max(MIN_PAGE_SIZE, rows))
+      const fallbackRows = Math.floor((window.innerHeight - chrome - SKELETON_HEADER_HEIGHT - BOTTOM_SAFETY) / SKELETON_ROW_HEIGHT)
+      const next = Math.min(MAX_PAGE_SIZE, Math.max(MIN_PAGE_SIZE, fallbackRows))
 
       if (next !== pageSizeRef.current) {
         pageSizeRef.current = next
@@ -503,20 +509,20 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
           )
         ) : (
           <div className="table-scroll" ref={tableScrollRef}>
-            <table>
+            <table className="inventory-table">
               <caption className="sr-only">Listado de dispositivos del inventario</caption>
               <thead>
                 <tr>
                   <th scope="col" aria-sort="ascending">Código</th>
                   <th scope="col">Tipo</th>
-                  <th scope="col">Marca y modelo</th>
+                  <th scope="col">Marca/Modelo</th>
                   <th scope="col">Ubicación</th>
                   <th scope="col">Estado</th>
                 </tr>
               </thead>
               <tbody>
                 {devices.map((device) => (
-                  <tr key={device.id} style={rowHeight ? { height: rowHeight } : undefined}>
+                  <tr key={device.id}>
                     <td className="device-code">
                       {canManageInventory ? (
                         <button className="device-code-button" type="button" aria-label={`Editar ${device.code}`} title={`Editar ${device.code}`} onClick={() => setModal({ kind: 'edit', device })}>

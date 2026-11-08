@@ -27,8 +27,8 @@ export class UsersController {
 
   @Patch(':rut')
   @Roles(UserRole.ADMIN)
-  update(@Param('rut') rut: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.usersService.update(rut, updateUserDto);
+  update(@Param('rut') rut: string, @Body() updateUserDto: UpdateUserDto, @Req() request: AuthenticatedRequest) {
+    return this.usersService.update(rut, updateUserDto, request.user?.sub ?? '');
   }
 
   @Delete(':rut')

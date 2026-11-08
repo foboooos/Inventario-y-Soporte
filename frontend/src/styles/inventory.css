@@ -10,7 +10,7 @@
 }
 
 .inventory-content {
-  width: min(100% - 48px, 1280px);
+  width: calc(100% - 48px);
   margin: 0 auto;
   padding: 24px 0;
   height: 100%;
@@ -211,6 +211,10 @@
   border-collapse: collapse;
   table-layout: fixed;
   text-align: left;
+}
+
+.inventory-table tbody tr {
+  height: var(--inventory-row-height, auto);
 }
 
 .table-scroll th,
@@ -519,7 +523,7 @@ tbody tr:hover {
 }
 
 .inbox-table tbody tr {
-  height: 32px;
+  height: var(--inbox-row-height, 32px);
 }
 
 .inbox-table td {
@@ -994,4 +998,40 @@ tbody tr:hover {
 .table-search input:focus-visible {
   border-color: var(--minimal-secondary);
   box-shadow: 0 0 0 3px rgba(49, 44, 133, 0.14);
+}
+
+@media (max-width: 700px) {
+  .inventory-table th,
+  .inventory-table td {
+    padding-top: 4px;
+    padding-bottom: 4px;
+  }
+
+  .inventory-table th:nth-child(1),
+  .inventory-table td:nth-child(1) {
+    width: 18%;
+  }
+
+  .inventory-table th:nth-child(3),
+  .inventory-table td:nth-child(3) {
+    width: 21%;
+  }
+
+  .inventory-table th:nth-child(4),
+  .inventory-table td:nth-child(4) {
+    width: 25%;
+  }
+
+  .inventory-table th:nth-child(5),
+  .inventory-table td:nth-child(5) {
+    width: 24%;
+  }
+
+  .inventory-table thead th {
+    white-space: nowrap;
+  }
+
+  .inventory-table tbody tr {
+    height: var(--inventory-row-height, 44px);
+  }
 }

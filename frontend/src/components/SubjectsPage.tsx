@@ -1,21 +1,21 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import {
-  createLevel,
   createSubject,
-  deleteLevel,
-  deleteSubject,
   getLevels,
   getSubjects,
-  renameLevel,
 } from '../services/academics'
 import { isSessionExpired } from '../services/http'
 import type { EducationalLevel, Subject } from '../types/academic'
 import { ChecklistSkeleton, ListSkeleton } from './Skeleton'
 import { EditSubjectForm } from './EditSubjectForm'
+import { LevelFormModal } from './LevelFormModal'
+import { DeleteLevelModal } from './DeleteLevelModal'
+import { DeleteSubjectModal } from './DeleteSubjectModal'
 import { PencilIcon, TrashIcon } from './ActionIcons'
 import { SortButton } from './SortButton'
 import type { SortKey, SortOption } from './SortButton'
+import { useCustomScrollbar } from '../utils/useCustomScrollbar'
 
 type SubjectsPageProps = {
   accessToken: string
@@ -44,20 +44,27 @@ export function SubjectsPage({ accessToken, onSessionExpired }: SubjectsPageProp
   const [error, setError] = useState('')
   const [reloadKey, setReloadKey] = useState(0)
 
-  const [newLevelName, setNewLevelName] = useState('')
-  const [creatingLevel, setCreatingLevel] = useState(false)
-  const [editingLevelId, setEditingLevelId] = useState<number | null>(null)
-  const [editLevelName, setEditLevelName] = useState('')
-  const [savingLevelId, setSavingLevelId] = useState<number | null>(null)
-  const [confirmLevelId, setConfirmLevelId] = useState<number | null>(null)
-  const [deletingLevelId, setDeletingLevelId] = useState<number | null>(null)
+  const [levelModal, setLevelModal] = useState<{ level: EducationalLevel | null } | null>(null)
+  const [pendingDeleteLevel, setPendingDeleteLevel] = useState<EducationalLevel | null>(null)
+  const scrollbarKey = `${levels.length}:${loading}`
+  const {
+    scrollRef: levelsListRef,
+    thumbRef: levelsThumbRef,
+    barRef: levelsScrollbarRef,
+    handlePointerDown: handleLevelsScrollbarPointerDown,
+  } = useCustomScrollbar<HTMLUListElement>(scrollbarKey)
+  const {
+    scrollRef: checklistRef,
+    thumbRef: checklistThumbRef,
+    barRef: checklistScrollbarRef,
+    handlePointerDown: handleChecklistScrollbarPointerDown,
+  } = useCustomScrollbar<HTMLDivElement>(scrollbarKey)
 
   const [newSubjectName, setNewSubjectName] = useState('')
   const [newSubjectLevelIds, setNewSubjectLevelIds] = useState<number[]>([])
   const [creatingSubject, setCreatingSubject] = useState(false)
   const [editingSubject, setEditingSubject] = useState<Subject | null>(null)
-  const [confirmSubjectId, setConfirmSubjectId] = useState<number | null>(null)
-  const [deletingSubjectId, setDeletingSubjectId] = useState<number | null>(null)
+  const [pendingDeleteSubject, setPendingDeleteSubject] = useState<Subject | null>(null)
   const [subjectSort, setSubjectSort] = useState<SortKey>('alfabetico')
 
   useEffect(() => {
@@ -131,61 +138,20 @@ export function SubjectsPage({ accessToken, onSessionExpired }: SubjectsPageProp
     setError(exception instanceof Error ? exception.message : fallback)
   }
 
-  async function handleCreateLevel(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const nombre = newLevelName.trim()
-    if (!nombre) return
-
-    setCreatingLevel(true)
-    setError('')
-    try {
-      const created = await createLevel(accessToken, nombre)
-      setLevels((current) => [...current, created])
-      setNewLevelName('')
-    } catch (exception: unknown) {
-      reportError(exception, 'No se pudo crear el nivel educativo')
-    } finally {
-      setCreatingLevel(false)
-    }
+  function handleLevelSaved(saved: EducationalLevel) {
+    setLevels((current) => {
+      const exists = current.some((level) => level.id === saved.id)
+      return exists
+        ? current.map((level) => (level.id === saved.id ? saved : level))
+        : [...current, saved]
+    })
+    setLevelModal(null)
   }
 
-  function startEditLevel(level: EducationalLevel) {
-    setConfirmLevelId(null)
-    setEditingLevelId(level.id)
-    setEditLevelName(level.nombre)
-  }
-
-  async function handleRenameLevel(event: FormEvent<HTMLFormElement>, level: EducationalLevel) {
-    event.preventDefault()
-    const nombre = editLevelName.trim()
-    if (!nombre) return
-
-    setSavingLevelId(level.id)
-    setError('')
-    try {
-      const updated = await renameLevel(accessToken, level.id, nombre)
-      setLevels((current) => current.map((item) => (item.id === updated.id ? updated : item)))
-      setEditingLevelId(null)
-      setEditLevelName('')
-    } catch (exception: unknown) {
-      reportError(exception, 'No se pudo renombrar el nivel educativo')
-    } finally {
-      setSavingLevelId(null)
-    }
-  }
-
-  async function handleDeleteLevel(level: EducationalLevel) {
-    setDeletingLevelId(level.id)
-    setError('')
-    try {
-      await deleteLevel(accessToken, level.id)
-      setLevels((current) => current.filter((item) => item.id !== level.id))
-      setConfirmLevelId(null)
-    } catch (exception: unknown) {
-      reportError(exception, 'No se pudo eliminar el nivel educativo')
-    } finally {
-      setDeletingLevelId(null)
-    }
+  function handleLevelDeleted(id: number) {
+    setLevels((current) => current.filter((level) => level.id !== id))
+    setNewSubjectLevelIds((current) => current.filter((levelId) => levelId !== id))
+    setPendingDeleteLevel(null)
   }
 
   async function handleCreateSubject(event: FormEvent<HTMLFormElement>) {
@@ -208,22 +174,7 @@ export function SubjectsPage({ accessToken, onSessionExpired }: SubjectsPageProp
   }
 
   function startEditSubject(subject: Subject) {
-    setConfirmSubjectId(null)
     setEditingSubject(subject)
-  }
-
-  async function handleDeleteSubject(subject: Subject) {
-    setDeletingSubjectId(subject.id)
-    setError('')
-    try {
-      await deleteSubject(accessToken, subject.id)
-      setSubjects((current) => current.filter((item) => item.id !== subject.id))
-      setConfirmSubjectId(null)
-    } catch (exception: unknown) {
-      reportError(exception, 'No se pudo eliminar la asignatura')
-    } finally {
-      setDeletingSubjectId(null)
-    }
   }
 
   function renderLevelChecklist(selected: number[], onToggle: (id: number) => void, onClear: () => void, onSelectAll: () => void) {
@@ -249,13 +200,23 @@ export function SubjectsPage({ accessToken, onSessionExpired }: SubjectsPageProp
             )}
           </span>
         </div>
-        <div className="subjects-checklist">
-          {levels.map((level) => (
-            <label className="subjects-checkbox" key={level.id}>
-              <input type="checkbox" checked={selected.includes(level.id)} onChange={() => onToggle(level.id)} />
-              <span>{level.nombre}</span>
-            </label>
-          ))}
+        <div className="subjects-checklist-scroll">
+          <div className="subjects-checklist" ref={checklistRef}>
+            {levels.map((level) => (
+              <label className="subjects-checkbox" key={level.id}>
+                <input type="checkbox" checked={selected.includes(level.id)} onChange={() => onToggle(level.id)} />
+                <span>{level.nombre}</span>
+              </label>
+            ))}
+          </div>
+          <div
+            className="subjects-level-scrollbar"
+            aria-hidden="true"
+            ref={checklistScrollbarRef}
+            onPointerDown={handleChecklistScrollbarPointerDown}
+          >
+            <span className="subjects-level-scrollbar-thumb" ref={checklistThumbRef} />
+          </div>
         </div>
       </div>
     )
@@ -306,114 +267,65 @@ export function SubjectsPage({ accessToken, onSessionExpired }: SubjectsPageProp
 
           <div className="subjects-grid subjects-grid-split">
             <section className="support-card subjects-card subjects-levels-card" aria-label="Niveles educativos">
-              <form className="subjects-form" onSubmit={handleCreateLevel}>
-                <label>
-                  <span>Nivel educativo</span>
-                  <input
-                    value={newLevelName}
-                    onChange={(event) => setNewLevelName(event.target.value)}
-                    placeholder="Ej: 5° Básico"
-                    maxLength={100}
-                    required
-                  />
-                </label>
-                <button className="primary-action" type="submit" disabled={creatingLevel || !newLevelName.trim()}>
-                  {creatingLevel ? 'Agregando…' : 'Agregar'}
+              <div className="subjects-levels-toolbar">
+                <button
+                  className="secondary-button subjects-levels-add"
+                  type="button"
+                  onClick={() => setLevelModal({ level: null })}
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 5v14M5 12h14" />
+                  </svg>
+                  Nuevo nivel
                 </button>
-              </form>
+                <span className="subjects-levels-count">
+                  {levels.length} {levels.length === 1 ? 'nivel' : 'niveles'}
+                </span>
+              </div>
 
-              {loading && <ListSkeleton label="Cargando niveles educativos…" rows={12} />}
+              {loading && <ListSkeleton label="Cargando niveles educativos…" rows={4} />}
               {!loading && levels.length === 0 && (
                 <p className="subjects-state" role="status">Aún no hay niveles educativos registrados.</p>
               )}
 
               {!loading && levels.length > 0 && (
-                <ul className="subjects-list">
-                  {levels.map((level) => (
-                    <li className="subjects-item" key={level.id}>
-                      {editingLevelId === level.id ? (
-                        <form className="subjects-edit" onSubmit={(event) => handleRenameLevel(event, level)}>
-                          <input
-                            value={editLevelName}
-                            onChange={(event) => setEditLevelName(event.target.value)}
-                            maxLength={100}
-                            required
-                            aria-label={`Nuevo nombre para ${level.nombre}`}
-                          />
+                <div className="subjects-level-scroll">
+                  <ul className="subjects-list" ref={levelsListRef}>
+                    {levels.map((level) => (
+                      <li className="subjects-item" key={level.id}>
+                        <span className="subjects-name">{level.nombre}</span>
+                        <div className="subjects-actions">
                           <button
                             className="subjects-icon-button"
-                            type="submit"
-                            aria-label="Guardar"
-                            title="Guardar"
-                            disabled={savingLevelId === level.id || !editLevelName.trim()}
+                            type="button"
+                            aria-label={`Renombrar ${level.nombre}`}
+                            title="Renombrar"
+                            onClick={() => setLevelModal({ level })}
                           >
-                            <svg viewBox="0 0 24 24" aria-hidden="true">
-                              <path d="M20 6 9 17l-5-5" />
-                            </svg>
+                            <PencilIcon />
                           </button>
                           <button
-                            className="subjects-icon-button subjects-icon-button-muted"
+                            className="subjects-icon-button subjects-icon-button-danger"
                             type="button"
-                            aria-label="Cancelar"
-                            title="Cancelar"
-                            disabled={savingLevelId === level.id}
-                            onClick={() => setEditingLevelId(null)}
+                            aria-label={`Eliminar ${level.nombre}`}
+                            title="Eliminar"
+                            onClick={() => setPendingDeleteLevel(level)}
                           >
-                            <svg viewBox="0 0 24 24" aria-hidden="true">
-                              <path d="M18 6 6 18M6 6l12 12" />
-                            </svg>
+                            <TrashIcon />
                           </button>
-                        </form>
-                      ) : (
-                        <>
-                          <span className="subjects-name">{level.nombre}</span>
-                          <div className="subjects-actions">
-                            {confirmLevelId === level.id ? (
-                              <>
-                                <span className="subjects-confirm">¿Eliminar?</span>
-                                <button
-                                  className="text-button text-button-danger"
-                                  type="button"
-                                  disabled={deletingLevelId === level.id}
-                                  onClick={() => handleDeleteLevel(level)}
-                                >
-                                  {deletingLevelId === level.id ? 'Eliminando…' : 'Confirmar'}
-                                </button>
-                                <button className="text-button" type="button" disabled={deletingLevelId === level.id} onClick={() => setConfirmLevelId(null)}>
-                                  Cancelar
-                                </button>
-                              </>
-                            ) : (
-                              <>
-                                <button
-                                  className="subjects-icon-button"
-                                  type="button"
-                                  aria-label={`Renombrar ${level.nombre}`}
-                                  title="Renombrar"
-                                  onClick={() => startEditLevel(level)}
-                                >
-                                  <PencilIcon />
-                                </button>
-                                <button
-                                  className="subjects-icon-button subjects-icon-button-danger"
-                                  type="button"
-                                  aria-label={`Eliminar ${level.nombre}`}
-                                  title="Eliminar"
-                                  onClick={() => {
-                                    setEditingLevelId(null)
-                                    setConfirmLevelId(level.id)
-                                  }}
-                                >
-                                  <TrashIcon />
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        </>
-                      )}
-                    </li>
-                  ))}
-                </ul>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                  <div
+                    className="subjects-level-scrollbar"
+                    aria-hidden="true"
+                    ref={levelsScrollbarRef}
+                    onPointerDown={handleLevelsScrollbarPointerDown}
+                  >
+                    <span className="subjects-level-scrollbar-thumb" ref={levelsThumbRef} />
+                  </div>
+                </div>
               )}
             </section>
 
@@ -462,43 +374,24 @@ export function SubjectsPage({ accessToken, onSessionExpired }: SubjectsPageProp
                         {renderSubjectChips(subject)}
                       </div>
                       <div className="subjects-actions">
-                        {confirmSubjectId === subject.id ? (
-                          <>
-                            <span className="subjects-confirm">¿Eliminar?</span>
-                            <button
-                              className="text-button text-button-danger"
-                              type="button"
-                              disabled={deletingSubjectId === subject.id}
-                              onClick={() => handleDeleteSubject(subject)}
-                            >
-                              {deletingSubjectId === subject.id ? 'Eliminando…' : 'Confirmar'}
-                            </button>
-                            <button className="text-button" type="button" disabled={deletingSubjectId === subject.id} onClick={() => setConfirmSubjectId(null)}>
-                              Cancelar
-                            </button>
-                          </>
-                        ) : (
-                          <>
-                            <button
-                              className="subjects-icon-button"
-                              type="button"
-                              aria-label={`Editar ${subject.nombre}`}
-                              title="Editar"
-                              onClick={() => startEditSubject(subject)}
-                            >
-                              <PencilIcon />
-                            </button>
-                            <button
-                              className="subjects-icon-button subjects-icon-button-danger"
-                              type="button"
-                              aria-label={`Eliminar ${subject.nombre}`}
-                              title="Eliminar"
-                              onClick={() => setConfirmSubjectId(subject.id)}
-                            >
-                              <TrashIcon />
-                            </button>
-                          </>
-                        )}
+                        <button
+                          className="subjects-icon-button"
+                          type="button"
+                          aria-label={`Editar ${subject.nombre}`}
+                          title="Editar"
+                          onClick={() => startEditSubject(subject)}
+                        >
+                          <PencilIcon />
+                        </button>
+                        <button
+                          className="subjects-icon-button subjects-icon-button-danger"
+                          type="button"
+                          aria-label={`Eliminar ${subject.nombre}`}
+                          title="Eliminar"
+                          onClick={() => setPendingDeleteSubject(subject)}
+                        >
+                          <TrashIcon />
+                        </button>
                       </div>
                     </li>
                   ))}
@@ -517,6 +410,39 @@ export function SubjectsPage({ accessToken, onSessionExpired }: SubjectsPageProp
                 setEditingSubject(null)
               }}
               onCancel={() => setEditingSubject(null)}
+              onSessionExpired={onSessionExpired}
+            />
+          )}
+
+          {levelModal && (
+            <LevelFormModal
+              accessToken={accessToken}
+              level={levelModal.level}
+              onSaved={handleLevelSaved}
+              onCancel={() => setLevelModal(null)}
+              onSessionExpired={onSessionExpired}
+            />
+          )}
+
+          {pendingDeleteLevel && (
+            <DeleteLevelModal
+              accessToken={accessToken}
+              level={pendingDeleteLevel}
+              onDeleted={handleLevelDeleted}
+              onCancel={() => setPendingDeleteLevel(null)}
+              onSessionExpired={onSessionExpired}
+            />
+          )}
+
+          {pendingDeleteSubject && (
+            <DeleteSubjectModal
+              accessToken={accessToken}
+              subject={pendingDeleteSubject}
+              onDeleted={(id) => {
+                setSubjects((current) => current.filter((item) => item.id !== id))
+                setPendingDeleteSubject(null)
+              }}
+              onCancel={() => setPendingDeleteSubject(null)}
               onSessionExpired={onSessionExpired}
             />
           )}

@@ -54,12 +54,21 @@ export class UsersService {
     await this.users.delete({ rut });
   }
 
-  async update(inputRut: string, dto: UpdateUserDto) {
+  async update(inputRut: string, dto: UpdateUserDto, actingRut?: string) {
     const rut = normalizeRut(inputRut.trim());
     const user = await this.users.findOneBy({ rut });
 
     if (!user) {
       throw new NotFoundException('El usuario no existe');
+    }
+
+    if (
+      actingRut !== undefined
+      && normalizeRut(actingRut.trim()) === rut
+      && dto.rol !== undefined
+      && dto.rol !== user.rol
+    ) {
+      throw new ConflictException('No puedes modificar tu propio rol');
     }
 
     const email = dto.email?.trim().toLowerCase();

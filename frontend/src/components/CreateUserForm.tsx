@@ -3,6 +3,7 @@ import type { ChangeEvent, FormEvent } from 'react'
 import { isSessionExpired } from '../services/http'
 import { createUser } from '../services/users'
 import type { User, UserRole } from '../types/user'
+import { buildUserEmail, USER_EMAIL_DOMAIN } from '../utils/email'
 import { formatRut, rutCaretPosition } from '../utils/rut'
 import { Modal } from './Modal'
 import type { ModalHandle } from './Modal'
@@ -67,8 +68,8 @@ export function CreateUserForm({ accessToken, onClose, onCreated, onSessionExpir
     event.preventDefault()
     const rut = form.rut.trim()
     const nombre = form.nombre.trim()
-    const email = form.email.trim()
-    if (!rut || !nombre || !email) return
+    const email = buildUserEmail(form.email)
+    if (!rut || !nombre || !form.email.trim()) return
 
     setSaving(true)
     setError('')
@@ -121,14 +122,19 @@ export function CreateUserForm({ accessToken, onClose, onCreated, onSessionExpir
             </label>
             <label>
               <span>Email</span>
-              <input
-                type="email"
-                value={form.email}
-                onChange={(event) => updateField('email', event.target.value)}
-                placeholder="nombre.apellido@davincicoquimbo.cl"
-                maxLength={150}
-                required
-              />
+              <div className="email-input-group">
+                <input
+                  type="text"
+                  value={form.email}
+                  onChange={(event) => updateField('email', event.target.value.replace(/@.*$/, ''))}
+                  placeholder="nombre.apellido"
+                  maxLength={150 - USER_EMAIL_DOMAIN.length}
+                  autoComplete="off"
+                  spellCheck={false}
+                  required
+                />
+                <span className="email-input-suffix">{USER_EMAIL_DOMAIN}</span>
+              </div>
             </label>
             <div className="device-field">
               <span>Rol</span>
@@ -151,7 +157,7 @@ export function CreateUserForm({ accessToken, onClose, onCreated, onSessionExpir
                 type="submit"
                 disabled={saving || !form.rut.trim() || !form.nombre.trim() || !form.email.trim()}
               >
-                {saving ? 'Creando…' : 'Crear usuario'}
+                {saving ? 'Creando…' : 'Crear'}
               </button>
             </div>
           </form>

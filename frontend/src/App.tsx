@@ -207,7 +207,7 @@ function App() {
     }
 
     if (route === 'settings') {
-      return <ConfigurationPage accessToken={token} onSessionExpired={onSessionExpired} />
+      return <ConfigurationPage accessToken={token} currentUserRut={account.rut} onSessionExpired={onSessionExpired} />
     }
 
     if (route === 'subjects') {
