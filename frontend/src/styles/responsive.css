@@ -28,6 +28,22 @@
     overflow: hidden;
   }
 
+  .dashboard-layout[data-route='settings'] {
+    height: 100svh;
+    min-height: 100svh;
+    overflow: hidden;
+  }
+
+  .dashboard-layout[data-route='settings'] .dashboard-main {
+    overflow: hidden;
+  }
+
+  .dashboard-layout[data-route='settings'] .config-shell {
+    flex: 1 1 0;
+    height: auto;
+    min-height: 0;
+  }
+
   .dashboard-layout[data-route='inventory'] .table-card {
     flex: 1 1 0;
     min-height: 0;
@@ -104,6 +120,14 @@
     background: transparent;
     overflow: visible;
     justify-content: flex-start;
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .sidebar-header-action {
+    display: inline-grid;
+    margin-left: auto;
+    border-radius: var(--radius-circle);
   }
 
   .sidebar-toggle {

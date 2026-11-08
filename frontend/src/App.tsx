@@ -25,6 +25,8 @@ import { isSessionExpired } from './services/http'
 import { clearToken, readToken, saveToken } from './utils/session'
 import {
   canAccessRoute,
+  configSectionFromPath,
+  configSectionLabels,
   defaultRouteForRole,
   normalizePath,
   routeFromPath,
@@ -108,10 +110,13 @@ function App() {
   )
 
   const activeRoute = routeFromPath(pathname)
+  const configSection = activeRoute === 'settings' ? configSectionFromPath(pathname) : null
 
   const pageTitle = !user
     ? pathname !== '/login' && !activeRoute ? NOT_FOUND_TITLE : LOGIN_TITLE
-    : activeRoute && canAccessRoute(user.rol, activeRoute) ? titleForRoute(activeRoute) : NOT_FOUND_TITLE
+    : activeRoute && canAccessRoute(user.rol, activeRoute)
+      ? configSection ? configSectionLabels[configSection] : titleForRoute(activeRoute)
+      : NOT_FOUND_TITLE
 
   useEffect(() => {
     document.title = pageTitle
@@ -137,6 +142,12 @@ function App() {
 
     function handleViewportChange() {
       if (mobileQuery.matches || !user || !activeRoute) return
+
+      if (configSection) {
+        navigate(routePaths.settings, { replace: true })
+        return
+      }
+
       if (!routes.find((route) => route.key === activeRoute)?.mobileOnly) return
 
       navigate(routePaths[defaultRouteForRole(user.rol)], { replace: true })
@@ -146,7 +157,7 @@ function App() {
     mobileQuery.addEventListener('change', handleViewportChange)
 
     return () => mobileQuery.removeEventListener('change', handleViewportChange)
-  }, [activeRoute, navigate, user])
+  }, [activeRoute, configSection, navigate, user])
 
   // Páginas ya visitadas: se mantienen montadas para no volver a cargar sus datos.
   const [visitedRoutes, setVisitedRoutes] = useState<RouteKey[]>([])
@@ -207,7 +218,15 @@ function App() {
     }
 
     if (route === 'settings') {
-      return <ConfigurationPage accessToken={token} currentUserRut={account.rut} onSessionExpired={onSessionExpired} />
+      return (
+        <ConfigurationPage
+          accessToken={token}
+          currentUserRut={account.rut}
+          onSessionExpired={onSessionExpired}
+          section={route === activeRoute ? configSection : null}
+          onNavigate={navigate}
+        />
+      )
     }
 
     if (route === 'subjects') {
@@ -229,12 +248,17 @@ function App() {
     ? visitedRoutes
     : [...visitedRoutes, activeRoute]
 
+  const headerAction = configSection
+    ? { label: 'Salir de configuración', onClick: () => navigate(routePaths.settings) }
+    : undefined
+
   return (
     <DashboardLayout
       user={user}
       activeRoute={activeRoute}
       onNavigate={navigateToRoute}
       onLogout={handleLogout}
+      headerAction={headerAction}
     >
       {routesToRender.map((route) => (
         <div key={route} hidden={route !== activeRoute}>

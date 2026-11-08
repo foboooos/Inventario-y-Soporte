@@ -12,6 +12,8 @@ import { SelectMenu } from './SelectMenu'
 import { PencilIcon, TrashIcon } from './ActionIcons'
 import { SortButton } from './SortButton'
 import type { SortKey, SortOption } from './SortButton'
+import { ChipDisclosure } from './ChipDisclosure'
+import { useCustomScrollbar } from '../utils/useCustomScrollbar'
 import { SOFTWARE_LICENSES, softwareLicenseLabel } from '../types/software'
 import type { SoftwareLicense, SoftwareProgram } from '../types/software'
 
@@ -50,6 +52,14 @@ export function SoftwarePage({ accessToken, onSessionExpired }: SoftwarePageProp
   const [deletingId, setDeletingId] = useState<number | null>(null)
   const [deleteError, setDeleteError] = useState('')
   const deleteModalRef = useRef<ModalHandle>(null)
+
+  const scrollbarKey = `${programs.length}:${loading}`
+  const {
+    scrollRef: programsListRef,
+    thumbRef: programsThumbRef,
+    barRef: programsScrollbarRef,
+    handlePointerDown: handleProgramsScrollbarPointerDown,
+  } = useCustomScrollbar<HTMLUListElement>(scrollbarKey)
 
   useEffect(() => {
     let active = true
@@ -172,14 +182,14 @@ export function SoftwarePage({ accessToken, onSessionExpired }: SoftwarePageProp
         <div className="subjects-levels-head">
           <span className="subjects-levels-title">Asignaturas</span>
           <span className="subjects-levels-meta">
-            <span className="subjects-levels-count">{selected.length} de {sortedSubjects.length} seleccionadas</span>
             {selected.length < sortedSubjects.length && (
-              <button className="text-button" type="button" onClick={onSelectAll}>
+              <button className="text-button subjects-levels-all" type="button" onClick={onSelectAll}>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg>
                 Todas
               </button>
             )}
             {selected.length > 0 && (
-              <button className="text-button" type="button" onClick={onClear}>
+              <button className="text-button subjects-levels-clear" type="button" onClick={onClear}>
                 Limpiar
               </button>
             )}
@@ -187,7 +197,7 @@ export function SoftwarePage({ accessToken, onSessionExpired }: SoftwarePageProp
         </div>
         <div className="subjects-checklist">
           {sortedSubjects.map((subject) => (
-            <label className="subjects-checkbox" key={subject.id}>
+            <label className="subjects-checkbox" key={subject.id} title={subject.nombre}>
               <input type="checkbox" checked={selected.includes(subject.id)} onChange={() => onToggle(subject.id)} />
               <span>{subject.nombre}</span>
             </label>
@@ -202,18 +212,26 @@ export function SoftwarePage({ accessToken, onSessionExpired }: SoftwarePageProp
       return <span className="subjects-hint">Sin asignaturas</span>
     }
 
+    const subjectIds = new Set(program.asignaturaIds)
+    const coversAllSubjects = sortedSubjects.length > 0
+      && sortedSubjects.every((subject) => subjectIds.has(subject.id))
+
+    if (coversAllSubjects) {
+      return (
+        <span className="subjects-chips">
+          <span className="subject-chip">Todas las asignaturas</span>
+        </span>
+      )
+    }
+
     const sortedIds = [...program.asignaturaIds].sort((a, b) =>
       (subjectNameById.get(a) ?? '').localeCompare(subjectNameById.get(b) ?? '', 'es', { sensitivity: 'base' }),
     )
 
     return (
-      <span className="subjects-chips">
-        {sortedIds.map((id) => (
-          <span className="subject-chip" key={id}>
-            {subjectNameById.get(id) ?? `Asignatura ${id}`}
-          </span>
-        ))}
-      </span>
+      <ChipDisclosure
+        items={sortedIds.map((id) => subjectNameById.get(id) ?? `Asignatura ${id}`)}
+      />
     )
   }
 
@@ -299,45 +317,55 @@ export function SoftwarePage({ accessToken, onSessionExpired }: SoftwarePageProp
               )}
 
               {!loading && programs.length > 0 && (
-                <ul className="subjects-list">
-                  {sortedPrograms.map((program) => (
-                    <li className="subjects-item subjects-item-block" key={program.id}>
-                      <div className="subjects-subject-info">
-                        <span className="subjects-name">{program.nombre}</span>
-                        <span className="software-meta">
-                          <span className="software-version">{program.version}</span>
-                          <span className={`software-license software-license-${program.licencia.toLowerCase()}`}>
-                            {softwareLicenseLabel(program.licencia)}
+                <div className="list-scroll">
+                  <ul className="subjects-list" ref={programsListRef}>
+                    {sortedPrograms.map((program) => (
+                      <li className="subjects-item subjects-item-block" key={program.id}>
+                        <div className="subjects-subject-info">
+                          <span className="subjects-name">{program.nombre}</span>
+                          <span className="software-meta">
+                            <span className="software-version">{program.version}</span>
+                            <span className={`software-license software-license-${program.licencia.toLowerCase()}`}>
+                              {softwareLicenseLabel(program.licencia)}
+                            </span>
                           </span>
-                        </span>
-                        {renderAsignaturaChips(program)}
-                      </div>
-                      <div className="subjects-actions">
-                        <button
-                          className="subjects-icon-button"
-                          type="button"
-                          aria-label={`Editar ${program.nombre}`}
-                          title="Editar"
-                          onClick={() => startEdit(program)}
-                        >
-                          <PencilIcon />
-                        </button>
-                        <button
-                          className="subjects-icon-button subjects-icon-button-danger"
-                          type="button"
-                          aria-label={`Eliminar ${program.nombre}`}
-                          title="Eliminar"
-                          onClick={() => {
-                            setDeleteError('')
-                            setPendingDelete(program)
-                          }}
-                        >
-                          <TrashIcon />
-                        </button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
+                          {renderAsignaturaChips(program)}
+                        </div>
+                        <div className="subjects-actions">
+                          <button
+                            className="subjects-icon-button"
+                            type="button"
+                            aria-label={`Editar ${program.nombre}`}
+                            title="Editar"
+                            onClick={() => startEdit(program)}
+                          >
+                            <PencilIcon />
+                          </button>
+                          <button
+                            className="subjects-icon-button subjects-icon-button-danger"
+                            type="button"
+                            aria-label={`Eliminar ${program.nombre}`}
+                            title="Eliminar"
+                            onClick={() => {
+                              setDeleteError('')
+                              setPendingDelete(program)
+                            }}
+                          >
+                            <TrashIcon />
+                          </button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                  <div
+                    className="list-scrollbar"
+                    aria-hidden="true"
+                    ref={programsScrollbarRef}
+                    onPointerDown={handleProgramsScrollbarPointerDown}
+                  >
+                    <span className="list-scrollbar-thumb" ref={programsThumbRef} />
+                  </div>
+                </div>
               )}
             </section>
           </div>

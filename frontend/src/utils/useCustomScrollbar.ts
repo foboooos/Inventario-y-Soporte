@@ -17,6 +17,7 @@ export function useCustomScrollbar<T extends HTMLElement>(resetKey: unknown) {
     function updateThumb() {
       if (scrollElement.scrollHeight <= scrollElement.clientHeight + 1) {
         thumbElement.style.height = '0px'
+        barRef.current?.classList.remove('is-visible')
         return
       }
 

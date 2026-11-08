@@ -1,5 +1,7 @@
 export type RouteKey = 'support' | 'history' | 'inventory' | 'inbox' | 'settings' | 'subjects' | 'software'
 
+export type ConfigSection = 'users' | 'locations'
+
 export type RouteDefinition = {
   key: RouteKey
   path: string
@@ -23,6 +25,16 @@ export const routePaths: Record<RouteKey, string> = Object.fromEntries(
   routes.map((route) => [route.key, route.path]),
 ) as Record<RouteKey, string>
 
+export const configSectionPaths: Record<ConfigSection, string> = {
+  users: '/config/usuarios',
+  locations: '/config/ubicaciones',
+}
+
+export const configSectionLabels: Record<ConfigSection, string> = {
+  users: 'Usuarios',
+  locations: 'Ubicaciones',
+}
+
 export function routesForRole(role: string): RouteDefinition[] {
   return routes.filter((route) => route.roles.includes(role))
 }
@@ -32,8 +44,17 @@ export function canAccessRoute(role: string, key: RouteKey): boolean {
 }
 
 export function routeFromPath(pathname: string): RouteKey | null {
-  const route = routes.find((item) => item.path === pathname)
-  return route ? route.key : null
+  const path = normalizePath(pathname)
+  const route = routes.find((item) => item.path === path)
+  if (route) return route.key
+  return configSectionFromPath(path) ? 'settings' : null
+}
+
+export function configSectionFromPath(pathname: string): ConfigSection | null {
+  const path = normalizePath(pathname)
+  if (path === configSectionPaths.users) return 'users'
+  if (path === configSectionPaths.locations) return 'locations'
+  return null
 }
 
 export function defaultRouteForRole(role: string): RouteKey {

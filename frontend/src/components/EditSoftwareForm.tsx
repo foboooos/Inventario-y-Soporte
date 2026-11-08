@@ -96,14 +96,14 @@ export function EditSoftwareForm({ accessToken, program, subjects, onUpdated, on
                   <div className="subjects-levels-head">
                     <span className="subjects-levels-title">Asignaturas</span>
                     <span className="subjects-levels-meta">
-                      <span className="subjects-levels-count">{subjectIds.length} de {subjects.length} seleccionadas</span>
                       {subjectIds.length < subjects.length && (
-                        <button className="text-button" type="button" onClick={() => setSubjectIds(subjects.map((subject) => subject.id))}>
+                        <button className="text-button subjects-levels-all" type="button" onClick={() => setSubjectIds(subjects.map((subject) => subject.id))}>
+                          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg>
                           Todas
                         </button>
                       )}
                       {subjectIds.length > 0 && (
-                        <button className="text-button" type="button" onClick={() => setSubjectIds([])}>
+                        <button className="text-button subjects-levels-clear" type="button" onClick={() => setSubjectIds([])}>
                           Limpiar
                         </button>
                       )}

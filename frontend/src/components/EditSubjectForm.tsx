@@ -70,14 +70,14 @@ export function EditSubjectForm({ accessToken, subject, levels, onUpdated, onCan
                   <div className="subjects-levels-head">
                     <span className="subjects-levels-title">Niveles educativos</span>
                     <span className="subjects-levels-meta">
-                      <span className="subjects-levels-count">{levelIds.length} de {levels.length} seleccionados</span>
                       {levelIds.length < levels.length && (
-                        <button className="text-button" type="button" onClick={() => setLevelIds(levels.map((level) => level.id))}>
+                        <button className="text-button subjects-levels-all" type="button" onClick={() => setLevelIds(levels.map((level) => level.id))}>
+                          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg>
                           Todos
                         </button>
                       )}
                       {levelIds.length > 0 && (
-                        <button className="text-button" type="button" onClick={() => setLevelIds([])}>
+                        <button className="text-button subjects-levels-clear" type="button" onClick={() => setLevelIds([])}>
                           Limpiar
                         </button>
                       )}

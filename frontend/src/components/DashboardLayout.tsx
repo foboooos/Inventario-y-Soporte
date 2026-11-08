@@ -11,9 +11,10 @@ type DashboardLayoutProps = {
   activeRoute: RouteKey | null
   onNavigate: (route: RouteKey) => void
   onLogout: () => void
+  headerAction?: { label: string; onClick: () => void }
 }
 
-export function DashboardLayout({ children, user, activeRoute, onNavigate, onLogout }: DashboardLayoutProps) {
+export function DashboardLayout({ children, user, activeRoute, onNavigate, onLogout, headerAction }: DashboardLayoutProps) {
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(SIDEBAR_STORAGE_KEY) === 'true')
   const [mobileOpen, setMobileOpen] = useState(false)
 
@@ -42,6 +43,7 @@ export function DashboardLayout({ children, user, activeRoute, onNavigate, onLog
         onLogout={onLogout}
         mobileOpen={mobileOpen}
         onToggleMobile={() => setMobileOpen((current) => !current)}
+        headerAction={headerAction}
       />
       <button
         className="sidebar-toggle"

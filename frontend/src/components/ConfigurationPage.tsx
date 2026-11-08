@@ -1,5 +1,5 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import type { FormEvent, TransitionEvent } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import type { FormEvent } from 'react'
 import { createLocation, getLocations, renameLocation } from '../services/locations'
 import { isSessionExpired } from '../services/http'
 import { getUsers, deleteUser } from '../services/users'
@@ -15,6 +15,8 @@ import { EditUserForm } from './EditUserForm'
 import { Modal } from './Modal'
 import type { ModalHandle } from './Modal'
 import { RoleIcon } from './RoleIcon'
+import { useCustomScrollbar } from '../utils/useCustomScrollbar'
+import { configSectionPaths, type ConfigSection } from '../routes'
 
 const USERS_PAGE_SIZE = 10
 const MIN_USERS_PAGE_SIZE = 5
@@ -24,6 +26,8 @@ type ConfigurationPageProps = {
   accessToken: string
   currentUserRut: string
   onSessionExpired: () => void
+  section: ConfigSection | null
+  onNavigate: (path: string) => void
 }
 
 const roleOptions = [
@@ -54,32 +58,11 @@ const locationFilterOptions = [
   ...locationTypeOptions,
 ]
 
-function prepareCardToggle(body: HTMLDivElement | null, willExpand: boolean) {
-  if (!body || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-
-  if (willExpand) {
-    body.style.maxHeight = `${body.scrollHeight}px`
-    return
-  }
-
-  body.style.transition = 'none'
-  body.style.maxHeight = `${body.scrollHeight}px`
-  void body.offsetHeight
-  body.style.transition = ''
-}
-
-function handleCardTransitionEnd(event: TransitionEvent<HTMLDivElement>) {
-  if (event.target !== event.currentTarget || event.propertyName !== 'max-height') return
-  event.currentTarget.style.removeProperty('max-height')
-}
-
-export function ConfigurationPage({ accessToken, currentUserRut, onSessionExpired }: ConfigurationPageProps) {
+export function ConfigurationPage({ accessToken, currentUserRut, onSessionExpired, section, onNavigate }: ConfigurationPageProps) {
   const [createdUser, setCreatedUser] = useState<{ nombre: string; password: string } | null>(null)
   const [createUserOpen, setCreateUserOpen] = useState(false)
   const [deletingRut, setDeletingRut] = useState<string | null>(null)
   const [pendingDelete, setPendingDelete] = useState<User | null>(null)
-  const [usersExpanded, setUsersExpanded] = useState(false)
-  const [locationsExpanded, setLocationsExpanded] = useState(false)
   const [usersSort, setUsersSort] = useState<'asc' | 'desc'>('asc')
   const [usersSearch, setUsersSearch] = useState('')
   const [usersPage, setUsersPage] = useState(1)
@@ -92,6 +75,13 @@ export function ConfigurationPage({ accessToken, currentUserRut, onSessionExpire
   const [locations, setLocations] = useState<Location[]>([])
   const [locationsLoading, setLocationsLoading] = useState(true)
   const [locationsError, setLocationsError] = useState('')
+  const locationsScrollbarKey = `${locations.length}:${locationsLoading}`
+  const {
+    scrollRef: locationsListRef,
+    thumbRef: locationsThumbRef,
+    barRef: locationsScrollbarRef,
+    handlePointerDown: handleLocationsScrollbarPointerDown,
+  } = useCustomScrollbar<HTMLUListElement>(locationsScrollbarKey)
   const [users, setUsers] = useState<User[]>([])
   const [usersLoading, setUsersLoading] = useState(true)
   const [usersError, setUsersError] = useState('')
@@ -107,9 +97,7 @@ export function ConfigurationPage({ accessToken, currentUserRut, onSessionExpire
   const [editLocationSigla, setEditLocationSigla] = useState('')
   const [savingLocation, setSavingLocation] = useState(false)
   const [locationEditError, setLocationEditError] = useState('')
-  const usersCardBodyRef = useRef<HTMLDivElement>(null)
   const usersTableScrollRef = useRef<HTMLDivElement>(null)
-  const locationsCardBodyRef = useRef<HTMLDivElement>(null)
   const locationModalRef = useRef<ModalHandle>(null)
   const addLocationModalRef = useRef<ModalHandle>(null)
   const deleteModalRef = useRef<ModalHandle>(null)
@@ -222,14 +210,6 @@ export function ConfigurationPage({ accessToken, currentUserRut, onSessionExpire
     return () => query.removeEventListener('change', handleChange)
   }, [])
 
-  useLayoutEffect(() => {
-    if (!usersExpanded) usersCardBodyRef.current?.style.removeProperty('max-height')
-  }, [usersExpanded])
-
-  useLayoutEffect(() => {
-    if (!locationsExpanded) locationsCardBodyRef.current?.style.removeProperty('max-height')
-  }, [locationsExpanded])
-
   const sortedLocations = useMemo(
     () => [...locations].sort((a, b) =>
       locationTypeOrder[a.tipo] - locationTypeOrder[b.tipo]
@@ -272,6 +252,14 @@ export function ConfigurationPage({ accessToken, currentUserRut, onSessionExpire
       const next = new Set(current)
       if (next.has(rut)) next.delete(rut)
       else next.add(rut)
+      return next
+    })
+  }
+
+  function selectPageUsers() {
+    setSelectedRuts((current) => {
+      const next = new Set(current)
+      visibleUsers.forEach((user) => next.add(user.rut))
       return next
     })
   }
@@ -427,14 +415,21 @@ export function ConfigurationPage({ accessToken, currentUserRut, onSessionExpire
 
   return (
     <main className="support-shell config-shell">
-      <section className="support-content configuration-content" aria-label="Configuración">
-        <section className={`support-card config-card config-users-card${usersExpanded ? '' : ' is-collapsed'}`} aria-label="Usuarios">
-          <div
-            className="config-card-body"
-            id="config-users-body"
-            ref={usersCardBodyRef}
-            onTransitionEnd={handleCardTransitionEnd}
-          >
+      <section className={`support-content configuration-content${section ? ` is-${section}` : ''}`} aria-label="Configuración">
+        {!section && (
+          <nav className="config-mobile-nav" aria-label="Secciones de configuración">
+            <button className="secondary-button" type="button" onClick={() => onNavigate(configSectionPaths.users)}>
+              Usuarios
+            </button>
+            <button className="secondary-button" type="button" onClick={() => onNavigate(configSectionPaths.locations)}>
+              Ubicaciones
+            </button>
+          </nav>
+        )}
+
+        {(!section || section === 'users') && (
+        <section className="support-card config-card config-users-card" aria-label="Usuarios">
+          <div className="config-card-body">
           <div className="config-users-head">
             <div className="config-users-actions">
               <button
@@ -456,6 +451,14 @@ export function ConfigurationPage({ accessToken, currentUserRut, onSessionExpire
               >
                 Descargar PDF
               </button>
+              <button
+                className="secondary-button"
+                type="button"
+                onClick={selectPageUsers}
+                disabled={usersLoading || visibleUsers.length === 0}
+              >
+                Seleccionar página
+              </button>
               {selectedRuts.size > 0 && (
                 <button
                   className="config-danger-button config-users-bulk-delete"
@@ -465,7 +468,7 @@ export function ConfigurationPage({ accessToken, currentUserRut, onSessionExpire
                     setBulkDeleteOpen(true)
                   }}
                 >
-                  Eliminar ({selectedRuts.size})
+                  Borrar seleccionados
                 </button>
               )}
             </div>
@@ -603,32 +606,12 @@ export function ConfigurationPage({ accessToken, currentUserRut, onSessionExpire
             </>
           )}
           </div>
-          <button
-            className="config-card-toggle"
-            type="button"
-            aria-expanded={usersExpanded}
-            aria-controls="config-users-body"
-            aria-label={usersExpanded ? 'Contraer usuarios' : 'Expandir usuarios'}
-            onClick={() => {
-              const collapsing = usersExpanded
-              prepareCardToggle(usersCardBodyRef.current, !collapsing)
-              setUsersExpanded(!collapsing)
-              if (collapsing && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-                window.scrollTo({ top: 0, behavior: 'smooth' })
-              }
-            }}
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
-          </button>
         </section>
+        )}
 
-        <section className={`support-card config-card${locationsExpanded ? '' : ' is-collapsed'}`} aria-label="Ubicaciones">
-          <div
-            className="config-card-body"
-            id="config-locations-body"
-            ref={locationsCardBodyRef}
-            onTransitionEnd={handleCardTransitionEnd}
-          >
+        {(!section || section === 'locations') && (
+        <section className="support-card config-card config-locations-card" aria-label="Ubicaciones">
+          <div className="config-card-body">
           <div className="config-locations-head">
             <div className="config-locations-actions">
               <button
@@ -677,46 +660,43 @@ export function ConfigurationPage({ accessToken, currentUserRut, onSessionExpire
           )}
 
           {!locationsLoading && locations.length > 0 && (
-            <ul className="subjects-list">
-              {visibleLocations.map((location) => (
-                <li className="subjects-item subjects-item-block" key={location.id}>
-                  <div className="subjects-subject-info">
-                    <span className="subjects-name">{location.nombre}</span>
-                    <span className="config-location-parent">
-                      {location.sigla ? `${locationTypeLabel(location)} · ${location.sigla}` : locationTypeLabel(location)}
-                    </span>
-                  </div>
-                  <div className="subjects-actions">
-                    <button
-                      className="subjects-icon-button"
-                      type="button"
-                      aria-label={`Editar ${location.nombre}`}
-                      title="Editar"
-                      onClick={() => startEditLocation(location)}
-                    >
-                      <PencilIcon />
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
+            <div className="list-scroll">
+              <ul className="subjects-list" ref={locationsListRef}>
+                {visibleLocations.map((location) => (
+                  <li className="subjects-item subjects-item-block" key={location.id}>
+                    <div className="subjects-subject-info">
+                      <span className="subjects-name">{location.nombre}</span>
+                      <span className="config-location-parent">
+                        {location.sigla ? `${locationTypeLabel(location)} · ${location.sigla}` : locationTypeLabel(location)}
+                      </span>
+                    </div>
+                    <div className="subjects-actions">
+                      <button
+                        className="subjects-icon-button"
+                        type="button"
+                        aria-label={`Editar ${location.nombre}`}
+                        title="Editar"
+                        onClick={() => startEditLocation(location)}
+                      >
+                        <PencilIcon />
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              <div
+                className="list-scrollbar"
+                aria-hidden="true"
+                ref={locationsScrollbarRef}
+                onPointerDown={handleLocationsScrollbarPointerDown}
+              >
+                <span className="list-scrollbar-thumb" ref={locationsThumbRef} />
+              </div>
+            </div>
           )}
           </div>
-          <button
-            className="config-card-toggle"
-            type="button"
-            aria-expanded={locationsExpanded}
-            aria-controls="config-locations-body"
-            aria-label={locationsExpanded ? 'Contraer ubicaciones' : 'Expandir ubicaciones'}
-            onClick={() => {
-              const expanding = !locationsExpanded
-              prepareCardToggle(locationsCardBodyRef.current, expanding)
-              setLocationsExpanded(expanding)
-            }}
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
-          </button>
         </section>
+        )}
       </section>
 
       {editingLocation && (

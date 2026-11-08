@@ -15,6 +15,7 @@ import { DeleteSubjectModal } from './DeleteSubjectModal'
 import { PencilIcon, TrashIcon } from './ActionIcons'
 import { SortButton } from './SortButton'
 import type { SortKey, SortOption } from './SortButton'
+import { ChipDisclosure } from './ChipDisclosure'
 import { useCustomScrollbar } from '../utils/useCustomScrollbar'
 
 type SubjectsPageProps = {
@@ -59,6 +60,12 @@ export function SubjectsPage({ accessToken, onSessionExpired }: SubjectsPageProp
     barRef: checklistScrollbarRef,
     handlePointerDown: handleChecklistScrollbarPointerDown,
   } = useCustomScrollbar<HTMLDivElement>(scrollbarKey)
+  const {
+    scrollRef: subjectsListRef,
+    thumbRef: subjectsThumbRef,
+    barRef: subjectsScrollbarRef,
+    handlePointerDown: handleSubjectsScrollbarPointerDown,
+  } = useCustomScrollbar<HTMLUListElement>(`${subjects.length}:${loading}`)
 
   const [newSubjectName, setNewSubjectName] = useState('')
   const [newSubjectLevelIds, setNewSubjectLevelIds] = useState<number[]>([])
@@ -187,14 +194,14 @@ export function SubjectsPage({ accessToken, onSessionExpired }: SubjectsPageProp
         <div className="subjects-levels-head">
           <span className="subjects-levels-title">Niveles educativos</span>
           <span className="subjects-levels-meta">
-            <span className="subjects-levels-count">{selected.length} de {levels.length} seleccionados</span>
             {selected.length < levels.length && (
-              <button className="text-button" type="button" onClick={onSelectAll}>
+              <button className="text-button subjects-levels-all" type="button" onClick={onSelectAll}>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg>
                 Todos
               </button>
             )}
             {selected.length > 0 && (
-              <button className="text-button" type="button" onClick={onClear}>
+              <button className="text-button subjects-levels-clear" type="button" onClick={onClear}>
                 Limpiar
               </button>
             )}
@@ -210,12 +217,12 @@ export function SubjectsPage({ accessToken, onSessionExpired }: SubjectsPageProp
             ))}
           </div>
           <div
-            className="subjects-level-scrollbar"
+            className="list-scrollbar"
             aria-hidden="true"
             ref={checklistScrollbarRef}
             onPointerDown={handleChecklistScrollbarPointerDown}
           >
-            <span className="subjects-level-scrollbar-thumb" ref={checklistThumbRef} />
+            <span className="list-scrollbar-thumb" ref={checklistThumbRef} />
           </div>
         </div>
       </div>
@@ -238,13 +245,10 @@ export function SubjectsPage({ accessToken, onSessionExpired }: SubjectsPageProp
     }
 
     return (
-      <span className="subjects-chips">
-        {subject.nivelIds.map((id) => (
-          <span className="subject-chip" key={id}>
-            {levelNameById.get(id) ?? `Nivel ${id}`}
-          </span>
-        ))}
-      </span>
+      <ChipDisclosure
+        items={subject.nivelIds.map((id) => levelNameById.get(id) ?? `Nivel ${id}`)}
+        maxVisible={4}
+      />
     )
   }
 
@@ -318,12 +322,12 @@ export function SubjectsPage({ accessToken, onSessionExpired }: SubjectsPageProp
                     ))}
                   </ul>
                   <div
-                    className="subjects-level-scrollbar"
+                    className="list-scrollbar"
                     aria-hidden="true"
                     ref={levelsScrollbarRef}
                     onPointerDown={handleLevelsScrollbarPointerDown}
                   >
-                    <span className="subjects-level-scrollbar-thumb" ref={levelsThumbRef} />
+                    <span className="list-scrollbar-thumb" ref={levelsThumbRef} />
                   </div>
                 </div>
               )}
@@ -366,36 +370,46 @@ export function SubjectsPage({ accessToken, onSessionExpired }: SubjectsPageProp
               )}
 
               {!loading && subjects.length > 0 && (
-                <ul className="subjects-list">
-                  {sortedSubjects.map((subject) => (
-                    <li className="subjects-item subjects-item-block" key={subject.id}>
-                      <div className="subjects-subject-info">
-                        <span className="subjects-name">{subject.nombre}</span>
-                        {renderSubjectChips(subject)}
-                      </div>
-                      <div className="subjects-actions">
-                        <button
-                          className="subjects-icon-button"
-                          type="button"
-                          aria-label={`Editar ${subject.nombre}`}
-                          title="Editar"
-                          onClick={() => startEditSubject(subject)}
-                        >
-                          <PencilIcon />
-                        </button>
-                        <button
-                          className="subjects-icon-button subjects-icon-button-danger"
-                          type="button"
-                          aria-label={`Eliminar ${subject.nombre}`}
-                          title="Eliminar"
-                          onClick={() => setPendingDeleteSubject(subject)}
-                        >
-                          <TrashIcon />
-                        </button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
+                <div className="list-scroll">
+                  <ul className="subjects-list" ref={subjectsListRef}>
+                    {sortedSubjects.map((subject) => (
+                      <li className="subjects-item subjects-item-block" key={subject.id}>
+                        <div className="subjects-subject-info">
+                          <span className="subjects-name">{subject.nombre}</span>
+                          {renderSubjectChips(subject)}
+                        </div>
+                        <div className="subjects-actions">
+                          <button
+                            className="subjects-icon-button"
+                            type="button"
+                            aria-label={`Editar ${subject.nombre}`}
+                            title="Editar"
+                            onClick={() => startEditSubject(subject)}
+                          >
+                            <PencilIcon />
+                          </button>
+                          <button
+                            className="subjects-icon-button subjects-icon-button-danger"
+                            type="button"
+                            aria-label={`Eliminar ${subject.nombre}`}
+                            title="Eliminar"
+                            onClick={() => setPendingDeleteSubject(subject)}
+                          >
+                            <TrashIcon />
+                          </button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                  <div
+                    className="list-scrollbar"
+                    aria-hidden="true"
+                    ref={subjectsScrollbarRef}
+                    onPointerDown={handleSubjectsScrollbarPointerDown}
+                  >
+                    <span className="list-scrollbar-thumb" ref={subjectsThumbRef} />
+                  </div>
+                </div>
               )}
             </section>
           </div>

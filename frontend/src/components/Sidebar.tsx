@@ -10,6 +10,7 @@ type SidebarProps = {
   onLogout: () => void
   mobileOpen: boolean
   onToggleMobile: () => void
+  headerAction?: { label: string; onClick: () => void }
 }
 
 function RouteIcon({ route }: { route: RouteKey }) {
@@ -36,7 +37,7 @@ function RouteIcon({ route }: { route: RouteKey }) {
   return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5a2 2 0 0 1 2 2v.38a6.8 6.8 0 0 1 1.55.9l.33-.19a2 2 0 1 1 2 3.46l-.33.19c.08.36.12.73.12 1.11s-.04.75-.12 1.11l.33.19a2 2 0 1 1-2 3.46l-.33-.19a6.8 6.8 0 0 1-1.55.9v.38a2 2 0 1 1-4 0v-.38a6.8 6.8 0 0 1-1.55-.9l.33.19a2 2 0 1 1-2-3.46l.33-.19A5.7 5.7 0 0 1 6.33 12c0-.38.04-.75.12-1.11l-.33-.19a2 2 0 1 1 2-3.46l.33.19A6.8 6.8 0 0 1 10 5.88V5.5a2 2 0 0 1 2-2Z" /><circle cx="12" cy="11.35" r="2.5" /></svg>
 }
 
-export function Sidebar({ user, activeRoute, onNavigate, onLogout, mobileOpen, onToggleMobile }: SidebarProps) {
+export function Sidebar({ user, activeRoute, onNavigate, onLogout, mobileOpen, onToggleMobile, headerAction }: SidebarProps) {
   const visibleRoutes = routesForRole(user.rol)
   const roleLabels: Record<string, string> = {
     ADMIN: 'Administrador',
@@ -109,6 +110,19 @@ export function Sidebar({ user, activeRoute, onNavigate, onLogout, mobileOpen, o
           <path d="m15 6-6 6 6 6" />
         </svg>
       </button>
+
+      {headerAction && (
+        <button
+          className="sidebar-header-action"
+          type="button"
+          onClick={headerAction.onClick}
+          aria-label={headerAction.label}
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m7 7 10 10M17 7 7 17" />
+          </svg>
+        </button>
+      )}
 
       <div
         className="sidebar-scrim"
