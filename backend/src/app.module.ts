@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { APP_FILTER } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter.js';
@@ -18,6 +19,7 @@ import { entities } from './database/entities.js';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ThrottlerModule.forRoot([{ name: 'default', ttl: 60_000, limit: 5 }]),
     AcademicModule,
     AuthModule,
     HealthModule,

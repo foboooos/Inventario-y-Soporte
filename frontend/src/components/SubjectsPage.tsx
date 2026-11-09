@@ -192,7 +192,6 @@ export function SubjectsPage({ accessToken, onSessionExpired }: SubjectsPageProp
     return (
       <div className="subjects-levels">
         <div className="subjects-levels-head">
-          <span className="subjects-levels-title">Niveles educativos</span>
           <span className="subjects-levels-meta">
             {selected.length < levels.length && (
               <button className="text-button subjects-levels-all" type="button" onClick={onSelectAll}>
@@ -231,7 +230,11 @@ export function SubjectsPage({ accessToken, onSessionExpired }: SubjectsPageProp
 
   function renderSubjectChips(subject: Subject) {
     if (subject.nivelIds.length === 0) {
-      return <span className="subjects-hint">Sin niveles asignados</span>
+      return (
+        <span className="subjects-chips">
+          <span className="subject-chip subject-chip-danger">Sin niveles asignados</span>
+        </span>
+      )
     }
 
     const coversAllLevels = levels.length > 0 && levels.every((level) => subject.nivelIds.includes(level.id))
@@ -239,7 +242,7 @@ export function SubjectsPage({ accessToken, onSessionExpired }: SubjectsPageProp
     if (coversAllLevels) {
       return (
         <span className="subjects-chips">
-          <span className="subject-chip">Todos los cursos</span>
+          <span className="subject-chip subject-chip-success">Todos los cursos</span>
         </span>
       )
     }
@@ -273,7 +276,7 @@ export function SubjectsPage({ accessToken, onSessionExpired }: SubjectsPageProp
             <section className="support-card subjects-card subjects-levels-card" aria-label="Niveles educativos">
               <div className="subjects-levels-toolbar">
                 <button
-                  className="secondary-button subjects-levels-add"
+                  className="primary-action primary-action-solid subjects-levels-add"
                   type="button"
                   onClick={() => setLevelModal({ level: null })}
                 >
@@ -282,9 +285,6 @@ export function SubjectsPage({ accessToken, onSessionExpired }: SubjectsPageProp
                   </svg>
                   Nuevo nivel
                 </button>
-                <span className="subjects-levels-count">
-                  {levels.length} {levels.length === 1 ? 'nivel' : 'niveles'}
-                </span>
               </div>
 
               {loading && <ListSkeleton label="Cargando niveles educativos…" rows={4} />}
@@ -335,7 +335,7 @@ export function SubjectsPage({ accessToken, onSessionExpired }: SubjectsPageProp
 
             <section className="support-card subjects-card subjects-create-card" aria-label="Crear asignatura">
               <form className="subjects-form subjects-form-column" onSubmit={handleCreateSubject}>
-                <label>
+                <label className="field-float">
                   <span>Asignatura</span>
                   <input
                     value={newSubjectName}
@@ -346,14 +346,14 @@ export function SubjectsPage({ accessToken, onSessionExpired }: SubjectsPageProp
                   />
                 </label>
                 {loading ? (
-                  <ChecklistSkeleton label="Cargando niveles educativos…" title="Niveles educativos" />
+                  <ChecklistSkeleton label="Cargando niveles educativos…" />
                 ) : renderLevelChecklist(
                   newSubjectLevelIds,
                   (id) => setNewSubjectLevelIds((current) => toggleLevel(current, id)),
                   () => setNewSubjectLevelIds([]),
                   () => setNewSubjectLevelIds(levels.map((level) => level.id)),
                 )}
-                <button className="primary-action" type="submit" disabled={creatingSubject || !newSubjectName.trim()}>
+                <button className="primary-action primary-action-solid" type="submit" disabled={creatingSubject || !newSubjectName.trim()}>
                   {creatingSubject ? 'Agregando…' : 'Agregar'}
                 </button>
               </form>

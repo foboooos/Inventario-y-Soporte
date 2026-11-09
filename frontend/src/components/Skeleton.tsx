@@ -59,20 +59,13 @@ export function ListSkeleton({ label, rows = 4 }: ListSkeletonProps) {
 
 type ChecklistSkeletonProps = {
   label: string
-  title: string
   items?: number
 }
 
-export function ChecklistSkeleton({ label, title, items = 9 }: ChecklistSkeletonProps) {
+export function ChecklistSkeleton({ label, items = 9 }: ChecklistSkeletonProps) {
   return (
     <div className="subjects-levels" role="status">
       <span className="sr-only">{label}</span>
-      <div className="subjects-levels-head">
-        <span className="subjects-levels-title">{title}</span>
-        <span className="subjects-levels-meta">
-          <span className="skeleton-bar skeleton-levels-count" />
-        </span>
-      </div>
       <div className="subjects-checklist" aria-hidden="true">
         {Array.from({ length: items }, (_, index) => (
           <span className="subjects-checkbox skeleton-checkbox" key={index}>

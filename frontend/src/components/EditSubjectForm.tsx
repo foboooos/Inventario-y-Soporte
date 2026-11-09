@@ -5,6 +5,7 @@ import { isSessionExpired } from '../services/http'
 import type { EducationalLevel, Subject } from '../types/academic'
 import { Modal } from './Modal'
 import type { ModalHandle } from './Modal'
+import { useCustomScrollbar } from '../utils/useCustomScrollbar'
 
 type EditSubjectFormProps = {
   accessToken: string
@@ -25,6 +26,12 @@ export function EditSubjectForm({ accessToken, subject, levels, onUpdated, onCan
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const modalRef = useRef<ModalHandle>(null)
+  const {
+    scrollRef: checklistRef,
+    thumbRef: checklistThumbRef,
+    barRef: checklistScrollbarRef,
+    handlePointerDown: handleChecklistScrollbarPointerDown,
+  } = useCustomScrollbar<HTMLDivElement>(`${levels.length}:${subject.nivelIds.length}`)
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -68,7 +75,6 @@ export function EditSubjectForm({ accessToken, subject, levels, onUpdated, onCan
               ) : (
                 <div className="subjects-levels">
                   <div className="subjects-levels-head">
-                    <span className="subjects-levels-title">Niveles educativos</span>
                     <span className="subjects-levels-meta">
                       {levelIds.length < levels.length && (
                         <button className="text-button subjects-levels-all" type="button" onClick={() => setLevelIds(levels.map((level) => level.id))}>
@@ -83,17 +89,27 @@ export function EditSubjectForm({ accessToken, subject, levels, onUpdated, onCan
                       )}
                     </span>
                   </div>
-                  <div className="subjects-checklist">
-                    {levels.map((level) => (
-                      <label className="subjects-checkbox" key={level.id}>
-                        <input
-                          type="checkbox"
-                          checked={levelIds.includes(level.id)}
-                          onChange={() => setLevelIds((current) => toggleLevel(current, level.id))}
-                        />
-                        <span>{level.nombre}</span>
-                      </label>
-                    ))}
+                  <div className="subjects-checklist-scroll">
+                    <div className="subjects-checklist" ref={checklistRef}>
+                      {levels.map((level) => (
+                        <label className="subjects-checkbox" key={level.id}>
+                          <input
+                            type="checkbox"
+                            checked={levelIds.includes(level.id)}
+                            onChange={() => setLevelIds((current) => toggleLevel(current, level.id))}
+                          />
+                          <span>{level.nombre}</span>
+                        </label>
+                      ))}
+                    </div>
+                    <div
+                      className="list-scrollbar"
+                      aria-hidden="true"
+                      ref={checklistScrollbarRef}
+                      onPointerDown={handleChecklistScrollbarPointerDown}
+                    >
+                      <span className="list-scrollbar-thumb" ref={checklistThumbRef} />
+                    </div>
                   </div>
                 </div>
               )}

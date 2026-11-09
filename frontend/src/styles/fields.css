@@ -1,0 +1,37 @@
+.field-float {
+  position: relative;
+  display: block;
+  margin: 0;
+}
+
+.field-float > span {
+  position: absolute;
+  top: 0;
+  left: 8px;
+  z-index: 1;
+  padding: 0 4px;
+  color: var(--minimal-muted);
+  background: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 16px;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.field-float:has(input:focus-within) > span,
+.field-float:has([aria-expanded='true']) > span {
+  color: var(--minimal-secondary);
+}
+
+.field-float input,
+.field-float .select-menu-button {
+  height: 40px;
+}
+
+.field-float input:focus-visible,
+.field-float .select-menu-button:focus-visible {
+  border-color: var(--minimal-border);
+  box-shadow: none;
+  outline: none;
+}

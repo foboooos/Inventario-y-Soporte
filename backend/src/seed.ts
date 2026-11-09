@@ -3,6 +3,7 @@ import { DataSource } from 'typeorm';
 import { AppModule } from './app.module.js';
 import { seedLevels } from './seeds/levels.seed.js';
 import { seedLocations } from './seeds/locations.seed.js';
+import { seedDevices } from './seeds/devices.seed.js';
 import { seedSoftware } from './seeds/software.seed.js';
 import { seedSubjects } from './seeds/subjects.seed.js';
 import { seedTickets } from './seeds/tickets.seed.js';
@@ -18,6 +19,7 @@ async function bootstrap() {
 
   try {
     await seedLocations(dataSource);
+    await seedDevices(dataSource);
     await seedLevels(dataSource);
     await seedSubjects(dataSource);
     await seedSoftware(dataSource);

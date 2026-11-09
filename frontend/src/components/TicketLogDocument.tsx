@@ -1,6 +1,12 @@
-import { useRef } from 'react'
-import type { DeviceStatus, DeviceType } from '../types/inventory'
+import { useRef, useState } from 'react'
 import type { TicketBitacora } from '../types/ticket'
+import { downloadTicketLogPdf } from '../utils/ticketLogPdf'
+import {
+  formatTicketLogDate,
+  ticketLogDeviceLabels,
+  ticketLogSolutionSteps,
+  ticketLogStatusLabels,
+} from '../utils/ticketLog'
 import { Modal } from './Modal'
 import type { ModalHandle } from './Modal'
 
@@ -9,53 +15,29 @@ type TicketLogDocumentProps = {
   onClose: () => void
 }
 
-const deviceOptions: Array<{ value: DeviceType; label: string }> = [
-  { value: 'PC', label: 'PC' },
-  { value: 'PROYECTOR', label: 'Proyector' },
-  { value: 'IMPRESORA', label: 'Impresora' },
-  { value: 'RED', label: 'Red' },
-]
-
-const finalStatusOptions: Array<{ value: DeviceStatus; label: string }> = [
-  { value: 'ACTIVO', label: 'Activo' },
-  { value: 'INACTIVO', label: 'Inactivo' },
-  { value: 'BAJA_TECNICA', label: 'Baja Técnica' },
-]
-
-function formatDate(value?: string | null) {
-  if (!value) return 'No disponible'
-
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value
-
-  const day = String(date.getDate()).padStart(2, '0')
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  return `${day} / ${month} / ${date.getFullYear()}`
-}
-
-function CheckOption({ checked, label }: { checked: boolean; label: string }) {
-  return (
-    <span className="ticket-log-check">
-      <span className="ticket-log-check-box" aria-hidden="true">{checked ? '✓' : ''}</span>
-      <span>{label}</span>
-    </span>
-  )
-}
-
 export function TicketLogDocument({ bitacora, onClose }: TicketLogDocumentProps) {
   const modalRef = useRef<ModalHandle>(null)
-  const solutionSteps = (bitacora.solucion_aplicada ?? '')
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const solutionSteps = ticketLogSolutionSteps(bitacora.solucion_aplicada)
+  const deviceLabel = bitacora.dispositivo_tipo ? ticketLogDeviceLabels[bitacora.dispositivo_tipo] : null
+  const device = deviceLabel
+    ? `${deviceLabel}${bitacora.codigo_inventario ? ` · ${bitacora.codigo_inventario}` : ''}`
+    : '—'
+  const finalStatus = bitacora.estado_final ? ticketLogStatusLabels[bitacora.estado_final] : null
+  const closeDate = bitacora.fecha_resolucion ? formatTicketLogDate(bitacora.fecha_resolucion) : null
 
-  function printDocument() {
-    const originalTitle = document.title
-    document.title = bitacora.codigo_ticket
-    window.addEventListener('afterprint', () => {
-      document.title = originalTitle
-    }, { once: true })
-    window.print()
+  async function savePdf() {
+    setSaving(true)
+    setError('')
+
+    try {
+      await downloadTicketLogPdf(bitacora)
+    } catch (exception) {
+      setError(exception instanceof Error ? exception.message : 'No se pudo generar el PDF')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -67,84 +49,68 @@ export function TicketLogDocument({ bitacora, onClose }: TicketLogDocumentProps)
       cardClassName="modal-card ticket-log-modal"
       onClose={onClose}
     >
-        <div className="ticket-log-toolbar no-print">
-          <button className="primary-action" type="button" onClick={printDocument}>Imprimir / Guardar PDF</button>
-          <button className="secondary-button" type="button" onClick={() => modalRef.current?.close()}>Cerrar</button>
-        </div>
-
+      <div className="ticket-log-body">
         <article className="ticket-log-document">
-          <header className="ticket-log-header">
-            <h1 className="ticket-log-title">REGISTRO DE ATENCIÓN DE INCIDENTES</h1>
-            <dl className="ticket-log-meta">
-              <div>
-                <dt>Ticket</dt>
-                <dd>{bitacora.codigo_ticket}</dd>
-              </div>
-              <div>
-                <dt>Fecha de cierre</dt>
-                <dd>{formatDate(bitacora.fecha_resolucion)}</dd>
-              </div>
-            </dl>
+          <header className="ticket-log-heading">
+            <h2 className="config-dialog-title">Bitácora del ticket {bitacora.codigo_ticket}</h2>
+            <p className="config-dialog-text">
+              {closeDate ? `Cerrado el ${closeDate}` : 'Fecha de cierre no registrada'}
+            </p>
           </header>
 
-          <div className="ticket-log-cross">
-            <section className="ticket-log-column" aria-labelledby="ticket-log-initial">
-              <h2 id="ticket-log-initial">Ticket inicial</h2>
-              <dl className="ticket-log-fields">
-                <div>
-                  <dt>Ubicación</dt>
-                  <dd>{bitacora.ubicacion}</dd>
-                </div>
-                <div>
-                  <dt>Dispositivo</dt>
-                  <dd className="ticket-log-checks">
-                    {deviceOptions.map((option) => (
-                      <CheckOption key={option.value} checked={bitacora.dispositivo_tipo === option.value} label={option.label} />
-                    ))}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Código de inventario</dt>
-                  <dd>{bitacora.codigo_inventario ?? '—'}</dd>
-                </div>
-                <div>
-                  <dt>Síntoma</dt>
-                  <dd>{bitacora.sintoma}</dd>
-                </div>
-              </dl>
+          <dl className="ticket-log-summary">
+            <div>
+              <dt>Ubicación</dt>
+              <dd>{bitacora.ubicacion || '—'}</dd>
+            </div>
+            <div>
+              <dt>Dispositivo</dt>
+              <dd>{device}</dd>
+            </div>
+            <div>
+              <dt>Estado final</dt>
+              <dd>
+                {finalStatus && bitacora.estado_final ? (
+                  <span className={`status status-${bitacora.estado_final.toLowerCase().replace('_', '-')}`}>
+                    {finalStatus}
+                  </span>
+                ) : (
+                  '—'
+                )}
+              </dd>
+            </div>
+            <div>
+              <dt>Técnico responsable</dt>
+              <dd>{bitacora.tecnico_nombre ?? '—'}</dd>
+            </div>
+          </dl>
+
+          <div className="ticket-log-sections">
+            <section className="ticket-log-block" aria-label="Síntoma">
+              <h3>Síntoma</h3>
+              <p>{bitacora.sintoma}</p>
             </section>
 
-            <section className="ticket-log-column" aria-labelledby="ticket-log-final">
-              <h2 id="ticket-log-final">Respuesta técnica</h2>
-              <div className="ticket-log-block">
-                <h3>Diagnóstico y causa raíz</h3>
-                <p>{bitacora.causa_raiz ?? 'No disponible'}</p>
-              </div>
-              <div className="ticket-log-block">
-                <h3>Solución aplicada</h3>
-                {solutionSteps.length > 0 ? (
-                  <ul className="ticket-log-solution">
-                    {solutionSteps.map((step, index) => <li key={index}>{step}</li>)}
-                  </ul>
-                ) : (
-                  <p>No disponible</p>
-                )}
-              </div>
-              <div className="ticket-log-block">
-                <h3>Estado final</h3>
-                <p className="ticket-log-checks">
-                  {finalStatusOptions.map((option) => (
-                    <CheckOption key={option.value} checked={bitacora.estado_final === option.value} label={option.label} />
-                  ))}
-                </p>
-              </div>
-              <div className="ticket-log-block">
-                <h3>Técnico responsable</h3>
-                <p>{bitacora.tecnico_nombre ?? 'No disponible'}</p>
-              </div>
+            <section className="ticket-log-block" aria-label="Diagnóstico y causa raíz">
+              <h3>Diagnóstico y causa raíz</h3>
+              <p>{bitacora.causa_raiz ?? '—'}</p>
+            </section>
+
+            <section className="ticket-log-block" aria-label="Solución aplicada">
+              <h3>Solución aplicada</h3>
+              <p>{solutionSteps.length > 0 ? solutionSteps.join('\n') : '—'}</p>
             </section>
           </div>
         </article>
+      </div>
+
+      <div className="ticket-log-actions no-print">
+        {error && <p className="error ticket-log-error" role="alert">{error}</p>}
+        <button className="secondary-button" type="button" onClick={() => modalRef.current?.close()}>Cerrar</button>
+        <button className="primary-action primary-action-solid" type="button" disabled={saving} onClick={savePdf}>
+          {saving ? 'Generando…' : 'Guardar PDF'}
+        </button>
+      </div>
     </Modal>
   )
 }

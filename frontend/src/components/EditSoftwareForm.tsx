@@ -8,6 +8,7 @@ import type { Subject } from '../types/academic'
 import { Modal } from './Modal'
 import type { ModalHandle } from './Modal'
 import { SelectMenu } from './SelectMenu'
+import { useCustomScrollbar } from '../utils/useCustomScrollbar'
 
 type EditSoftwareFormProps = {
   accessToken: string
@@ -30,6 +31,12 @@ export function EditSoftwareForm({ accessToken, program, subjects, onUpdated, on
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const modalRef = useRef<ModalHandle>(null)
+  const {
+    scrollRef: checklistRef,
+    thumbRef: checklistThumbRef,
+    barRef: checklistScrollbarRef,
+    handlePointerDown: handleChecklistScrollbarPointerDown,
+  } = useCustomScrollbar<HTMLDivElement>(`${subjects.length}:${program.asignaturaIds.length}`)
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -94,7 +101,6 @@ export function EditSoftwareForm({ accessToken, program, subjects, onUpdated, on
               ) : (
                 <div className="subjects-levels">
                   <div className="subjects-levels-head">
-                    <span className="subjects-levels-title">Asignaturas</span>
                     <span className="subjects-levels-meta">
                       {subjectIds.length < subjects.length && (
                         <button className="text-button subjects-levels-all" type="button" onClick={() => setSubjectIds(subjects.map((subject) => subject.id))}>
@@ -109,17 +115,27 @@ export function EditSoftwareForm({ accessToken, program, subjects, onUpdated, on
                       )}
                     </span>
                   </div>
-                  <div className="subjects-checklist">
-                    {subjects.map((subject) => (
-                      <label className="subjects-checkbox" key={subject.id}>
-                        <input
-                          type="checkbox"
-                          checked={subjectIds.includes(subject.id)}
-                          onChange={() => setSubjectIds((current) => toggleId(current, subject.id))}
-                        />
-                        <span>{subject.nombre}</span>
-                      </label>
-                    ))}
+                  <div className="subjects-checklist-scroll">
+                    <div className="subjects-checklist" ref={checklistRef}>
+                      {subjects.map((subject) => (
+                        <label className="subjects-checkbox" key={subject.id}>
+                          <input
+                            type="checkbox"
+                            checked={subjectIds.includes(subject.id)}
+                            onChange={() => setSubjectIds((current) => toggleId(current, subject.id))}
+                          />
+                          <span>{subject.nombre}</span>
+                        </label>
+                      ))}
+                    </div>
+                    <div
+                      className="list-scrollbar"
+                      aria-hidden="true"
+                      ref={checklistScrollbarRef}
+                      onPointerDown={handleChecklistScrollbarPointerDown}
+                    >
+                      <span className="list-scrollbar-thumb" ref={checklistThumbRef} />
+                    </div>
                   </div>
                 </div>
               )}

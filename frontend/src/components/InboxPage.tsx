@@ -365,6 +365,11 @@ export function InboxPage({ accessToken, onSessionExpired, isActive }: InboxPage
 
   const hasActiveFilters = estadoFilter !== 'ALL' || Boolean(subLocation || parentLocation) || Boolean(desde) || Boolean(hasta)
 
+  useEffect(() => {
+    const table = tableCardRef.current?.querySelector('table')
+    table?.classList.toggle('is-partial', tickets.length < pageSize)
+  }, [tickets, pageSize])
+
   const pageStart = (activePage - 1) * pageSize
   const pageNumbers = getPageNumbers(activePage, totalPages)
 

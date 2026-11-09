@@ -51,7 +51,7 @@ const TICKETS: SeedTicket[] = [
     estado: TicketStatus.ABIERTO,
   },
   {
-    ubicacion: 'Laboratorio de Computación',
+    ubicacion: 'Lab. Computación 1',
     sintoma: 'no hay internet en el laboratorio, los computadores tienen la red pero no navegan',
     estado: TicketStatus.ABIERTO,
   },

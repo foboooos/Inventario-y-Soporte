@@ -96,6 +96,10 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
   const [deleteError, setDeleteError] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(INITIAL_PAGE_SIZE)
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(() => new Set())
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
+  const [deletingBulk, setDeletingBulk] = useState(false)
+  const [bulkDeleteError, setBulkDeleteError] = useState('')
   const pageSizeRef = useRef(INITIAL_PAGE_SIZE)
   const hasDataRef = useRef(false)
   const actionsRef = useRef<HTMLDivElement | null>(null)
@@ -103,6 +107,7 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
   const tabsRef = useRef<HTMLDivElement | null>(null)
   const tableScrollRef = useRef<HTMLDivElement | null>(null)
   const deleteModalRef = useRef<ModalHandle>(null)
+  const bulkDeleteModalRef = useRef<ModalHandle>(null)
   const baseRowHeightRef = useRef<number | null>(null)
   const statusTabRefs = useRef<Array<HTMLButtonElement | null>>([])
   const canManageInventory = user.rol === 'ADMIN' || user.rol === 'TECNICO'
@@ -171,6 +176,11 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
       return
     }
   }, [statusFilter])
+
+  useEffect(() => {
+    const table = tableScrollRef.current?.querySelector('table')
+    table?.classList.toggle('is-partial', devices.length < pageSize)
+  }, [devices, pageSize])
 
   useEffect(() => {
     function computePageSize() {
@@ -273,6 +283,57 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
   const pageNumbers = getPageNumbers(activePage, totalPages)
   const hasQuery = Boolean(searchTerm) || statusFilter !== 'ALL'
 
+  function toggleDeviceSelected(id: number) {
+    setSelectedIds((current) => {
+      const next = new Set(current)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  async function handleBulkDelete() {
+    const targets = devices.filter((device) => selectedIds.has(device.id))
+    if (targets.length === 0) return
+
+    setDeletingBulk(true)
+    setBulkDeleteError('')
+    const deleted: number[] = []
+    const failed: string[] = []
+
+    for (const device of targets) {
+      try {
+        await deleteInventoryDevice(accessToken, device.id)
+        deleted.push(device.id)
+      } catch (exception: unknown) {
+        if (isSessionExpired(exception)) {
+          onSessionExpired()
+          return
+        }
+        failed.push(exception instanceof Error ? exception.message : `No se pudo eliminar ${device.code}`)
+      }
+    }
+
+    if (deleted.length > 0) {
+      setDevices((current) => current.filter((device) => !deleted.includes(device.id)))
+      setTotal((current) => Math.max(0, current - deleted.length))
+      setSelectedIds((current) => {
+        const next = new Set(current)
+        deleted.forEach((id) => next.delete(id))
+        return next
+      })
+      setReloadKey((key) => key + 1)
+    }
+
+    if (failed.length > 0) {
+      setBulkDeleteError(`${failed.length} dispositivo(s) no se pudieron eliminar: ${failed[0]}`)
+    } else {
+      bulkDeleteModalRef.current?.close()
+    }
+
+    setDeletingBulk(false)
+  }
+
   function changeStatusFilter(nextStatus: StatusFilter) {
     setStatusFilter(nextStatus)
     setCurrentPage(1)
@@ -321,10 +382,22 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
       <section className="inventory-content" aria-label="Inventario">
     {canManageInventory && (
     <div className="inventory-actions" ref={actionsRef}>
-      <button className="primary-action" type="button" onClick={() => setModal({ kind: 'create' })}>
+      <button className="primary-action primary-action-solid" type="button" onClick={() => setModal({ kind: 'create' })}>
         <svg viewBox="0 0 24 24" aria-hidden="true" className="button-icon"><path d="M12 5v14M5 12h14" /></svg>
         Nuevo dispositivo
       </button>
+      {selectedIds.size > 0 && (
+        <button
+          className="config-danger-button"
+          type="button"
+          onClick={() => {
+            setBulkDeleteError('')
+            setBulkDeleteOpen(true)
+          }}
+        >
+          Borrar seleccionados
+        </button>
+      )}
     </div>
   )}
   <section className="inventory-summary" aria-label="Resumen del inventario" ref={summaryRef}>
@@ -440,6 +513,43 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
         </div>
       </Modal>
     )}
+    {bulkDeleteOpen && (
+      <Modal
+        ref={bulkDeleteModalRef}
+        role="alertdialog"
+        label="Eliminar dispositivos seleccionados"
+        backdropClassName="device-modal-backdrop"
+        cardClassName="create-device-card modal-card config-delete-modal"
+        dismissible={!deletingBulk}
+        onClose={() => setBulkDeleteOpen(false)}
+      >
+        <div className="device-modal-body">
+          <h2 className="config-dialog-title">Eliminar dispositivos</h2>
+          <p className="config-dialog-text">
+            ¿Eliminar {selectedIds.size} dispositivo(s) seleccionado(s)? Esta acción no se puede deshacer.
+          </p>
+          {bulkDeleteError && <p className="error" role="alert">{bulkDeleteError}</p>}
+          <div className="device-form-actions">
+            <button
+              className="secondary-button"
+              type="button"
+              disabled={deletingBulk}
+              onClick={() => bulkDeleteModalRef.current?.close()}
+            >
+              Cancelar
+            </button>
+            <button
+              className="config-danger-button"
+              type="button"
+              disabled={deletingBulk}
+              onClick={() => { void handleBulkDelete() }}
+            >
+              {deletingBulk ? 'Eliminando…' : 'Eliminar'}
+            </button>
+          </div>
+        </div>
+      </Modal>
+    )}
     {modal?.kind === 'create' && canManageInventory && (
       <CreateDeviceForm
         accessToken={accessToken}
@@ -500,7 +610,7 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
             <div className="empty-state-block">
               <p>Aún no hay dispositivos registrados.</p>
               {canManageInventory && (
-                <button className="primary-action" type="button" onClick={() => setModal({ kind: 'create' })}>
+                <button className="primary-action primary-action-solid" type="button" onClick={() => setModal({ kind: 'create' })}>
                   <svg viewBox="0 0 24 24" aria-hidden="true" className="button-icon"><path d="M12 5v14M5 12h14" /></svg>
                   Nuevo dispositivo
                 </button>
@@ -522,10 +632,21 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
               </thead>
               <tbody>
                 {devices.map((device) => (
-                  <tr key={device.id}>
+                  <tr
+                    key={device.id}
+                    className={selectedIds.has(device.id) ? 'is-selected' : undefined}
+                    tabIndex={canManageInventory ? 0 : undefined}
+                    onClick={canManageInventory ? () => toggleDeviceSelected(device.id) : undefined}
+                    onKeyDown={canManageInventory ? (event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault()
+                        toggleDeviceSelected(device.id)
+                      }
+                    } : undefined}
+                  >
                     <td className="device-code">
                       {canManageInventory ? (
-                        <button className="device-code-button" type="button" aria-label={`Editar ${device.code}`} title={`Editar ${device.code}`} onClick={() => setModal({ kind: 'edit', device })}>
+                        <button className="device-code-button" type="button" aria-label={`Editar ${device.code}`} title={`Editar ${device.code}`} onClick={(event) => { event.stopPropagation(); setModal({ kind: 'edit', device }) }}>
                           {device.code}
                         </button>
                       ) : (
@@ -543,7 +664,8 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
                           type="button"
                           aria-label={`Eliminar ${device.code}`}
                           title="Eliminar"
-                          onClick={() => {
+                          onClick={(event) => {
+                            event.stopPropagation()
                             setDeleteError('')
                             setPendingDelete(device)
                           }}

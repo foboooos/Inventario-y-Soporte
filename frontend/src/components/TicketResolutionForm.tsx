@@ -146,7 +146,7 @@ export function TicketResolutionForm({ accessToken, ticket, onResolved, onCancel
             {error && <p className="error" role="alert">{error}</p>}
             <div className="ticket-resolution-actions">
               <button className="secondary-button" type="button" disabled={saving} onClick={() => modalRef.current?.close()}>Cancelar</button>
-              <button className="primary-action" type="submit" disabled={saving || !cause.trim() || !solution.trim() || (hasDevice && !finalStatus)}>
+              <button className="primary-action primary-action-solid" type="submit" disabled={saving || !cause.trim() || !solution.trim() || (hasDevice && !finalStatus)}>
                 {saving ? 'Guardando…' : 'Cerrar ticket'}
               </button>
             </div>

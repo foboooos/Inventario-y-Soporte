@@ -288,6 +288,13 @@ button:disabled {
   stroke-width: 2;
 }
 
+.select-menu-button > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .select-menu-placeholder {
   color: var(--minimal-muted);
 }

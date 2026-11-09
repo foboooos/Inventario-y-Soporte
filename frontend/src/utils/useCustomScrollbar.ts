@@ -43,14 +43,20 @@ export function useCustomScrollbar<T extends HTMLElement>(resetKey: unknown) {
     }
 
     updateThumb()
+    const frame = requestAnimationFrame(updateThumb)
     scrollElement.addEventListener('scroll', handleScroll)
 
     const observer = new ResizeObserver(updateThumb)
     observer.observe(scrollElement)
 
+    const mutations = new MutationObserver(updateThumb)
+    mutations.observe(scrollElement, { childList: true, subtree: true })
+
     return () => {
+      cancelAnimationFrame(frame)
       scrollElement.removeEventListener('scroll', handleScroll)
       observer.disconnect()
+      mutations.disconnect()
       if (hideTimer !== undefined) window.clearTimeout(hideTimer)
     }
   }, [resetKey])

@@ -193,7 +193,7 @@ export function CreateTicketForm({ accessToken, onSessionExpired, onTicketCreate
           <textarea value={symptom} onChange={(event) => setSymptom(event.target.value)} placeholder="Cuéntanos qué está ocurriendo…" maxLength={2000} rows={6} required />
         </label>
         {error && <p className="error" role="alert">{error}</p>}
-        <button className="primary-action" type="submit" disabled={submitting || !resolvedLocation || !symptom.trim()}>{submitting ? 'Enviando…' : 'Enviar solicitud'}</button>
+        <button className="primary-action primary-action-solid" type="submit" disabled={submitting || !resolvedLocation || !symptom.trim()}>{submitting ? 'Enviando…' : 'Enviar solicitud'}</button>
       </form>
     </section>
   )

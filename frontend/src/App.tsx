@@ -8,6 +8,7 @@ import './styles/layout.css'
 import './styles/inventory.css'
 import './styles/dialogs.css'
 import './styles/support.css'
+import './styles/fields.css'
 import './styles/print.css'
 import './styles/responsive.css'
 import { DashboardLayout } from './components/DashboardLayout'
@@ -32,6 +33,7 @@ import {
   routeFromPath,
   routePaths,
   routes,
+  type ConfigSection,
   type RouteKey,
 } from './routes'
 import type { AuthUser } from './types/auth'
@@ -49,6 +51,7 @@ function App() {
   const [authChecking, setAuthChecking] = useState(() => Boolean(readToken()))
   const [pathname, setPathname] = useState(() => normalizePath(window.location.pathname))
   const [ticketsVersion, setTicketsVersion] = useState(0)
+  const [configSection, setConfigSection] = useState<ConfigSection | null>(() => configSectionFromPath(window.location.pathname))
 
   useEffect(() => {
     const token = readToken()
@@ -84,7 +87,10 @@ function App() {
 
   useEffect(() => {
     function handlePopState() {
-      setPathname(normalizePath(window.location.pathname))
+      const nextPath = normalizePath(window.location.pathname)
+      const section = configSectionFromPath(nextPath)
+      if (section) setConfigSection(section)
+      setPathname(nextPath)
     }
 
     window.addEventListener('popstate', handlePopState)
@@ -93,6 +99,8 @@ function App() {
 
   const navigate = useCallback((path: string, options?: { replace?: boolean }) => {
     const normalizedPath = normalizePath(path)
+    const section = configSectionFromPath(normalizedPath)
+    if (section) setConfigSection(section)
     setPathname((current) => {
       if (current === normalizedPath) return current
       if (options?.replace) {
@@ -110,7 +118,6 @@ function App() {
   )
 
   const activeRoute = routeFromPath(pathname)
-  const configSection = activeRoute === 'settings' ? configSectionFromPath(pathname) : null
 
   const pageTitle = !user
     ? pathname !== '/login' && !activeRoute ? NOT_FOUND_TITLE : LOGIN_TITLE
@@ -143,7 +150,8 @@ function App() {
     function handleViewportChange() {
       if (mobileQuery.matches || !user || !activeRoute) return
 
-      if (configSection) {
+      if (configSection && activeRoute === 'settings') {
+        setConfigSection(null)
         navigate(routePaths.settings, { replace: true })
         return
       }
@@ -249,7 +257,13 @@ function App() {
     : [...visitedRoutes, activeRoute]
 
   const headerAction = configSection
-    ? { label: 'Salir de configuración', onClick: () => navigate(routePaths.settings) }
+    ? {
+        label: 'Salir de configuración',
+        onClick: () => {
+          setConfigSection(null)
+          navigate(routePaths.settings)
+        },
+      }
     : undefined
 
   return (

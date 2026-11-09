@@ -162,26 +162,25 @@ export function ConfigurationPage({ accessToken, currentUserRut, onSessionExpire
 
       table?.style.removeProperty('--config-users-row-height')
 
-      if (window.matchMedia('(max-width: 700px)').matches) {
-        setUsersPageSize((current) => (current === USERS_PAGE_SIZE ? current : USERS_PAGE_SIZE))
-        return
-      }
-
       const header = table?.querySelector('thead')?.getBoundingClientRect().height ?? 0
       const rows = table ? Array.from(table.querySelectorAll('tbody tr')) : []
       const rowHeight = rows.reduce((max, row) => Math.max(max, row.getBoundingClientRect().height), 0)
 
       if (rowHeight <= 0) return
 
-      const fit = Math.floor((scrollElement.clientHeight - header) / rowHeight)
+      const available = scrollElement.clientHeight - header
+
+      if (available <= 0) return
+
+      const fit = Math.floor(available / rowHeight)
       const next = Math.min(MAX_USERS_PAGE_SIZE, Math.max(MIN_USERS_PAGE_SIZE, fit))
+
+      table?.classList.toggle('is-partial', rows.length < next)
 
       setUsersPageSize((current) => (current === next ? current : next))
 
-      const available = scrollElement.clientHeight - header
-
-      if (table && available > 0) {
-        const target = Math.max(rowHeight, (available - 2) / rows.length)
+      if (table) {
+        const target = Math.max(rowHeight, (available - 2) / next)
         table.style.setProperty('--config-users-row-height', `${target}px`)
       }
     }
@@ -767,7 +766,7 @@ export function ConfigurationPage({ accessToken, currentUserRut, onSessionExpire
                 <input
                   value={newLocationName}
                   onChange={(event) => setNewLocationName(event.target.value)}
-                  placeholder="Ej: Laboratorio de Computación"
+                  placeholder="Ej: Lab. Computación 1"
                   maxLength={100}
                   required
                 />
@@ -777,7 +776,7 @@ export function ConfigurationPage({ accessToken, currentUserRut, onSessionExpire
                 <input
                   value={newLocationSigla}
                   onChange={(event) => setNewLocationSigla(event.target.value.toUpperCase())}
-                  placeholder="LAB"
+                  placeholder="LC1"
                   maxLength={3}
                   pattern="[A-Za-z0-9]{1,3}"
                   title="Sigla de hasta 3 letras o números"

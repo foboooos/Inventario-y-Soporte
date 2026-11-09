@@ -80,32 +80,36 @@ export function LoginForm({ onAuthenticated }: LoginFormProps) {
         )}
         <section className="login-card">
           <form onSubmit={handleSubmit} noValidate>
-            <label htmlFor="usuario">Usuario</label>
-            <input ref={usuarioRef} id="usuario" type="text" value={usuario} onChange={(event) => setUsuario(event.target.value)} required autoComplete="username" pattern="[a-z0-9._\-]+\.[a-z0-9._\-]+" aria-invalid={usuarioInvalido ? true : undefined} aria-describedby={error ? 'login-error' : undefined} />
-            <label htmlFor="password">Contraseña</label>
-            <div className="password-field">
-              <input ref={passwordRef} id="password" type={showPassword ? 'text' : 'password'} value={password} onChange={(event) => setPassword(event.target.value)} required minLength={8} autoComplete="current-password" aria-invalid={passwordInvalida ? true : undefined} aria-describedby={error ? 'login-error' : undefined} />
-              <button
-                type="button"
-                className="password-toggle"
-                onClick={() => setShowPassword((visible) => !visible)}
-                aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                aria-pressed={showPassword}
-              >
-                {showPassword ? (
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12Z" />
-                    <circle cx="12" cy="12" r="3" />
-                  </svg>
-                ) : (
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="m3 3 18 18" />
-                    <path d="M10.6 5.08A10.94 10.94 0 0 1 12 5c7 0 11 7 11 7a18.45 18.45 0 0 1-3.17 3.98M6.23 6.23C3.03 8.15 1 12 1 12s4 7 11 7a10.7 10.7 0 0 0 3.77-.68" />
-                    <path d="M9.88 9.88a3 3 0 0 0 4.24 4.24" />
-                  </svg>
-                )}
-              </button>
-            </div>
+            <label className="field-float" htmlFor="usuario">
+              <span>Usuario</span>
+              <input ref={usuarioRef} id="usuario" type="text" value={usuario} onChange={(event) => setUsuario(event.target.value)} required autoComplete="username" pattern="[a-z0-9._\-]+\.[a-z0-9._\-]+" aria-invalid={usuarioInvalido ? true : undefined} aria-describedby={error ? 'login-error' : undefined} />
+            </label>
+            <label className="field-float" htmlFor="password">
+              <span>Contraseña</span>
+              <div className="password-field">
+                <input ref={passwordRef} id="password" type={showPassword ? 'text' : 'password'} value={password} onChange={(event) => setPassword(event.target.value)} required minLength={8} autoComplete="current-password" aria-invalid={passwordInvalida ? true : undefined} aria-describedby={error ? 'login-error' : undefined} />
+                <button
+                  type="button"
+                  className="password-toggle"
+                  onClick={() => setShowPassword((visible) => !visible)}
+                  aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                  aria-pressed={showPassword}
+                >
+                  {showPassword ? (
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12Z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                  ) : (
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="m3 3 18 18" />
+                      <path d="M10.6 5.08A10.94 10.94 0 0 1 12 5c7 0 11 7 11 7a18.45 18.45 0 0 1-3.17 3.98M6.23 6.23C3.03 8.15 1 12 1 12s4 7 11 7a10.7 10.7 0 0 0 3.77-.68" />
+                      <path d="M9.88 9.88a3 3 0 0 0 4.24 4.24" />
+                    </svg>
+                  )}
+                </button>
+              </div>
+            </label>
             <label className="login-remember">
               <input type="checkbox" checked={remember} onChange={(event) => setRemember(event.target.checked)} />
               <span>Recordar usuario</span>

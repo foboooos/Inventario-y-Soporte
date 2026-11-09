@@ -60,6 +60,12 @@ export function SoftwarePage({ accessToken, onSessionExpired }: SoftwarePageProp
     barRef: programsScrollbarRef,
     handlePointerDown: handleProgramsScrollbarPointerDown,
   } = useCustomScrollbar<HTMLUListElement>(scrollbarKey)
+  const {
+    scrollRef: checklistRef,
+    thumbRef: checklistThumbRef,
+    barRef: checklistScrollbarRef,
+    handlePointerDown: handleChecklistScrollbarPointerDown,
+  } = useCustomScrollbar<HTMLDivElement>(`${subjects.length}:${loading}`)
 
   useEffect(() => {
     let active = true
@@ -180,7 +186,6 @@ export function SoftwarePage({ accessToken, onSessionExpired }: SoftwarePageProp
     return (
       <div className="subjects-levels">
         <div className="subjects-levels-head">
-          <span className="subjects-levels-title">Asignaturas</span>
           <span className="subjects-levels-meta">
             {selected.length < sortedSubjects.length && (
               <button className="text-button subjects-levels-all" type="button" onClick={onSelectAll}>
@@ -195,13 +200,23 @@ export function SoftwarePage({ accessToken, onSessionExpired }: SoftwarePageProp
             )}
           </span>
         </div>
-        <div className="subjects-checklist">
-          {sortedSubjects.map((subject) => (
-            <label className="subjects-checkbox" key={subject.id} title={subject.nombre}>
-              <input type="checkbox" checked={selected.includes(subject.id)} onChange={() => onToggle(subject.id)} />
-              <span>{subject.nombre}</span>
-            </label>
-          ))}
+        <div className="subjects-checklist-scroll">
+          <div className="subjects-checklist" ref={checklistRef}>
+            {sortedSubjects.map((subject) => (
+              <label className="subjects-checkbox" key={subject.id} title={subject.nombre}>
+                <input type="checkbox" checked={selected.includes(subject.id)} onChange={() => onToggle(subject.id)} />
+                <span>{subject.nombre}</span>
+              </label>
+            ))}
+          </div>
+          <div
+            className="list-scrollbar"
+            aria-hidden="true"
+            ref={checklistScrollbarRef}
+            onPointerDown={handleChecklistScrollbarPointerDown}
+          >
+            <span className="list-scrollbar-thumb" ref={checklistThumbRef} />
+          </div>
         </div>
       </div>
     )
@@ -209,7 +224,11 @@ export function SoftwarePage({ accessToken, onSessionExpired }: SoftwarePageProp
 
   function renderAsignaturaChips(program: SoftwareProgram) {
     if (program.asignaturaIds.length === 0) {
-      return <span className="subjects-hint">Sin asignaturas</span>
+      return (
+        <span className="subjects-chips">
+          <span className="subject-chip subject-chip-danger">Sin asignaturas</span>
+        </span>
+      )
     }
 
     const subjectIds = new Set(program.asignaturaIds)
@@ -219,7 +238,7 @@ export function SoftwarePage({ accessToken, onSessionExpired }: SoftwarePageProp
     if (coversAllSubjects) {
       return (
         <span className="subjects-chips">
-          <span className="subject-chip">Todas las asignaturas</span>
+          <span className="subject-chip subject-chip-success">Todas las asignaturas</span>
         </span>
       )
     }
@@ -268,7 +287,7 @@ export function SoftwarePage({ accessToken, onSessionExpired }: SoftwarePageProp
           <div className="subjects-grid software-grid">
             <section className="support-card subjects-card software-form-card" aria-label="Registrar software educativo">
               <form className="subjects-form software-create-form" onSubmit={handleCreate}>
-                <label>
+                <label className="field-float">
                   <span>Programa</span>
                   <input
                     value={newName}
@@ -278,7 +297,7 @@ export function SoftwarePage({ accessToken, onSessionExpired }: SoftwarePageProp
                     required
                   />
                 </label>
-                <label>
+                <label className="field-float">
                   <span>Versión</span>
                   <input
                     value={newVersion}
@@ -288,19 +307,19 @@ export function SoftwarePage({ accessToken, onSessionExpired }: SoftwarePageProp
                     required
                   />
                 </label>
-                <label>
+                <label className="field-float">
                   <span>Licencia</span>
                   {renderLicenseSelect(newLicense, setNewLicense)}
                 </label>
                 {loading ? (
-                  <ChecklistSkeleton label="Cargando asignaturas…" title="Asignaturas" />
+                  <ChecklistSkeleton label="Cargando asignaturas…" />
                 ) : renderAsignaturaPicker(
                   newAsignaturaIds,
                   (id) => setNewAsignaturaIds((current) => toggleId(current, id)),
                   () => setNewAsignaturaIds([]),
                   () => setNewAsignaturaIds(sortedSubjects.map((subject) => subject.id)),
                 )}
-                <button className="primary-action" type="submit" disabled={creating || !newName.trim() || !newVersion.trim()}>
+                <button className="primary-action primary-action-solid" type="submit" disabled={creating || !newName.trim() || !newVersion.trim()}>
                   {creating ? 'Registrando…' : 'Registrar'}
                 </button>
               </form>

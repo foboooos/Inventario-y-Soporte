@@ -10,6 +10,10 @@ async function bootstrap() {
     .filter(Boolean);
   const isProduction = process.env.NODE_ENV === 'production';
 
+  if (isProduction) {
+    app.getHttpAdapter().getInstance().set('trust proxy', 1);
+  }
+
   app.enableCors({
     origin: allowedOrigins.length > 0 ? allowedOrigins : !isProduction,
   });

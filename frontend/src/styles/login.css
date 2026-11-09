@@ -35,16 +35,11 @@
 }
 
 .login-card form {
-  gap: 12px;
+  gap: 16px;
 }
 
-.login-card form label {
+.login-card form .field-float + .field-float {
   margin-top: 8px;
-  text-align: left;
-}
-
-.login-card form label:first-of-type {
-  margin-top: 0;
 }
 
 .login-card form .login-remember {
@@ -72,27 +67,20 @@
 }
 
 .login-card .primary-action {
-  margin-top: 12px;
+  margin-top: 4px;
   height: auto;
 }
 
 .login-card input {
-  height: auto;
   padding: 8px 12px;
-  border: 1px solid rgba(12, 12, 9, 0.08);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
-  background: var(--minimal-surface);
-  font-size: 14px;
+  background: #fff;
   line-height: inherit;
 }
 
-.login-card input[aria-invalid='true'] {
+.login-card .field-float input[aria-invalid='true'] {
   border-color: rgba(185, 28, 28, 0.35);
-}
-
-.login-card input:focus-visible {
-  border-color: var(--minimal-secondary);
-  box-shadow: 0 0 0 3px rgba(49, 44, 133, 0.14);
 }
 
 .login-error {
