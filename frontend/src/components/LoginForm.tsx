@@ -1,9 +1,7 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
-import { login } from '../services/auth'
-import type { AuthUser } from '../types/auth'
-
-const USUARIO_PATTERN = /^[a-z0-9._-]+\.[a-z0-9._-]+$/
+import { getLoginUsers, login } from '../services/auth'
+import type { AuthUser, LoginOption } from '../types/auth'
 
 type LoginFormProps = {
   onAuthenticated: (user: AuthUser, accessToken: string, remember: boolean) => void
@@ -11,14 +9,32 @@ type LoginFormProps = {
 
 export function LoginForm({ onAuthenticated }: LoginFormProps) {
   const [usuario, setUsuario] = useState('')
+  const [usuarios, setUsuarios] = useState<LoginOption[]>([])
+  const [loadingUsers, setLoadingUsers] = useState(true)
+  const [usersError, setUsersError] = useState('')
   const [password, setPassword] = useState('')
   const [remember, setRemember] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [errorField, setErrorField] = useState<'usuario' | 'password' | null>(null)
   const [loading, setLoading] = useState(false)
-  const usuarioRef = useRef<HTMLInputElement>(null)
+  const usuarioRef = useRef<HTMLSelectElement>(null)
   const passwordRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    let active = true
+    getLoginUsers()
+      .then((loaded) => {
+        if (active) setUsuarios(loaded)
+      })
+      .catch((exception: unknown) => {
+        if (active) setUsersError(exception instanceof Error ? exception.message : 'No se pudo cargar la lista de usuarios')
+      })
+      .finally(() => {
+        if (active) setLoadingUsers(false)
+      })
+    return () => { active = false }
+  }, [])
 
   function fail(message: string, field: 'usuario' | 'password') {
     setError(message)
@@ -29,13 +45,7 @@ export function LoginForm({ onAuthenticated }: LoginFormProps) {
   }
 
   function validate() {
-    const usuarioNormalizado = usuario.trim().toLowerCase()
-    const usuarioSinTildes = usuarioNormalizado.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-
-    if (!usuarioNormalizado) return fail('Ingresa tu usuario.', 'usuario')
-
-    if (!USUARIO_PATTERN.test(usuarioSinTildes)) return fail('Usa el formato nombre.apellido en minúsculas.', 'usuario')
-    if (usuarioSinTildes !== usuarioNormalizado) return fail('El usuario no lleva tildes.', 'usuario')
+    if (!usuario) return fail('Selecciona tu nombre de usuario.', 'usuario')
     if (!password) return fail('Ingresa tu contraseña.', 'password')
     if (password.length < 8) return fail('La contraseña debe tener al menos 8 caracteres.', 'password')
 
@@ -52,7 +62,7 @@ export function LoginForm({ onAuthenticated }: LoginFormProps) {
     setLoading(true)
 
     try {
-      const session = await login({ usuario: usuario.trim().toLowerCase(), password, remember })
+      const session = await login({ usuario, password, remember })
       onAuthenticated(session.user, session.access_token, remember)
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : 'Error de conexión')
@@ -68,26 +78,29 @@ export function LoginForm({ onAuthenticated }: LoginFormProps) {
     <main className="app-shell">
       <img className="login-logo" src="/logo-colegio.svg" alt="Logo del colegio" />
       <div className="login-stage">
-        {error && (
+      {(error || usersError) && (
           <p className="login-error" id="login-error" role="alert">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <circle cx="12" cy="12" r="9" />
               <path d="M12 7.5v5" />
               <path d="M12 16.2h.01" />
             </svg>
-            <span>{error}</span>
+            <span>{error || usersError}</span>
           </p>
         )}
         <section className="login-card">
           <form onSubmit={handleSubmit} noValidate>
             <label className="field-float" htmlFor="usuario">
               <span>Usuario</span>
-              <input ref={usuarioRef} id="usuario" type="text" value={usuario} onChange={(event) => setUsuario(event.target.value)} required autoComplete="username" pattern="[a-z0-9._\-]+\.[a-z0-9._\-]+" aria-invalid={usuarioInvalido ? true : undefined} aria-describedby={error ? 'login-error' : undefined} />
+              <select ref={usuarioRef} id="usuario" value={usuario} onChange={(event) => setUsuario(event.target.value)} required autoComplete="username" disabled={loadingUsers || usuarios.length === 0} aria-invalid={usuarioInvalido ? true : undefined} aria-describedby={error || usersError ? 'login-error' : undefined}>
+                <option value="">{loadingUsers ? 'Cargando usuarios…' : 'Selecciona tu nombre'}</option>
+                {usuarios.map((option) => <option key={option.id} value={option.id}>{option.nombre}</option>)}
+              </select>
             </label>
             <label className="field-float" htmlFor="password">
               <span>Contraseña</span>
               <div className="password-field">
-                <input ref={passwordRef} id="password" type={showPassword ? 'text' : 'password'} value={password} onChange={(event) => setPassword(event.target.value)} required minLength={8} autoComplete="current-password" aria-invalid={passwordInvalida ? true : undefined} aria-describedby={error ? 'login-error' : undefined} />
+                <input ref={passwordRef} id="password" type={showPassword ? 'text' : 'password'} value={password} onChange={(event) => setPassword(event.target.value)} required minLength={8} autoComplete="current-password" aria-invalid={passwordInvalida ? true : undefined} aria-describedby={error || usersError ? 'login-error' : 'password-hint'} />
                 <button
                   type="button"
                   className="password-toggle"
@@ -109,12 +122,13 @@ export function LoginForm({ onAuthenticated }: LoginFormProps) {
                   )}
                 </button>
               </div>
+              <span className="login-password-hint" id="password-hint">RUT o fecha de nacimiento en formato DDMMYYYY.</span>
             </label>
             <label className="login-remember">
               <input type="checkbox" checked={remember} onChange={(event) => setRemember(event.target.checked)} />
               <span>Recordar usuario</span>
             </label>
-            <button className="primary-action primary-action-solid" type="submit" disabled={loading}>{loading ? 'Ingresando…' : 'Ingresar'}</button>
+            <button className="primary-action primary-action-solid" type="submit" disabled={loading || loadingUsers || usuarios.length === 0}>{loading ? 'Ingresando…' : 'Ingresar'}</button>
           </form>
         </section>
       </div>

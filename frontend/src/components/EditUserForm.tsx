@@ -27,6 +27,7 @@ export function EditUserForm({ accessToken, user, isSelf, onUpdated, onCancel, o
   const [form, setForm] = useState<UpdateUserInput>({
     nombre: user.nombre,
     email: localPartOfEmail(user.email),
+    fecha_nacimiento: '',
     rol: user.rol,
   })
   const [saving, setSaving] = useState(false)
@@ -47,7 +48,12 @@ export function EditUserForm({ accessToken, user, isSelf, onUpdated, onCancel, o
     setError('')
 
     try {
-      const updated = await updateUser(accessToken, user.rut, { nombre, email, rol: form.rol })
+      const updated = await updateUser(accessToken, user.rut, {
+        nombre,
+        email,
+        rol: form.rol,
+        ...(form.fecha_nacimiento ? { fecha_nacimiento: form.fecha_nacimiento } : {}),
+      })
       modalRef.current?.close(() => onUpdated(updated))
     } catch (exception) {
       if (isSessionExpired(exception)) {
@@ -99,6 +105,19 @@ export function EditUserForm({ accessToken, user, isSelf, onUpdated, onCancel, o
               />
               <span className="email-input-suffix">{USER_EMAIL_DOMAIN}</span>
             </div>
+          </label>
+          <label>
+            <span>Fecha de nacimiento</span>
+            <input
+              type="date"
+              value={form.fecha_nacimiento ?? ''}
+              onChange={(event) => updateField('fecha_nacimiento', event.target.value)}
+            />
+            <span className="device-field-hint">
+              {user.fecha_nacimiento_configurada
+                ? 'Ingresa otra fecha solo si necesitas actualizarla.'
+                : 'Aún no está registrada; ingrésala para habilitar este acceso.'}
+            </span>
           </label>
           <div className="device-field">
             <span>Rol</span>

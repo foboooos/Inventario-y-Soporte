@@ -101,15 +101,13 @@ function App() {
     const normalizedPath = normalizePath(path)
     const section = configSectionFromPath(normalizedPath)
     if (section) setConfigSection(section)
-    setPathname((current) => {
-      if (current === normalizedPath) return current
-      if (options?.replace) {
-        window.history.replaceState({}, '', normalizedPath)
-      } else {
-        window.history.pushState({}, '', normalizedPath)
-      }
-      return normalizedPath
-    })
+
+    if (normalizePath(window.location.pathname) !== normalizedPath) {
+      if (options?.replace) window.history.replaceState({}, '', normalizedPath)
+      else window.history.pushState({}, '', normalizedPath)
+    }
+
+    setPathname(normalizedPath)
   }, [])
 
   const navigateToRoute = useCallback(

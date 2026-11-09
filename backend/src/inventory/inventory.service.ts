@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOptionsOrder, FindOptionsWhere, ILike, In, Repository } from 'typeorm';
+import { EntityManager, FindOptionsOrder, FindOptionsWhere, ILike, In, Repository } from 'typeorm';
 import { Ubicacion } from '../locations/ubicacion.entity.js';
 import { Ticket } from '../tickets/ticket.entity.js';
 import { DeviceStatus } from './device-status.enum.js';
@@ -117,15 +117,23 @@ export class InventoryService {
       throw new BadRequestException('La ubicación no tiene sigla configurada');
     }
 
-    const locationNames = isCourse
-      ? (await this.locations.find()).filter((item) => item.padre_id !== null).map((item) => item.nombre)
-      : [location.nombre];
+    return this.findNextCode(location, tipo, sigla, this.devices, this.locations);
+  }
 
-    const group = await this.devices.find({
+  private async findNextCode(
+    location: Ubicacion,
+    tipo: CreateDeviceDto['tipo'],
+    sigla: string,
+    devices: Repository<Device>,
+    locations: Repository<Ubicacion>,
+  ) {
+    const locationNames = location.padre_id !== null
+      ? (await locations.find()).filter((item) => item.padre_id !== null).map((item) => item.nombre)
+      : [location.nombre];
+    const group = await devices.find({
       select: { codigo_inventario: true },
       where: { tipo, ubicacion: In(locationNames) },
     });
-
     const used = new Set(group.map((device) => device.codigo_inventario));
     let numero = group.length + 1;
 
@@ -138,56 +146,81 @@ export class InventoryService {
     return formatDeviceCode(tipo, sigla, numero);
   }
 
-  async create(createDeviceDto: CreateDeviceDto) {
-    const ubicacion = createDeviceDto.ubicacion.trim();
-    const codigo_inventario = await this.nextCode(createDeviceDto.tipo, ubicacion);
-    const existingDevice = await this.devices.findOneBy({ codigo_inventario });
+  private async nextCodeForUpdate(
+    manager: EntityManager,
+    tipo: CreateDeviceDto['tipo'],
+    ubicacion: string,
+  ) {
+    const locations = manager.getRepository(Ubicacion);
+    const location = await locations.findOneBy({ nombre: ubicacion.trim() });
 
-    if (existingDevice) {
-      throw new ConflictException('El código de inventario ya existe');
+    if (!location) {
+      throw new NotFoundException('La ubicación no existe');
     }
 
-    const device = this.devices.create({
-      ...createDeviceDto,
-      codigo_inventario,
-      marca: createDeviceDto.marca?.trim() || null,
-      modelo: createDeviceDto.modelo?.trim() || null,
-      ubicacion,
-    });
+    const sigla = location.padre_id !== null ? COURSE_LOCATION_SIGLA : location.sigla;
+    if (!sigla) throw new BadRequestException('La ubicación no tiene sigla configurada');
 
-    return this.devices.save(device);
+    await manager.query('SELECT pg_advisory_xact_lock(hashtext($1), 0)', [`inventario:${tipo}:${sigla}`]);
+    return this.findNextCode(location, tipo, sigla, manager.getRepository(Device), locations);
+  }
+
+  async create(createDeviceDto: CreateDeviceDto) {
+    const ubicacion = createDeviceDto.ubicacion.trim();
+    return this.devices.manager.transaction(async (manager) => {
+      const devices = manager.getRepository(Device);
+      const codigo_inventario = await this.nextCodeForUpdate(manager, createDeviceDto.tipo, ubicacion);
+      const existingDevice = await devices.findOneBy({ codigo_inventario });
+
+      if (existingDevice) {
+        throw new ConflictException('El código de inventario ya existe');
+      }
+
+      const device = devices.create({
+        ...createDeviceDto,
+        codigo_inventario,
+        marca: createDeviceDto.marca?.trim() || null,
+        modelo: createDeviceDto.modelo?.trim() || null,
+        ubicacion,
+      });
+
+      return devices.save(device);
+    });
   }
 
   async update(id: number, updateDeviceDto: UpdateDeviceDto) {
-    const device = await this.devices.findOneBy({ id_dispositivo: id });
+    return this.devices.manager.transaction(async (manager) => {
+      const devices = manager.getRepository(Device);
+      const device = await devices.findOneBy({ id_dispositivo: id });
 
-    if (!device) {
-      throw new NotFoundException('Dispositivo no encontrado');
-    }
-
-    const nextTipo = updateDeviceDto.tipo ?? device.tipo;
-    let nextUbicacion = device.ubicacion;
-
-    if (updateDeviceDto.ubicacion !== undefined) {
-      nextUbicacion = updateDeviceDto.ubicacion.trim();
-      const location = await this.locations.findOneBy({ nombre: nextUbicacion });
-
-      if (!location) {
-        throw new NotFoundException('La ubicación no existe');
+      if (!device) {
+        throw new NotFoundException('Dispositivo no encontrado');
       }
-    }
 
-    if (nextTipo !== device.tipo || nextUbicacion !== device.ubicacion) {
-      device.codigo_inventario = await this.nextCode(nextTipo, nextUbicacion);
-    }
+      const nextTipo = updateDeviceDto.tipo ?? device.tipo;
+      let nextUbicacion = device.ubicacion;
 
-    device.tipo = nextTipo;
-    device.ubicacion = nextUbicacion;
-    if (updateDeviceDto.marca !== undefined) device.marca = updateDeviceDto.marca.trim() || null;
-    if (updateDeviceDto.modelo !== undefined) device.modelo = updateDeviceDto.modelo.trim() || null;
-    if (updateDeviceDto.estado !== undefined) device.estado = updateDeviceDto.estado;
+      if (updateDeviceDto.ubicacion !== undefined) {
+        nextUbicacion = updateDeviceDto.ubicacion.trim();
+        const location = await manager.getRepository(Ubicacion).findOneBy({ nombre: nextUbicacion });
 
-    return this.devices.save(device);
+        if (!location) {
+          throw new NotFoundException('La ubicación no existe');
+        }
+      }
+
+      if (nextTipo !== device.tipo || nextUbicacion !== device.ubicacion) {
+        device.codigo_inventario = await this.nextCodeForUpdate(manager, nextTipo, nextUbicacion);
+      }
+
+      device.tipo = nextTipo;
+      device.ubicacion = nextUbicacion;
+      if (updateDeviceDto.marca !== undefined) device.marca = updateDeviceDto.marca.trim() || null;
+      if (updateDeviceDto.modelo !== undefined) device.modelo = updateDeviceDto.modelo.trim() || null;
+      if (updateDeviceDto.estado !== undefined) device.estado = updateDeviceDto.estado;
+
+      return devices.save(device);
+    });
   }
 
   async remove(id: number) {

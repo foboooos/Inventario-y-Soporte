@@ -15,3 +15,8 @@ export type LoginCredentials = {
   password: string
   remember?: boolean
 }
+
+export type LoginOption = {
+  id: string
+  nombre: string
+}

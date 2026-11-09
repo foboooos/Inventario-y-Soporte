@@ -40,7 +40,7 @@ describe('LocationService', () => {
     const findOneBy = vi.fn().mockResolvedValue(null);
     const save = vi.fn().mockResolvedValue({ id_ubicacion: 2, nombre: 'Sala 3', padre_id: null } as Ubicacion);
     const create = vi.fn((value: Partial<Ubicacion>) => value as Ubicacion);
-    const service = createService({ findOneBy, save, create });
+    const service = createService({ findOneBy, save, create: create as unknown as Repository<Ubicacion>['create'] });
 
     await service.create({ nombre: '  Sala 3  ' });
 
@@ -53,7 +53,7 @@ describe('LocationService', () => {
       .mockResolvedValueOnce({ id_ubicacion: 2, nombre: 'Sala de clases', padre_id: null } as Ubicacion);
     const save = vi.fn().mockResolvedValue({ id_ubicacion: 7, nombre: '1° Básico A', padre_id: 2 } as Ubicacion);
     const create = vi.fn((value: Partial<Ubicacion>) => value as Ubicacion);
-    const service = createService({ findOneBy, save, create });
+    const service = createService({ findOneBy, save, create: create as unknown as Repository<Ubicacion>['create'] });
 
     await service.create({ nombre: '1° Básico A', padre_id: 2 });
 
@@ -64,7 +64,7 @@ describe('LocationService', () => {
     const findOneBy = vi.fn().mockResolvedValue(null);
     const save = vi.fn().mockResolvedValue({ id_ubicacion: 3, nombre: 'Patio', padre_id: null, tipo: 'TERCIARIA' } as Ubicacion);
     const create = vi.fn((value: Partial<Ubicacion>) => value as Ubicacion);
-    const service = createService({ findOneBy, save, create });
+    const service = createService({ findOneBy, save, create: create as unknown as Repository<Ubicacion>['create'] });
 
     await service.create({ nombre: 'Patio', tipo: 'TERCIARIA' });
 
@@ -151,7 +151,7 @@ describe('LocationService', () => {
     const find = vi.fn().mockResolvedValueOnce([]).mockResolvedValueOnce([]);
     const save = vi.fn().mockResolvedValue([]);
     const create = vi.fn((value: Partial<Ubicacion>) => value as Ubicacion);
-    const service = createService({ findOneBy, find, save, create });
+    const service = createService({ findOneBy, find, save, create: create as unknown as Repository<Ubicacion>['create'] });
 
     await service.generateCourses(2);
 
@@ -170,7 +170,7 @@ describe('LocationService', () => {
     const find = vi.fn().mockResolvedValueOnce(existing).mockResolvedValueOnce(existing);
     const save = vi.fn().mockResolvedValue([]);
     const create = vi.fn((value: Partial<Ubicacion>) => value as Ubicacion);
-    const service = createService({ findOneBy, find, save, create });
+    const service = createService({ findOneBy, find, save, create: create as unknown as Repository<Ubicacion>['create'] });
 
     await service.generateCourses(2);
 

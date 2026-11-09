@@ -1,4 +1,4 @@
-import { IsEmail, IsEnum, IsNotEmpty, IsString, MaxLength } from 'class-validator';
+import { IsDateString, IsEmail, IsEnum, IsNotEmpty, IsString, MaxLength } from 'class-validator';
 import { UserRole } from '../user-role.enum.js';
 
 export class CreateUserDto {
@@ -15,6 +15,9 @@ export class CreateUserDto {
   @IsEmail()
   @MaxLength(150)
   email!: string;
+
+  @IsDateString({ strict: true })
+  fecha_nacimiento!: string;
 
   @IsEnum(UserRole)
   rol!: UserRole;

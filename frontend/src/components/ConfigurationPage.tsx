@@ -901,7 +901,11 @@ export function ConfigurationPage({ accessToken, currentUserRut, onSessionExpire
           onCancel={() => setEditingUser(null)}
           onSessionExpired={onSessionExpired}
           onUpdated={(updated) => {
-            setUsers((current) => current.map((item) => (item.rut === updated.rut ? updated : item)))
+            setUsers((current) => current.map((item) => (item.rut === updated.rut ? {
+              ...item,
+              ...updated,
+              fecha_nacimiento_configurada: item.fecha_nacimiento_configurada || updated.fecha_nacimiento_configurada,
+            } : item)))
             setEditingUser(null)
           }}
         />

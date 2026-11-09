@@ -71,7 +71,10 @@
   height: auto;
 }
 
-.login-card input {
+.login-card input,
+.login-card select {
+  box-sizing: border-box;
+  width: 100%;
   padding: 8px 12px;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
@@ -79,8 +82,21 @@
   line-height: inherit;
 }
 
-.login-card .field-float input[aria-invalid='true'] {
+.login-card select {
+  color: var(--minimal-text);
+}
+
+.login-card input[aria-invalid='true'],
+.login-card select[aria-invalid='true'] {
   border-color: rgba(185, 28, 28, 0.35);
+}
+
+.login-password-hint {
+  display: block;
+  margin-top: 6px;
+  color: var(--minimal-muted);
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .login-error {

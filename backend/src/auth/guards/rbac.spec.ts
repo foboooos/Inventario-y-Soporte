@@ -1,5 +1,8 @@
+/// <reference types="vite/client" />
+
 import { INestApplication } from '@nestjs/common';
 import { JwtModule, JwtService } from '@nestjs/jwt';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { Test } from '@nestjs/testing';
 import 'reflect-metadata';
 import request from 'supertest';
@@ -16,6 +19,7 @@ import { SoftwareController } from '../../software/software.controller.js';
 import { SoftwareService } from '../../software/software.service.js';
 import { TicketController } from '../../tickets/ticket.controller.js';
 import { TicketService } from '../../tickets/ticket.service.js';
+import { User } from '../../users/user.entity.js';
 import { UserRole } from '../../users/user-role.enum.js';
 import { UsersController } from '../../users/users.controller.js';
 import { UsersService } from '../../users/users.service.js';
@@ -31,7 +35,7 @@ const PUBLIC_CONTROLLERS = new Set(['AuthController', 'HealthController']);
 
 const controllerModules = import.meta.glob<Record<string, unknown>>('../../**/*.controller.ts', {
   eager: true,
-});
+}) as Record<string, Record<string, unknown>>;
 
 const routeHandlers = (controller: any): string[] =>
   Object.getOwnPropertyNames(controller.prototype).filter(
@@ -166,8 +170,23 @@ describe('RBAC enforcement — todas las rutas protegidas', () => {
   let app: INestApplication;
   let jwt: JwtService;
 
-  const payload = (rol: string) => ({ sub: '12345678-9', email: 'usuario@colegio.cl', rol });
+  const roleRuts: Record<UserRole, string> = {
+    [UserRole.ADMIN]: '11111111-1',
+    [UserRole.TECNICO]: '22222222-2',
+    [UserRole.DOCENTE]: '33333333-3',
+  };
+  const payload = (rol: string) => ({
+    sub: roleRuts[rol as UserRole] ?? roleRuts[UserRole.DOCENTE],
+    email: 'usuario@colegio.cl',
+    rol,
+  });
   const token = (rol: UserRole) => jwt.sign(payload(rol));
+  const userRepository = {
+    findOneBy: vi.fn(({ rut }: { rut: string }) => {
+      const role = Object.entries(roleRuts).find(([, userRut]) => userRut === rut)?.[0] as UserRole | undefined;
+      return Promise.resolve(role ? { rut, email: 'usuario@colegio.cl', rol: role } as User : null);
+    }),
+  };
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
@@ -182,6 +201,7 @@ describe('RBAC enforcement — todas las rutas protegidas', () => {
         UsersController,
       ],
       providers: [
+        { provide: getRepositoryToken(User), useValue: userRepository },
         { provide: InventoryService, useValue: serviceMock(['findOptions', 'nextCode', 'findAll', 'create', 'update', 'remove']) },
         { provide: TicketService, useValue: serviceMock(['findInbox', 'findBitacora', 'findAll', 'resolve', 'changeStatus', 'create']) },
         { provide: LocationService, useValue: serviceMock(['findAll', 'create', 'generateCourses', 'rename', 'remove']) },
@@ -235,8 +255,8 @@ describe('RBAC enforcement — todas las rutas protegidas', () => {
       .expect(401);
   });
 
-  it('devuelve 403 cuando el token trae un rol desconocido', async () => {
-    const forged = jwt.sign(payload('ROOT'));
+  it('no concede permisos por un rol elevado incluido solo en el JWT', async () => {
+    const forged = jwt.sign({ ...payload(UserRole.DOCENTE), rol: UserRole.ADMIN });
 
     await request(app.getHttpServer())
       .get('/inventory')

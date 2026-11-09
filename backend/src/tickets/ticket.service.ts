@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, InternalServerErrorException, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Between, FindOptionsWhere, In, Repository } from 'typeorm';
 
@@ -246,6 +246,15 @@ export class TicketService {
         throw new NotFoundException('La ubicación no existe');
       }
 
+      const requester = await transactionManager.getRepository(User).findOne({
+        where: { rut: requesterRut },
+        lock: { mode: 'pessimistic_read' },
+      });
+
+      if (!requester) {
+        throw new UnauthorizedException('Sesión inválida');
+      }
+
       const year = new Date().getFullYear();
 
       await sequences
@@ -270,7 +279,7 @@ export class TicketService {
 
       const ticket = tickets.create({
         codigo_ticket: formatTicketCode(year, sequence.ultimo_numero),
-        id_solicitante: requesterRut,
+        id_solicitante: requester.rut,
         id_dispositivo: deviceId,
         ubicacion,
         sintoma: createTicketDto.sintoma.trim(),

@@ -15,14 +15,26 @@ export class AuthService {
   ) {}
 
   async login({ usuario, password, remember }: LoginDto) {
-    const normalizedUsuario = usuario.trim().toLowerCase();
     const user = await this.users
       .createQueryBuilder('user')
       .addSelect('user.password_hash')
-      .where("LOWER(SPLIT_PART(user.email, '@', 1)) = :usuario", { usuario: normalizedUsuario })
+      .addSelect('user.fecha_nacimiento_hash')
+      .where('user.login_id = :usuario', { usuario })
       .getOne();
 
-    if (!user || !(await bcrypt.compare(password, user.password_hash))) {
+    if (!user) {
+      throw new UnauthorizedException('Usuario o contraseña incorrectos');
+    }
+
+    const passwordSinPuntos = password.replace(/\./g, '');
+    const rutValido = await bcrypt.compare(password, user.password_hash)
+      || (passwordSinPuntos !== password && await bcrypt.compare(passwordSinPuntos, user.password_hash));
+    const fechaNacimientoValida = /^\d{8}$/.test(password)
+      && user.fecha_nacimiento_hash !== null
+      && user.fecha_nacimiento_hash !== undefined
+      && await bcrypt.compare(password, user.fecha_nacimiento_hash);
+
+    if (!rutValido && !fechaNacimientoValida) {
       throw new UnauthorizedException('Usuario o contraseña incorrectos');
     }
 
@@ -40,6 +52,15 @@ export class AuthService {
         rol: user.rol,
       },
     };
+  }
+
+  async listLoginUsers() {
+    const users = await this.users.find({
+      select: { login_id: true, nombre: true },
+      order: { nombre: 'ASC' },
+    });
+
+    return users.map((user) => ({ id: user.login_id, nombre: user.nombre }));
   }
 
   async me(rut: string) {

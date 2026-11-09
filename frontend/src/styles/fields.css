@@ -20,16 +20,19 @@
 }
 
 .field-float:has(input:focus-within) > span,
+.field-float:has(select:focus-visible) > span,
 .field-float:has([aria-expanded='true']) > span {
   color: var(--minimal-secondary);
 }
 
 .field-float input,
+.field-float select,
 .field-float .select-menu-button {
   height: 40px;
 }
 
 .field-float input:focus-visible,
+.field-float select:focus-visible,
 .field-float .select-menu-button:focus-visible {
   border-color: var(--minimal-border);
   box-shadow: none;

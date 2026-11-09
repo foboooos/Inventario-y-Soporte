@@ -1,4 +1,4 @@
-import type { AuthUser, LoginCredentials, LoginResponse } from '../types/auth'
+import type { AuthUser, LoginCredentials, LoginOption, LoginResponse } from '../types/auth'
 import { apiFetch, isTimeoutError, readApiJson, REQUEST_TIMEOUT_MS } from './http'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
@@ -23,6 +23,20 @@ export async function login(credentials: LoginCredentials): Promise<LoginRespons
     }
 
     return data as LoginResponse
+  } catch (error) {
+    if (isTimeoutError(error)) {
+      throw new Error('La solicitud tardó demasiado. Intenta nuevamente.')
+    }
+    throw error
+  }
+}
+
+export async function getLoginUsers(): Promise<LoginOption[]> {
+  try {
+    const response = await fetch(`${API_URL}/auth/users`, {
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    })
+    return readApiJson<LoginOption[]>(response, 'No se pudo cargar la lista de usuarios')
   } catch (error) {
     if (isTimeoutError(error)) {
       throw new Error('La solicitud tardó demasiado. Intenta nuevamente.')

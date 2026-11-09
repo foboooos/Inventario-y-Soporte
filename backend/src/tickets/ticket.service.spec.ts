@@ -475,6 +475,9 @@ describe('TicketService', () => {
     const locationRepository = {
       findOneBy: vi.fn().mockResolvedValue({ nombre: 'Laboratorio 1' } as Ubicacion),
     };
+    const userRepository = {
+      findOne: vi.fn().mockResolvedValue({ rut: '12345678-9' } as User),
+    };
     const sequenceRepository = {
       createQueryBuilder: vi.fn().mockReturnValue(sequenceQueryBuilder),
       findOne: vi.fn().mockResolvedValue(sequence),
@@ -493,10 +496,16 @@ describe('TicketService', () => {
       if (entity === Ticket) return ticketRepository;
       if (entity === Device) return deviceRepository;
       if (entity === Ubicacion) return locationRepository;
+      if (entity === User) return userRepository;
       return sequenceRepository;
     });
 
-    const service = createService(ticketRepository);
+    const service = createService(
+      ticketRepository as unknown as Partial<Repository<Ticket>>,
+      deviceRepository,
+      userRepository,
+      locationRepository,
+    );
     const input = {
       ubicacion: 'Laboratorio 1',
       sintoma: 'No enciende',
@@ -526,7 +535,7 @@ describe('TicketService', () => {
       return {};
     });
 
-    const service = createService(ticketRepository);
+    const service = createService(ticketRepository as unknown as Partial<Repository<Ticket>>);
     const input = { ubicacion: 'Ubicación inexistente', sintoma: 'No enciende' } as CreateTicketDto;
 
     await expect(service.create(input, '12345678-9')).rejects.toThrow('La ubicación no existe');

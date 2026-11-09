@@ -25,10 +25,14 @@ function createService(
   ]);
 
   if (!devices.manager) {
+    const query = vi.fn().mockResolvedValue([]);
     Object.assign(devices, {
       manager: {
-        transaction: <T>(work: (manager: { getRepository: (entity: unknown) => unknown }) => Promise<T>) =>
-          work({ getRepository: (entity) => repositories.get(entity) }),
+        query,
+        transaction: <T>(work: (manager: {
+          getRepository: (entity: unknown) => unknown;
+          query: typeof query;
+        }) => Promise<T>) => work({ getRepository: (entity) => repositories.get(entity), query }),
       },
     });
   }

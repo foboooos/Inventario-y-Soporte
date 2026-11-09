@@ -37,7 +37,7 @@ describe('LevelService', () => {
     const findOneBy = vi.fn().mockResolvedValue(null);
     const save = vi.fn().mockResolvedValue({ id_nivel: 2, nombre: '1° Básico' } as NivelEducativo);
     const create = vi.fn((value: Partial<NivelEducativo>) => value as NivelEducativo);
-    const service = createService({ findOneBy, save, create });
+    const service = createService({ findOneBy, save, create: create as unknown as Repository<NivelEducativo>['create'] });
 
     await service.create({ nombre: '  1° Básico  ' });
 

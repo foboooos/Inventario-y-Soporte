@@ -16,6 +16,13 @@ export class AuthController {
     return this.authService.login(loginDto);
   }
 
+  @Get('users')
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  listLoginUsers() {
+    return this.authService.listLoginUsers();
+  }
+
   @Get('me')
   @UseGuards(JwtAuthGuard)
   me(@Req() request: AuthenticatedRequest) {

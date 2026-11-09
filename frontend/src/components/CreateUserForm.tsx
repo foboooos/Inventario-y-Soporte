@@ -19,6 +19,7 @@ const initialForm = {
   rut: '',
   nombre: '',
   email: '',
+  fecha_nacimiento: '',
   rol: 'DOCENTE' as UserRole,
 }
 
@@ -75,7 +76,7 @@ export function CreateUserForm({ accessToken, onClose, onCreated, onSessionExpir
     setError('')
 
     try {
-      const created = await createUser(accessToken, { rut, nombre, email, rol: form.rol })
+      const created = await createUser(accessToken, { rut, nombre, email, fecha_nacimiento: form.fecha_nacimiento, rol: form.rol })
       modalRef.current?.close(() => onCreated(created))
     } catch (exception) {
       if (isSessionExpired(exception)) {
@@ -135,6 +136,15 @@ export function CreateUserForm({ accessToken, onClose, onCreated, onSessionExpir
                 />
                 <span className="email-input-suffix">{USER_EMAIL_DOMAIN}</span>
               </div>
+            </label>
+            <label>
+              <span>Fecha de nacimiento</span>
+              <input
+                type="date"
+                value={form.fecha_nacimiento}
+                onChange={(event) => updateField('fecha_nacimiento', event.target.value)}
+                required
+              />
             </label>
             <div className="device-field">
               <span>Rol</span>

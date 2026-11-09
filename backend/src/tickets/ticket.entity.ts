@@ -1,4 +1,6 @@
-import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, CreateDateColumn, Entity, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { Device } from '../inventory/device.entity.js';
+import { User } from '../users/user.entity.js';
 import { DeviceStatus } from '../inventory/device-status.enum.js';
 import { TicketStatus } from './ticket-status.enum.js';
 
@@ -17,8 +19,16 @@ export class Ticket {
   @Column({ name: 'id_solicitante', type: 'varchar', length: 12 })
   id_solicitante!: string;
 
+  @ManyToOne(() => User, { onDelete: 'RESTRICT' })
+  @JoinColumn({ name: 'id_solicitante', referencedColumnName: 'rut', foreignKeyConstraintName: 'FK_tickets_solicitante' })
+  solicitante!: User;
+
   @Column({ name: 'id_dispositivo', type: 'int', nullable: true })
   id_dispositivo!: number | null;
+
+  @ManyToOne(() => Device, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'id_dispositivo', referencedColumnName: 'id_dispositivo', foreignKeyConstraintName: 'FK_tickets_dispositivo' })
+  dispositivo!: Device | null;
 
   @Column({ type: 'varchar', length: 100 })
   ubicacion!: string;

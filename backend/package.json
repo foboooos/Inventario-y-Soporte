@@ -23,6 +23,7 @@
     "migration:show": "nest build && typeorm migration:show -d dist/database/data-source.js",
     "migration:baseline": "nest build && node dist/database/baseline.js",
     "lint": "oxlint src/ test/",
+    "typecheck": "tsc --noEmit --incremental false",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:cov": "vitest run --coverage",
