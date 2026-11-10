@@ -13,6 +13,7 @@ type SelectMenuProps = {
   disabled?: boolean
   visibleItems?: number
   fixedList?: boolean
+  searchable?: boolean
 }
 
 const ITEM_HEIGHT = 30
@@ -34,27 +35,48 @@ function boxFromRect(rect: DOMRect, above: boolean): ListBox {
   }
 }
 
-export function SelectMenu({ id, value, options, onChange, ariaLabel, placeholder, disabled, visibleItems = 10, fixedList = false }: SelectMenuProps) {
+export function SelectMenu({ id, value, options, onChange, ariaLabel, placeholder, disabled, visibleItems = 10, fixedList = false, searchable = false }: SelectMenuProps) {
   const [open, setOpen] = useState(false)
   const [activeIndex, setActiveIndex] = useState(-1)
+  const [search, setSearch] = useState<string | null>(null)
   const [above, setAbove] = useState(false)
   const [listBox, setListBox] = useState<ListBox | null>(null)
   const rootRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLUListElement>(null)
   const scrollActiveRef = useRef(false)
   const scrollTopRef = useRef<number | null>(null)
-  const visibleCount = Math.min(options.length, visibleItems)
+  const selectSearchOnOpenRef = useRef(false)
+  const normalizedSearch = search?.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase()
+  const filteredOptions = searchable && normalizedSearch
+    ? options.filter((option) => option.label.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase().includes(normalizedSearch))
+    : options
+  const visibleCount = Math.min(filteredOptions.length, visibleItems)
   const listHeight = visibleCount * ITEM_HEIGHT + LIST_PADDING
 
   const selectedIndex = options.findIndex((option) => option.value === value)
   const selected = selectedIndex >= 0 ? options[selectedIndex] : undefined
 
+  function getAnchor() {
+    return searchable ? inputRef.current : buttonRef.current
+  }
+
+  useLayoutEffect(() => {
+    if (searchable && open && selectSearchOnOpenRef.current) {
+      inputRef.current?.select()
+      selectSearchOnOpenRef.current = false
+    }
+  }, [searchable, open])
+
   useEffect(() => {
     if (!open) return
 
     function handlePointerDown(event: PointerEvent) {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false)
+      if (!rootRef.current?.contains(event.target as Node)) {
+        setOpen(false)
+        setSearch(null)
+      }
     }
 
     document.addEventListener('pointerdown', handlePointerDown)
@@ -65,7 +87,8 @@ export function SelectMenu({ id, value, options, onChange, ariaLabel, placeholde
     if (!open || !fixedList) return
 
     function reposition() {
-      const rect = buttonRef.current?.getBoundingClientRect()
+      const anchor = searchable ? inputRef.current : buttonRef.current
+      const rect = anchor?.getBoundingClientRect()
       if (rect) setListBox(boxFromRect(rect, above))
     }
 
@@ -75,7 +98,7 @@ export function SelectMenu({ id, value, options, onChange, ariaLabel, placeholde
       window.removeEventListener('scroll', reposition, true)
       window.removeEventListener('resize', reposition)
     }
-  }, [open, fixedList, above])
+  }, [open, fixedList, above, searchable])
 
   useLayoutEffect(() => {
     if (!open || scrollTopRef.current === null) return
@@ -90,8 +113,13 @@ export function SelectMenu({ id, value, options, onChange, ariaLabel, placeholde
   }, [open, activeIndex])
 
   function openList() {
-    const rect = buttonRef.current?.getBoundingClientRect()
-    const containerRect = buttonRef.current?.closest('.modal-card')?.getBoundingClientRect()
+    if (searchable) {
+      setSearch(null)
+      selectSearchOnOpenRef.current = Boolean(selected)
+    }
+    const anchor = getAnchor()
+    const rect = anchor?.getBoundingClientRect()
+    const containerRect = anchor?.closest('.modal-card')?.getBoundingClientRect()
     const viewportSpaceBelow = rect ? visibleViewportHeight() - rect.bottom : 0
     const containerSpaceBelow = rect
       ? (containerRect ? containerRect.bottom - rect.bottom : Infinity)
@@ -108,7 +136,8 @@ export function SelectMenu({ id, value, options, onChange, ariaLabel, placeholde
     setAbove(nextAbove)
     if (fixedList && rect) setListBox(boxFromRect(rect, nextAbove))
     scrollActiveRef.current = scrollTopRef.current === null
-    setActiveIndex(selectedIndex >= 0 ? selectedIndex : 0)
+    const visibleSelectedIndex = filteredOptions.findIndex((option) => option.value === value)
+    setActiveIndex(visibleSelectedIndex >= 0 ? visibleSelectedIndex : (filteredOptions.length > 0 ? 0 : -1))
     setOpen(true)
   }
 
@@ -119,18 +148,19 @@ export function SelectMenu({ id, value, options, onChange, ariaLabel, placeholde
   }
 
   function commit(index: number) {
-    const option = options[index]
+    const option = filteredOptions[index]
     if (!option) return
     onChange(option.value)
     setOpen(false)
-    buttonRef.current?.focus()
+    setSearch(null)
+    if (!searchable) buttonRef.current?.focus({ preventScroll: true })
   }
 
-  function handleKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
+  function handleKeyDown(event: KeyboardEvent<HTMLButtonElement | HTMLInputElement>) {
     if (disabled) return
 
     if (!open) {
-      if (event.key === 'ArrowDown' || event.key === 'ArrowUp' || event.key === 'Enter' || event.key === ' ') {
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp' || event.key === 'Enter' || (!searchable && event.key === ' ')) {
         event.preventDefault()
         openList()
       }
@@ -139,7 +169,7 @@ export function SelectMenu({ id, value, options, onChange, ariaLabel, placeholde
 
     if (event.key === 'ArrowDown') {
       event.preventDefault()
-      moveActive(Math.min(options.length - 1, activeIndex + 1))
+      moveActive(Math.min(filteredOptions.length - 1, activeIndex + 1))
     } else if (event.key === 'ArrowUp') {
       event.preventDefault()
       moveActive(Math.max(0, activeIndex - 1))
@@ -148,7 +178,7 @@ export function SelectMenu({ id, value, options, onChange, ariaLabel, placeholde
       moveActive(0)
     } else if (event.key === 'End') {
       event.preventDefault()
-      moveActive(options.length - 1)
+      moveActive(filteredOptions.length - 1)
     } else if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault()
       commit(activeIndex)
@@ -156,15 +186,17 @@ export function SelectMenu({ id, value, options, onChange, ariaLabel, placeholde
       event.preventDefault()
       event.stopPropagation()
       setOpen(false)
-      buttonRef.current?.focus()
+      setSearch(null)
+      if (!searchable) buttonRef.current?.focus({ preventScroll: true })
     } else if (event.key === 'Tab') {
       setOpen(false)
+      setSearch(null)
     }
   }
 
   const listStyle: CSSProperties = {}
 
-  if (options.length > visibleItems) listStyle.maxHeight = listHeight
+  if (filteredOptions.length > visibleItems) listStyle.maxHeight = listHeight
 
   if (fixedList && listBox) {
     listStyle.position = 'fixed'
@@ -177,27 +209,68 @@ export function SelectMenu({ id, value, options, onChange, ariaLabel, placeholde
 
   return (
     <div className="select-menu" ref={rootRef}>
-      <button
-        ref={buttonRef}
-        id={id}
-        className="select-menu-button"
-        type="button"
-        role="combobox"
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        aria-controls={`${id}-listbox`}
-        aria-label={ariaLabel}
-        disabled={disabled}
-        onClick={() => (open ? setOpen(false) : openList())}
-        onKeyDown={handleKeyDown}
-      >
-        <span className={value ? 'select-menu-value' : 'select-menu-placeholder'}>
-          {value ? selected?.label : placeholder ?? 'Selecciona'}
-        </span>
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="m6 9 6 6 6-6" />
-        </svg>
-      </button>
+      {searchable ? (
+        <div
+          className={`select-menu-button select-menu-searchable${open ? ' is-open' : ''}`}
+          onClick={() => {
+            if (disabled) return
+            if (!open) openList()
+            if (document.activeElement !== inputRef.current) {
+              inputRef.current?.focus({ preventScroll: true })
+            }
+          }}
+        >
+          <input
+            ref={inputRef}
+            id={id}
+            className="select-menu-search-input"
+            type="text"
+            role="combobox"
+            aria-label={ariaLabel}
+            aria-autocomplete="list"
+            aria-haspopup="listbox"
+            aria-expanded={open}
+            aria-controls={`${id}-listbox`}
+            aria-activedescendant={open && activeIndex >= 0 && filteredOptions[activeIndex] ? `${id}-option-${activeIndex}` : undefined}
+            autoComplete="off"
+            readOnly={!open}
+            value={open ? search ?? selected?.label ?? '' : selected?.label ?? ''}
+            placeholder={placeholder ?? 'Selecciona'}
+            disabled={disabled}
+            onChange={(event) => {
+              setSearch(event.target.value)
+              setActiveIndex(0)
+              if (!open) openList()
+            }}
+            onKeyDown={handleKeyDown}
+          />
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        </div>
+      ) : (
+        <button
+          ref={buttonRef}
+          id={id}
+          className="select-menu-button"
+          type="button"
+          role="combobox"
+          aria-haspopup="listbox"
+          aria-expanded={open}
+          aria-controls={`${id}-listbox`}
+          aria-label={ariaLabel}
+          disabled={disabled}
+          onClick={() => (open ? setOpen(false) : openList())}
+          onKeyDown={handleKeyDown}
+        >
+          <span className={value ? 'select-menu-value' : 'select-menu-placeholder'}>
+            {value ? selected?.label : placeholder ?? 'Selecciona'}
+          </span>
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        </button>
+      )}
 
       {open && (
         <ul
@@ -209,9 +282,10 @@ export function SelectMenu({ id, value, options, onChange, ariaLabel, placeholde
           style={listStyle}
           onScroll={(event) => { scrollTopRef.current = event.currentTarget.scrollTop }}
         >
-          {options.map((option, index) => (
+          {filteredOptions.map((option, index) => (
             <li
               key={option.value}
+              id={`${id}-option-${index}`}
               role="option"
               aria-selected={option.value === value}
               className={`select-menu-option${index === activeIndex ? ' is-active' : ''}${option.value === value ? ' is-selected' : ''}`}
@@ -224,6 +298,11 @@ export function SelectMenu({ id, value, options, onChange, ariaLabel, placeholde
               {option.label}
             </li>
           ))}
+          {searchable && filteredOptions.length === 0 && (
+            <li className="select-menu-option select-menu-empty" role="option" aria-selected="false" aria-disabled="true">
+              Sin coincidencias
+            </li>
+          )}
         </ul>
       )}
     </div>

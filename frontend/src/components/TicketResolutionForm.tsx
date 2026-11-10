@@ -104,7 +104,7 @@ export function TicketResolutionForm({ accessToken, ticket, onResolved, onCancel
           </dl>
 
           <form className="ticket-resolution-form" onSubmit={handleSubmit}>
-            <label>
+            <label className="field-float">
               <span>Causa raíz</span>
               <textarea
                 value={cause}
@@ -114,7 +114,7 @@ export function TicketResolutionForm({ accessToken, ticket, onResolved, onCancel
                 required
               />
             </label>
-            <label>
+            <label className="field-float">
               <span>Solución aplicada</span>
               <textarea
                 value={solution}

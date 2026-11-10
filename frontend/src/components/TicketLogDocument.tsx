@@ -52,7 +52,6 @@ export function TicketLogDocument({ bitacora, onClose }: TicketLogDocumentProps)
       <div className="ticket-log-body">
         <article className="ticket-log-document">
           <header className="ticket-log-heading">
-            <h2 className="config-dialog-title">Bitácora del ticket {bitacora.codigo_ticket}</h2>
             <p className="config-dialog-text">
               {closeDate ? `Cerrado el ${closeDate}` : 'Fecha de cierre no registrada'}
             </p>

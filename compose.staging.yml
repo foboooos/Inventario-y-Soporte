@@ -1,0 +1,15 @@
+services:
+  migrate:
+    image: inventario-soporte-migrate:staging-20261109
+
+  backend:
+    image: inventario-soporte-backend:staging-20261109
+
+  frontend:
+    image: inventario-soporte-frontend:staging-20261109
+    ports: !override
+      - "127.0.0.1:18080:80"
+
+volumes:
+  postgres-data:
+    name: inventario-soporte-staging-20261109-postgres-data

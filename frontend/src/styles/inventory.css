@@ -778,6 +778,7 @@ tbody tr:hover {
   background: transparent;
   font: inherit;
   font-size: 13px;
+  line-height: 1.2;
   text-align: left;
 }
 

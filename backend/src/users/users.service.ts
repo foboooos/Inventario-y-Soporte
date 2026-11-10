@@ -5,6 +5,7 @@ import { Repository } from 'typeorm';
 import { Ticket } from '../tickets/ticket.entity.js';
 import { CreateUserDto } from './dto/create-user.dto.js';
 import { UpdateUserDto } from './dto/update-user.dto.js';
+import { decryptBirthDate, encryptBirthDate } from './birth-date-crypto.js';
 import { normalizeRut } from './rut.js';
 import { User } from './user.entity.js';
 import { UserRole } from './user-role.enum.js';
@@ -21,6 +22,7 @@ export class UsersService {
       .createQueryBuilder('user')
       .select(['user.rut', 'user.login_id', 'user.nombre', 'user.email', 'user.rol'])
       .addSelect('user.fecha_nacimiento_hash')
+      .addSelect('user.fecha_nacimiento_cifrada')
       .orderBy('user.nombre', 'ASC')
       .getMany()
       .then((users) => users.map((user) => ({
@@ -30,6 +32,9 @@ export class UsersService {
         email: user.email,
         rol: user.rol,
         fecha_nacimiento_configurada: Boolean(user.fecha_nacimiento_hash),
+        fecha_nacimiento: user.fecha_nacimiento_cifrada
+          ? decryptBirthDate(user.fecha_nacimiento_cifrada)
+          : null,
       })));
   }
 
@@ -110,6 +115,7 @@ export class UsersService {
     const updates: Partial<User> = { nombre: user.nombre, email: user.email, rol: user.rol };
     if (dto.fecha_nacimiento !== undefined) {
       updates.fecha_nacimiento_hash = await bcrypt.hash(formatBirthDatePassword(dto.fecha_nacimiento), 12);
+      updates.fecha_nacimiento_cifrada = encryptBirthDate(dto.fecha_nacimiento);
     }
 
     await this.users.update({ rut }, updates);
@@ -119,6 +125,7 @@ export class UsersService {
       nombre: user.nombre,
       email: user.email,
       rol: user.rol,
+      ...(dto.fecha_nacimiento !== undefined ? { fecha_nacimiento: dto.fecha_nacimiento } : {}),
     };
   }
 
@@ -145,6 +152,7 @@ export class UsersService {
         email,
         password_hash,
         fecha_nacimiento_hash,
+        fecha_nacimiento_cifrada: encryptBirthDate(dto.fecha_nacimiento),
         rol: dto.rol,
       }),
     );
@@ -156,6 +164,7 @@ export class UsersService {
       email: saved.email,
       rol: saved.rol,
       fecha_nacimiento_configurada: true,
+      fecha_nacimiento: dto.fecha_nacimiento,
     };
   }
 }

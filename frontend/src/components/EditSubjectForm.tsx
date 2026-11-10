@@ -64,7 +64,7 @@ export function EditSubjectForm({ accessToken, subject, levels, onUpdated, onCan
     >
         <div className="device-modal-body">
           <form className="device-form" onSubmit={handleSubmit}>
-            <label className="device-form-wide">
+            <label className="device-form-wide field-float">
               <span>Nombre</span>
               <input value={name} onChange={(event) => setName(event.target.value)} maxLength={100} required />
             </label>

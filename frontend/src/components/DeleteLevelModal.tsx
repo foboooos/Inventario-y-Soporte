@@ -47,7 +47,6 @@ export function DeleteLevelModal({ accessToken, level, onDeleted, onCancel, onSe
       onClose={onCancel}
     >
       <div className="device-modal-body">
-        <h2 className="config-dialog-title">Eliminar nivel educativo</h2>
         <p className="config-dialog-text">
           ¿Eliminar {level.nombre}? Esta acción no se puede deshacer.
         </p>

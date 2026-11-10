@@ -8,3 +8,14 @@ export function localPartOfEmail(email: string): string {
 export function buildUserEmail(localPart: string): string {
   return `${localPartOfEmail(localPart.trim())}${USER_EMAIL_DOMAIN}`
 }
+
+export function emailFromName(name: string): string {
+  const localPart = name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '.')
+    .replace(/^\.|\.$/g, '')
+
+  return buildUserEmail(localPart)
+}

@@ -558,6 +558,9 @@ export function InboxPage({ accessToken, onSessionExpired, isActive }: InboxPage
             {!loading && !error && tickets.length === 0 && (
               <div className="empty-state-block" role="status">
                 <p>{hasActiveFilters ? 'No hay tickets que coincidan con los filtros.' : 'No hay tickets registrados.'}</p>
+                {hasActiveFilters && (
+                  <button className="secondary-button" type="button" onClick={clearFilters}>Limpiar filtros</button>
+                )}
               </div>
             )}
 

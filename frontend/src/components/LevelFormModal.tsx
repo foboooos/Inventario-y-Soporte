@@ -54,15 +54,13 @@ export function LevelFormModal({ accessToken, level, onSaved, onCancel, onSessio
       ref={modalRef}
       label={isEditing ? `Renombrar ${level.nombre}` : 'Nuevo nivel educativo'}
       backdropClassName="device-modal-backdrop"
+      cardClassName="create-device-card modal-card config-level-modal"
       dismissible={!saving}
       onClose={onCancel}
     >
       <div className="device-modal-body">
-        <h2 className="config-dialog-title level-modal-title">
-          {isEditing ? 'Renombrar nivel educativo' : 'Nuevo nivel educativo'}
-        </h2>
         <form className="device-form" onSubmit={handleSubmit}>
-          <label className="device-form-wide">
+          <label className="device-form-wide field-float">
             <span>Nombre</span>
             <input
               value={name}

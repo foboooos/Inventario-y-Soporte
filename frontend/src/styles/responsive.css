@@ -329,6 +329,10 @@
     padding: 18px;
   }
 
+  .device-modal-body:has(> .device-form) {
+    padding: 18px;
+  }
+
 
 }
 
@@ -346,7 +350,7 @@
   }
 
   .login-card {
-    padding: 24px;
+    padding: 20px 24px 24px;
   }
 }
 

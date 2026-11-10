@@ -104,12 +104,10 @@ body.modal-open .support-shell {
 
 .create-user-modal {
   width: min(100%, 560px);
-  max-height: none;
-  overflow: visible;
 }
 
 .create-user-modal .device-form {
-  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 @media (max-width: 700px) {
@@ -120,6 +118,14 @@ body.modal-open .support-shell {
 
 .device-modal-body {
   padding: 20px 24px 24px;
+}
+
+.device-modal-body:has(> .device-form) {
+  padding: 24px;
+}
+
+.device-modal-body:has(> .device-form) > .device-form {
+  row-gap: 24px;
 }
 
 .form-heading {
@@ -156,6 +162,10 @@ body.modal-open .support-shell {
   margin: 0;
 }
 
+.create-user-modal .email-input-group {
+  height: var(--field-height);
+}
+
 .device-form label > span,
 .device-form .device-field > span {
   color: var(--minimal-muted);
@@ -175,10 +185,15 @@ body.modal-open .support-shell {
   font-size: 13px;
 }
 
+.device-form input:not([type='checkbox']):not([type='radio']):not([type='hidden']),
+.device-form textarea {
+  font-weight: 400;
+}
+
 .email-input-group {
   display: flex;
   align-items: center;
-  height: var(--control-height);
+  height: var(--field-height);
   box-sizing: border-box;
   overflow: hidden;
   border: 1px solid var(--minimal-border);

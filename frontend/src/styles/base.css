@@ -37,7 +37,7 @@ input,
 select {
   width: 100%;
   box-sizing: border-box;
-  height: var(--control-height);
+  height: var(--field-height);
   padding: 8px 12px;
   border: 1px solid var(--minimal-border);
   border-radius: var(--radius-md);
@@ -46,7 +46,7 @@ select {
   color: var(--minimal-text);
   font: inherit;
   font-size: 13px;
-  line-height: 1.4;
+  line-height: 1.2;
 }
 
 select {
@@ -260,7 +260,7 @@ button:disabled {
 .select-menu-button {
   width: 100%;
   box-sizing: border-box;
-  height: var(--control-height);
+  height: var(--field-height);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -273,8 +273,38 @@ button:disabled {
   background: #fff;
   font: inherit;
   font-size: 13px;
-  line-height: 1.4;
+  line-height: 1.2;
   text-align: left;
+}
+
+.select-menu-searchable {
+  padding: 0 12px;
+}
+
+.select-menu-searchable:focus-within {
+  border-color: var(--minimal-border);
+}
+
+.select-menu-search-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  font-size: inherit;
+}
+
+.select-menu-search-input:focus-visible {
+  outline: 0;
+}
+
+.select-menu-search-input::placeholder {
+  color: var(--minimal-muted);
+  opacity: 1;
 }
 
 .select-menu-button svg {

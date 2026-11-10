@@ -22,6 +22,7 @@ export type User = {
   rol: UserRole
   login_id?: string
   fecha_nacimiento_configurada?: boolean
+  fecha_nacimiento?: string | null
 }
 
 export type CreatedUser = User

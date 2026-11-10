@@ -147,7 +147,7 @@ export function CreateDeviceForm({ accessToken, onCreated, onCancel, onSessionEx
     >
         <div className="device-modal-body">
           <form className="device-form create-device-form" onSubmit={handleSubmit}>
-            <label>
+            <label className="field-float">
               <span>Código</span>
               <input
                 className="code-preview-input"
@@ -161,7 +161,7 @@ export function CreateDeviceForm({ accessToken, onCreated, onCancel, onSessionEx
             {displayedCodeError && (
               <p className="error device-form-wide" id="device-code-error" role="status">{displayedCodeError}</p>
             )}
-            <div className="device-field">
+            <div className="device-field field-float">
               <span>Tipo</span>
               <SelectMenu
                 id="device-type"
@@ -179,15 +179,15 @@ export function CreateDeviceForm({ accessToken, onCreated, onCancel, onSessionEx
                 ]}
               />
             </div>
-            <label>
+            <label className="field-float">
               <span>Marca</span>
               <input value={form.marca} onChange={(event) => updateField('marca', event.target.value)} maxLength={50} />
             </label>
-            <label>
+            <label className="field-float">
               <span>Modelo</span>
               <input value={form.modelo} onChange={(event) => updateField('modelo', event.target.value)} maxLength={50} />
             </label>
-            <div className="device-field device-field-wide">
+            <div className="device-field device-field-wide field-float">
               <span>Ubicación</span>
               <SelectMenu
                 id="device-location"
@@ -207,7 +207,7 @@ export function CreateDeviceForm({ accessToken, onCreated, onCancel, onSessionEx
                 fixedList
               />
             </div>
-            <div className="device-field device-field-wide">
+            <div className="device-field device-field-wide field-float">
               <span>Estado</span>
               <SelectMenu
                 id="device-status"
@@ -222,7 +222,7 @@ export function CreateDeviceForm({ accessToken, onCreated, onCancel, onSessionEx
               />
             </div>
             {subLocations.length > 0 && (
-              <div className="device-field">
+              <div className="device-field field-float">
                 <span>Curso / Sub-ubicación</span>
                 <SelectMenu
                   id="device-sublocation"

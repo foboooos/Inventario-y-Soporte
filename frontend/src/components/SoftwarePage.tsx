@@ -413,7 +413,6 @@ export function SoftwarePage({ accessToken, onSessionExpired }: SoftwarePageProp
               onClose={() => setPendingDelete(null)}
             >
               <div className="device-modal-body">
-                <h2 className="config-dialog-title">Eliminar software</h2>
                 <p className="config-dialog-text">
                   ¿Eliminar <strong>{pendingDelete.nombre}</strong>? Esta acción no se puede deshacer.
                 </p>

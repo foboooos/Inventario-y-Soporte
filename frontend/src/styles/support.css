@@ -392,7 +392,7 @@
 .ticket-resolution-body {
   display: grid;
   gap: 18px;
-  padding: 20px 24px 24px;
+  padding: 24px;
 }
 
 .ticket-resolution-summary {
@@ -430,7 +430,7 @@
 
 .ticket-resolution-form {
   display: grid;
-  gap: 16px;
+  gap: 24px;
 }
 
 .ticket-resolution-form label {
@@ -1058,6 +1058,10 @@
   width: min(100%, 420px);
 }
 
+.config-level-modal {
+  width: min(100%, 420px);
+}
+
 .device-form.config-location-create-form {
   grid-template-columns: minmax(0, 1fr) 110px;
 }
@@ -1066,15 +1070,6 @@
   .device-form.config-location-create-form {
     grid-template-columns: 1fr;
   }
-}
-
-.config-dialog-title {
-  margin: 0 0 8px;
-  font-family: inherit;
-  font-size: 16px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  line-height: 1.35;
 }
 
 .config-dialog-text {
@@ -1093,10 +1088,6 @@
   align-items: flex-start;
   gap: 12px;
   margin-bottom: 16px;
-}
-
-.device-delete-header .config-dialog-title {
-  margin-bottom: 4px;
 }
 
 .device-delete-header .config-dialog-text {
@@ -1771,10 +1762,6 @@
   margin-top: 0;
 }
 
-.level-modal-title {
-  margin-bottom: 16px;
-}
-
 .subjects-checklist {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
@@ -2265,8 +2252,12 @@
   }
 
   .subjects-form.software-create-form {
-    grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.7fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.7fr);
     grid-template-rows: auto;
+  }
+
+  .subjects-form.software-create-form > .field-float:nth-child(3) {
+    grid-column: 1 / -1;
   }
 
   .subjects-form button,

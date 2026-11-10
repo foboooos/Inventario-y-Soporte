@@ -47,7 +47,6 @@ export function DeleteSubjectModal({ accessToken, subject, onDeleted, onCancel, 
       onClose={onCancel}
     >
       <div className="device-modal-body">
-        <h2 className="config-dialog-title">Eliminar asignatura</h2>
         <p className="config-dialog-text">
           ¿Eliminar {subject.nombre}? Esta acción no se puede deshacer.
         </p>

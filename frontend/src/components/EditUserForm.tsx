@@ -3,7 +3,7 @@ import type { FormEvent } from 'react'
 import { isSessionExpired } from '../services/http'
 import { updateUser } from '../services/users'
 import type { UpdateUserInput, User, UserRole } from '../types/user'
-import { buildUserEmail, localPartOfEmail, USER_EMAIL_DOMAIN } from '../utils/email'
+import { emailFromName, localPartOfEmail, USER_EMAIL_DOMAIN } from '../utils/email'
 import { Modal } from './Modal'
 import type { ModalHandle } from './Modal'
 import { SelectMenu } from './SelectMenu'
@@ -13,6 +13,8 @@ const roleOptions = [
   { value: 'TECNICO', label: 'Técnico' },
   { value: 'ADMIN', label: 'Administrador' },
 ]
+
+type EditUserFormState = Omit<UpdateUserInput, 'email'>
 
 type EditUserFormProps = {
   accessToken: string
@@ -24,25 +26,24 @@ type EditUserFormProps = {
 }
 
 export function EditUserForm({ accessToken, user, isSelf, onUpdated, onCancel, onSessionExpired }: EditUserFormProps) {
-  const [form, setForm] = useState<UpdateUserInput>({
+  const [form, setForm] = useState<EditUserFormState>({
     nombre: user.nombre,
-    email: localPartOfEmail(user.email),
-    fecha_nacimiento: '',
+    fecha_nacimiento: user.fecha_nacimiento ?? '',
     rol: user.rol,
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const modalRef = useRef<ModalHandle>(null)
 
-  function updateField<K extends keyof UpdateUserInput>(field: K, value: UpdateUserInput[K]) {
+  function updateField<K extends keyof EditUserFormState>(field: K, value: EditUserFormState[K]) {
     setForm((current) => ({ ...current, [field]: value }))
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const nombre = form.nombre.trim()
-    const email = buildUserEmail(form.email)
-    if (!nombre || !form.email.trim()) return
+    const email = emailFromName(nombre)
+    if (!nombre || !localPartOfEmail(email)) return
 
     setSaving(true)
     setError('')
@@ -76,50 +77,44 @@ export function EditUserForm({ accessToken, user, isSelf, onUpdated, onCancel, o
       onClose={onCancel}
     >
       <div className="device-modal-body">
-        <h2 className="config-dialog-title">Editar usuario</h2>
         <form className="device-form" onSubmit={handleSubmit}>
-          <label>
+          <label className="field-float" htmlFor="edit-user-rut">
             <span>RUT</span>
-            <input value={user.rut} readOnly />
+            <input id="edit-user-rut" value={user.rut} readOnly />
           </label>
-          <label>
+          <label className="field-float" htmlFor="edit-user-name">
             <span>Nombre</span>
             <input
+              id="edit-user-name"
               value={form.nombre}
               onChange={(event) => updateField('nombre', event.target.value)}
               maxLength={100}
               required
             />
           </label>
-          <label>
+          <label className="field-float" htmlFor="edit-user-email">
             <span>Email</span>
             <div className="email-input-group">
               <input
+                id="edit-user-email"
                 type="text"
-                value={form.email}
-                onChange={(event) => updateField('email', event.target.value.replace(/@.*$/, ''))}
-                maxLength={150 - USER_EMAIL_DOMAIN.length}
-                autoComplete="off"
-                spellCheck={false}
-                required
+                value={localPartOfEmail(emailFromName(form.nombre))}
+                readOnly
+                aria-label="Correo generado desde el nombre"
               />
               <span className="email-input-suffix">{USER_EMAIL_DOMAIN}</span>
             </div>
           </label>
-          <label>
+          <label className="field-float" htmlFor="edit-user-birth-date">
             <span>Fecha de nacimiento</span>
             <input
+              id="edit-user-birth-date"
               type="date"
               value={form.fecha_nacimiento ?? ''}
               onChange={(event) => updateField('fecha_nacimiento', event.target.value)}
             />
-            <span className="device-field-hint">
-              {user.fecha_nacimiento_configurada
-                ? 'Ingresa otra fecha solo si necesitas actualizarla.'
-                : 'Aún no está registrada; ingrésala para habilitar este acceso.'}
-            </span>
           </label>
-          <div className="device-field">
+          <div className="device-field field-float">
             <span>Rol</span>
             <SelectMenu
               id="edit-user-role"
@@ -140,7 +135,7 @@ export function EditUserForm({ accessToken, user, isSelf, onUpdated, onCancel, o
             <button
               className="primary-action primary-action-solid"
               type="submit"
-              disabled={saving || !form.nombre.trim() || !form.email.trim()}
+              disabled={saving || !form.nombre.trim() || !localPartOfEmail(emailFromName(form.nombre))}
             >
               {saving ? 'Guardando…' : 'Guardar'}
             </button>

@@ -23,6 +23,9 @@ export class User {
   @Column({ name: 'fecha_nacimiento_hash', type: 'varchar', length: 60, nullable: true, select: false })
   fecha_nacimiento_hash!: string | null;
 
+  @Column({ name: 'fecha_nacimiento_cifrada', type: 'varchar', length: 255, nullable: true, select: false })
+  fecha_nacimiento_cifrada!: string | null;
+
   @Column({ type: 'enum', enum: UserRole, enumName: 'user_role' })
   rol!: UserRole;
 

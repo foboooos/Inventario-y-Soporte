@@ -486,7 +486,6 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
               </svg>
             </span>
             <div>
-              <h2 className="config-dialog-title">Eliminar dispositivo</h2>
               <p className="config-dialog-text">
                 ¿Eliminar este dispositivo? Esta acción no se puede deshacer.
               </p>
@@ -524,7 +523,6 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
         onClose={() => setBulkDeleteOpen(false)}
       >
         <div className="device-modal-body">
-          <h2 className="config-dialog-title">Eliminar dispositivos</h2>
           <p className="config-dialog-text">
             ¿Eliminar {selectedIds.size} dispositivo(s) seleccionado(s)? Esta acción no se puede deshacer.
           </p>

@@ -1,40 +1,58 @@
 .field-float {
-  position: relative;
-  display: block;
+  display: grid;
+  gap: 8px;
   margin: 0;
 }
 
-.field-float > span {
-  position: absolute;
-  top: 0;
-  left: 8px;
-  z-index: 1;
-  padding: 0 4px;
+.field-float > span:not(.device-field-hint) {
+  display: block;
+  margin: 0;
   color: var(--minimal-muted);
-  background: #fff;
   font-size: 13px;
   font-weight: 600;
   line-height: 16px;
-  pointer-events: none;
-  transform: translateY(-50%);
 }
 
-.field-float:has(input:focus-within) > span,
-.field-float:has(select:focus-visible) > span,
-.field-float:has([aria-expanded='true']) > span {
+.field-float:has(:focus):not(:has(.select-menu-button)) > span:not(.device-field-hint),
+.field-float:has(.select-menu-button[aria-expanded='true']) > span:not(.device-field-hint) {
   color: var(--minimal-secondary);
 }
 
-.field-float input,
-.field-float select,
-.field-float .select-menu-button {
-  height: 40px;
+input:not([type='checkbox']):not([type='radio']):not([type='hidden']),
+select {
+  padding-block: 7px 9px;
 }
 
-.field-float input:focus-visible,
-.field-float select:focus-visible,
-.field-float .select-menu-button:focus-visible {
-  border-color: var(--minimal-border);
-  box-shadow: none;
+.field-float > input,
+.field-float .select-menu-button {
+  height: var(--field-height);
+}
+
+.field-float .select-menu-search-input:not([type='checkbox']):not([type='radio']):not([type='hidden']) {
+  align-self: stretch;
+  box-sizing: border-box;
+  height: 100%;
+  padding: 7px 0 9px;
+  line-height: 1.2;
+}
+
+.login-card .field-float .password-field input {
+  height: 100%;
+  padding: 7px 0 9px;
+  line-height: 1.2;
+}
+
+.field-float > input:focus,
+.field-float > textarea:focus,
+.field-float .password-field:focus-within,
+.field-float .email-input-group:focus-within,
+.field-float .select-menu-button[aria-expanded='true'],
+.inbox-filters label:has([aria-expanded='true']) :is(.select-menu-button, .date-field-button) {
+  border-color: var(--minimal-secondary);
+  box-shadow: 0 0 0 3px rgba(49, 44, 133, 0.14);
   outline: none;
+}
+
+.inbox-filters label:has([aria-expanded='true']) > span {
+  color: var(--minimal-secondary);
 }

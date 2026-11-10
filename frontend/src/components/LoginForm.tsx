@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { getLoginUsers, login } from '../services/auth'
 import type { AuthUser, LoginOption } from '../types/auth'
+import { SelectMenu } from './SelectMenu'
 
 type LoginFormProps = {
   onAuthenticated: (user: AuthUser, accessToken: string, remember: boolean) => void
@@ -18,8 +19,8 @@ export function LoginForm({ onAuthenticated }: LoginFormProps) {
   const [error, setError] = useState('')
   const [errorField, setErrorField] = useState<'usuario' | 'password' | null>(null)
   const [loading, setLoading] = useState(false)
-  const usuarioRef = useRef<HTMLSelectElement>(null)
   const passwordRef = useRef<HTMLInputElement>(null)
+  const usuarioOptions = usuarios.map((option) => ({ value: option.id, label: option.nombre }))
 
   useEffect(() => {
     let active = true
@@ -39,8 +40,8 @@ export function LoginForm({ onAuthenticated }: LoginFormProps) {
   function fail(message: string, field: 'usuario' | 'password') {
     setError(message)
     setErrorField(field)
-    const input = field === 'usuario' ? usuarioRef : passwordRef
-    input.current?.focus()
+    if (field === 'usuario') document.getElementById('usuario')?.focus()
+    else passwordRef.current?.focus()
     return false
   }
 
@@ -71,7 +72,6 @@ export function LoginForm({ onAuthenticated }: LoginFormProps) {
     }
   }
 
-  const usuarioInvalido = error !== '' && errorField !== 'password'
   const passwordInvalida = error !== '' && errorField !== 'usuario'
 
   return (
@@ -90,17 +90,23 @@ export function LoginForm({ onAuthenticated }: LoginFormProps) {
         )}
         <section className="login-card">
           <form onSubmit={handleSubmit} noValidate>
-            <label className="field-float" htmlFor="usuario">
+            <div className="field-float">
               <span>Usuario</span>
-              <select ref={usuarioRef} id="usuario" value={usuario} onChange={(event) => setUsuario(event.target.value)} required autoComplete="username" disabled={loadingUsers || usuarios.length === 0} aria-invalid={usuarioInvalido ? true : undefined} aria-describedby={error || usersError ? 'login-error' : undefined}>
-                <option value="">{loadingUsers ? 'Cargando usuarios…' : 'Selecciona tu nombre'}</option>
-                {usuarios.map((option) => <option key={option.id} value={option.id}>{option.nombre}</option>)}
-              </select>
-            </label>
+              <SelectMenu
+                id="usuario"
+                value={usuario}
+                onChange={setUsuario}
+                options={usuarioOptions}
+                ariaLabel="Usuario"
+                placeholder={loadingUsers ? 'Cargando usuarios…' : 'Selecciona tu nombre'}
+                disabled={loadingUsers || usuarios.length === 0}
+                searchable
+              />
+            </div>
             <label className="field-float" htmlFor="password">
               <span>Contraseña</span>
               <div className="password-field">
-                <input ref={passwordRef} id="password" type={showPassword ? 'text' : 'password'} value={password} onChange={(event) => setPassword(event.target.value)} required minLength={8} autoComplete="current-password" aria-invalid={passwordInvalida ? true : undefined} aria-describedby={error || usersError ? 'login-error' : 'password-hint'} />
+                <input ref={passwordRef} id="password" type={showPassword ? 'text' : 'password'} value={password} onChange={(event) => setPassword(event.target.value)} required minLength={8} autoComplete="current-password" aria-invalid={passwordInvalida ? true : undefined} aria-describedby={error || usersError ? 'login-error' : undefined} />
                 <button
                   type="button"
                   className="password-toggle"
@@ -122,7 +128,6 @@ export function LoginForm({ onAuthenticated }: LoginFormProps) {
                   )}
                 </button>
               </div>
-              <span className="login-password-hint" id="password-hint">RUT o fecha de nacimiento en formato DDMMYYYY.</span>
             </label>
             <label className="login-remember">
               <input type="checkbox" checked={remember} onChange={(event) => setRemember(event.target.checked)} />

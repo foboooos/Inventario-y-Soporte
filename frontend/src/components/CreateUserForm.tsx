@@ -3,7 +3,7 @@ import type { ChangeEvent, FormEvent } from 'react'
 import { isSessionExpired } from '../services/http'
 import { createUser } from '../services/users'
 import type { User, UserRole } from '../types/user'
-import { buildUserEmail, USER_EMAIL_DOMAIN } from '../utils/email'
+import { emailFromName, localPartOfEmail, USER_EMAIL_DOMAIN } from '../utils/email'
 import { formatRut, rutCaretPosition } from '../utils/rut'
 import { Modal } from './Modal'
 import type { ModalHandle } from './Modal'
@@ -18,7 +18,6 @@ const roleOptions = [
 const initialForm = {
   rut: '',
   nombre: '',
-  email: '',
   fecha_nacimiento: '',
   rol: 'DOCENTE' as UserRole,
 }
@@ -69,8 +68,8 @@ export function CreateUserForm({ accessToken, onClose, onCreated, onSessionExpir
     event.preventDefault()
     const rut = form.rut.trim()
     const nombre = form.nombre.trim()
-    const email = buildUserEmail(form.email)
-    if (!rut || !nombre || !form.email.trim()) return
+    const email = emailFromName(nombre)
+    if (!rut || !nombre || !localPartOfEmail(email)) return
 
     setSaving(true)
     setError('')
@@ -100,7 +99,7 @@ export function CreateUserForm({ accessToken, onClose, onCreated, onSessionExpir
     >
         <div className="device-modal-body">
           <form className="device-form" onSubmit={handleSubmit}>
-            <label>
+            <label className="field-float">
               <span>RUT</span>
               <input
                 ref={rutInputRef}
@@ -111,7 +110,7 @@ export function CreateUserForm({ accessToken, onClose, onCreated, onSessionExpir
                 required
               />
             </label>
-            <label>
+            <label className="field-float">
               <span>Nombre</span>
               <input
                 value={form.nombre}
@@ -121,23 +120,20 @@ export function CreateUserForm({ accessToken, onClose, onCreated, onSessionExpir
                 required
               />
             </label>
-            <label>
+            <label className="field-float" htmlFor="create-user-email">
               <span>Email</span>
               <div className="email-input-group">
                 <input
+                  id="create-user-email"
                   type="text"
-                  value={form.email}
-                  onChange={(event) => updateField('email', event.target.value.replace(/@.*$/, ''))}
-                  placeholder="nombre.apellido"
-                  maxLength={150 - USER_EMAIL_DOMAIN.length}
-                  autoComplete="off"
-                  spellCheck={false}
-                  required
+                  value={localPartOfEmail(emailFromName(form.nombre))}
+                  readOnly
+                  aria-label="Correo generado desde el nombre"
                 />
                 <span className="email-input-suffix">{USER_EMAIL_DOMAIN}</span>
               </div>
             </label>
-            <label>
+            <label className="field-float">
               <span>Fecha de nacimiento</span>
               <input
                 type="date"
@@ -146,7 +142,7 @@ export function CreateUserForm({ accessToken, onClose, onCreated, onSessionExpir
                 required
               />
             </label>
-            <div className="device-field">
+            <div className="device-field field-float">
               <span>Rol</span>
               <SelectMenu
                 id="config-user-role"
@@ -165,7 +161,7 @@ export function CreateUserForm({ accessToken, onClose, onCreated, onSessionExpir
               <button
                 className="primary-action primary-action-solid"
                 type="submit"
-                disabled={saving || !form.rut.trim() || !form.nombre.trim() || !form.email.trim()}
+                disabled={saving || !form.rut.trim() || !form.nombre.trim() || !localPartOfEmail(emailFromName(form.nombre))}
               >
                 {saving ? 'Creando…' : 'Crear'}
               </button>

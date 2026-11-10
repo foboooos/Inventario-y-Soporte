@@ -102,11 +102,11 @@ export function EditDeviceForm({ accessToken, device, onUpdated, onCancel, onSes
     >
         <div className="device-modal-body">
           <form className="device-form" onSubmit={handleSubmit}>
-            <label>
+            <label className="field-float">
               <span>Código de inventario</span>
               <input value={device.code} readOnly />
             </label>
-            <div className="device-field">
+            <div className="device-field field-float">
               <span>Tipo</span>
               <SelectMenu
                 id="device-type"
@@ -121,15 +121,15 @@ export function EditDeviceForm({ accessToken, device, onUpdated, onCancel, onSes
                 ]}
               />
             </div>
-            <label>
+            <label className="field-float">
               <span>Marca</span>
               <input value={form.marca} onChange={(event) => updateField('marca', event.target.value)} maxLength={50} />
             </label>
-            <label>
+            <label className="field-float">
               <span>Modelo</span>
               <input value={form.modelo} onChange={(event) => updateField('modelo', event.target.value)} maxLength={50} />
             </label>
-            <div className="device-field">
+            <div className="device-field field-float">
               <span>Ubicación</span>
               <SelectMenu
                 id="device-location"
@@ -145,7 +145,7 @@ export function EditDeviceForm({ accessToken, device, onUpdated, onCancel, onSes
               />
             </div>
             {subLocations.length > 0 && (
-              <div className="device-field">
+              <div className="device-field field-float">
                 <span>Curso / Sub-ubicación</span>
                 <SelectMenu
                   id="device-sublocation"
@@ -160,7 +160,7 @@ export function EditDeviceForm({ accessToken, device, onUpdated, onCancel, onSes
                 />
               </div>
             )}
-            <div className="device-field">
+            <div className="device-field field-float">
               <span>Estado</span>
               <SelectMenu
                 id="device-status"

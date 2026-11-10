@@ -707,9 +707,8 @@ export function ConfigurationPage({ accessToken, currentUserRut, onSessionExpire
           onClose={() => setEditingLocation(null)}
         >
             <div className="device-modal-body">
-              <h2 className="config-dialog-title">Editar ubicación</h2>
               <form className="device-form" onSubmit={handleRenameLocation}>
-                <label className="device-form-wide">
+                <label className="device-form-wide field-float">
                   <span>Nombre</span>
                   <input
                     value={editLocationName}
@@ -720,7 +719,7 @@ export function ConfigurationPage({ accessToken, currentUserRut, onSessionExpire
                   />
                 </label>
                 {editingLocation.padreId === null && (
-                  <label className="device-form-wide">
+                  <label className="device-form-wide field-float">
                     <span>Sigla</span>
                     <input
                       value={editLocationSigla}
@@ -761,7 +760,7 @@ export function ConfigurationPage({ accessToken, currentUserRut, onSessionExpire
         >
           <div className="device-modal-body">
             <form className="device-form config-location-create-form" onSubmit={handleCreateLocation}>
-              <label>
+              <label className="field-float">
                 <span>Nombre</span>
                 <input
                   value={newLocationName}
@@ -771,7 +770,7 @@ export function ConfigurationPage({ accessToken, currentUserRut, onSessionExpire
                   required
                 />
               </label>
-              <label>
+              <label className="field-float">
                 <span>Sigla</span>
                 <input
                   value={newLocationSigla}
@@ -783,7 +782,7 @@ export function ConfigurationPage({ accessToken, currentUserRut, onSessionExpire
                   required
                 />
               </label>
-              <div className="device-field device-form-wide">
+              <div className="device-field device-form-wide field-float">
                 <span>Tipo de ubicación</span>
                 <SelectMenu
                   id="config-location-type"
@@ -828,7 +827,6 @@ export function ConfigurationPage({ accessToken, currentUserRut, onSessionExpire
           onClose={() => setPendingDelete(null)}
         >
             <div className="device-modal-body">
-              <h2 className="config-dialog-title">Eliminar usuario</h2>
               <p className="config-dialog-text">
                 ¿Eliminar a <strong>{pendingDelete.nombre}</strong>? Esta acción no se puede deshacer.
               </p>
@@ -865,7 +863,6 @@ export function ConfigurationPage({ accessToken, currentUserRut, onSessionExpire
           onClose={() => setBulkDeleteOpen(false)}
         >
           <div className="device-modal-body">
-            <h2 className="config-dialog-title">Eliminar usuarios</h2>
             <p className="config-dialog-text">
               ¿Eliminar {selectedRuts.size} usuario(s) seleccionados? Esta acción no se puede deshacer.
             </p>

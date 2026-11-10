@@ -75,15 +75,15 @@ export function EditSoftwareForm({ accessToken, program, subjects, onUpdated, on
     >
         <div className="device-modal-body">
           <form className="device-form software-edit-form" onSubmit={handleSubmit}>
-            <label>
+            <label className="field-float">
               <span>Programa</span>
               <input value={name} onChange={(event) => setName(event.target.value)} maxLength={150} required />
             </label>
-            <label>
+            <label className="field-float">
               <span>Versión</span>
               <input value={version} onChange={(event) => setVersion(event.target.value)} maxLength={50} required />
             </label>
-            <div className="device-field">
+            <div className="device-field field-float">
               <span>Licencia</span>
               <SelectMenu
                 id="edit-software-license"
