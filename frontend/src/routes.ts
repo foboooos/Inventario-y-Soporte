@@ -21,10 +21,6 @@ export const routes: readonly RouteDefinition[] = [
   { key: 'settings', path: '/config', label: 'Configuración', title: 'Configuración', roles: ['ADMIN'] },
 ]
 
-export const routePaths: Record<RouteKey, string> = Object.fromEntries(
-  routes.map((route) => [route.key, route.path]),
-) as Record<RouteKey, string>
-
 export const configSectionPaths: Record<ConfigSection, string> = {
   users: '/config/usuarios',
   locations: '/config/ubicaciones',
@@ -34,6 +30,10 @@ export const configSectionLabels: Record<ConfigSection, string> = {
   users: 'Usuarios',
   locations: 'Ubicaciones',
 }
+
+export const routePaths: Record<RouteKey, string> = Object.fromEntries(
+  routes.map((route) => [route.key, route.path]),
+) as Record<RouteKey, string>
 
 export function routesForRole(role: string): RouteDefinition[] {
   return routes.filter((route) => route.roles.includes(role))

@@ -42,8 +42,8 @@ async function renameLegacyComputerLab(dataSource: DataSource): Promise<void> {
 
     if (current) {
       await locations.update({ padre_id: legacy.id_ubicacion }, { padre_id: current.id_ubicacion });
-      await devices.update({ ubicacion: LEGACY_COMPUTER_LAB }, { ubicacion: COMPUTER_LAB_1 });
-      await tickets.update({ ubicacion: LEGACY_COMPUTER_LAB }, { ubicacion: COMPUTER_LAB_1 });
+      await devices.update({ id_ubicacion: legacy.id_ubicacion }, { id_ubicacion: current.id_ubicacion });
+      await tickets.update({ id_ubicacion: legacy.id_ubicacion }, { id_ubicacion: current.id_ubicacion });
       await locations.delete({ id_ubicacion: legacy.id_ubicacion });
       return;
     }
@@ -52,8 +52,6 @@ async function renameLegacyComputerLab(dataSource: DataSource): Promise<void> {
       { id_ubicacion: legacy.id_ubicacion },
       { nombre: COMPUTER_LAB_1, sigla: 'LC1' },
     );
-    await devices.update({ ubicacion: LEGACY_COMPUTER_LAB }, { ubicacion: COMPUTER_LAB_1 });
-    await tickets.update({ ubicacion: LEGACY_COMPUTER_LAB }, { ubicacion: COMPUTER_LAB_1 });
   });
 }
 

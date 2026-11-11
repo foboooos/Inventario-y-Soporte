@@ -48,6 +48,27 @@
     min-height: 0;
   }
 
+  .dashboard-layout[data-route='history'] {
+    height: 100svh;
+    min-height: 100svh;
+    overflow: hidden;
+  }
+
+  .dashboard-layout[data-route='history'] .dashboard-main {
+    overflow: hidden;
+  }
+
+  .dashboard-layout[data-route='history'] .history-shell {
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .dashboard-layout[data-route='history'] .history-content {
+    height: 100%;
+    min-height: 0;
+  }
+
   .dashboard-layout[data-route='inventory'] .table-card {
     flex: 1 1 0;
     min-height: 0;
@@ -382,25 +403,26 @@
   .history-shell .ticket-history-table-scroll {
     flex: 1 1 auto;
     min-height: 0;
-    overflow: auto;
+    overflow-x: auto;
+    overflow-y: hidden;
   }
 
   .history-shell .table-footer {
     flex-direction: row;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
     gap: 8px;
     padding-top: 2px;
     padding-bottom: 2px;
   }
 
   .history-shell .table-footer > span {
-    position: static;
-    align-self: auto;
+    display: none;
   }
 
   .history-shell .pagination {
-    justify-content: flex-end;
+    width: 100%;
+    justify-content: center;
   }
 }
 

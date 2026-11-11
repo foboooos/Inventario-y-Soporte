@@ -1,9 +1,10 @@
-import { Column, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { Ubicacion } from '../locations/ubicacion.entity.js';
 import { DeviceStatus } from './device-status.enum.js';
 import { DeviceType } from './device-type.enum.js';
 
 @Index('IDX_inventario_estado', ['estado'])
-@Index('IDX_inventario_ubicacion', ['ubicacion'])
+@Index('IDX_inventario_ubicacion', ['id_ubicacion'])
 @Entity({ name: 'inventario' })
 export class Device {
   @PrimaryGeneratedColumn({ name: 'id_dispositivo', type: 'int' })
@@ -21,8 +22,12 @@ export class Device {
   @Column({ type: 'varchar', length: 50, nullable: true })
   modelo!: string | null;
 
-  @Column({ type: 'varchar', length: 100 })
-  ubicacion!: string;
+  @Column({ name: 'id_ubicacion', type: 'int' })
+  id_ubicacion!: number;
+
+  @ManyToOne(() => Ubicacion, { onDelete: 'RESTRICT' })
+  @JoinColumn({ name: 'id_ubicacion', referencedColumnName: 'id_ubicacion', foreignKeyConstraintName: 'FK_inventario_ubicacion' })
+  ubicacion_relacion!: Ubicacion;
 
   @Column({ type: 'enum', enum: DeviceStatus, enumName: 'device_status', default: DeviceStatus.ACTIVO })
   estado!: DeviceStatus;

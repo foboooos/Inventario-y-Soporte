@@ -7,6 +7,7 @@ import { Test } from '@nestjs/testing';
 import 'reflect-metadata';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { EMPTY } from 'rxjs';
 import { LevelController } from '../../academics/level.controller.js';
 import { LevelService } from '../../academics/level.service.js';
 import { SubjectController } from '../../academics/subject.controller.js';
@@ -19,6 +20,7 @@ import { SoftwareController } from '../../software/software.controller.js';
 import { SoftwareService } from '../../software/software.service.js';
 import { TicketController } from '../../tickets/ticket.controller.js';
 import { TicketService } from '../../tickets/ticket.service.js';
+import { TicketEventsService } from '../../tickets/ticket-events.service.js';
 import { User } from '../../users/user.entity.js';
 import { UserRole } from '../../users/user-role.enum.js';
 import { UsersController } from '../../users/users.controller.js';
@@ -73,6 +75,7 @@ const protectedRoutes: RouteCase[] = [
   { controller: InventoryController, handler: 'update', method: 'patch', path: '/inventory/1', status: 200 },
   { controller: InventoryController, handler: 'remove', method: 'delete', path: '/inventory/1', status: 204 },
   { controller: TicketController, handler: 'findInbox', method: 'get', path: '/tickets/inbox', status: 200 },
+  { controller: TicketController, handler: 'events', method: 'get', path: '/tickets/events', status: 200 },
   { controller: TicketController, handler: 'findBitacora', method: 'get', path: '/tickets/1/bitacora', status: 200 },
   { controller: TicketController, handler: 'findAll', method: 'get', path: '/tickets', status: 200 },
   { controller: TicketController, handler: 'resolve', method: 'patch', path: '/tickets/1', status: 200 },
@@ -204,6 +207,7 @@ describe('RBAC enforcement — todas las rutas protegidas', () => {
         { provide: getRepositoryToken(User), useValue: userRepository },
         { provide: InventoryService, useValue: serviceMock(['findOptions', 'nextCode', 'findAll', 'create', 'update', 'remove']) },
         { provide: TicketService, useValue: serviceMock(['findInbox', 'findBitacora', 'findAll', 'resolve', 'changeStatus', 'create']) },
+        { provide: TicketEventsService, useValue: { stream: () => EMPTY } },
         { provide: LocationService, useValue: serviceMock(['findAll', 'create', 'generateCourses', 'rename', 'remove']) },
         { provide: LevelService, useValue: serviceMock(['findAll', 'create', 'rename', 'remove']) },
         { provide: SubjectService, useValue: serviceMock(['findAll', 'create', 'update', 'remove']) },

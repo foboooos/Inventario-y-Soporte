@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
-import { createLocation, getLocations, renameLocation } from '../services/locations'
+import { createLocation, deleteLocation, getLocations, renameLocation } from '../services/locations'
 import { isSessionExpired } from '../services/http'
 import { getUsers, deleteUser } from '../services/users'
 import type { Location, LocationType } from '../types/location'
@@ -88,6 +88,7 @@ export function ConfigurationPage({ accessToken, currentUserRut, onSessionExpire
   const [newLocationName, setNewLocationName] = useState('')
   const [newLocationSigla, setNewLocationSigla] = useState('')
   const [newLocationTipo, setNewLocationTipo] = useState<LocationType>('PRINCIPAL')
+  const [newLocationParentId, setNewLocationParentId] = useState('')
   const [locationFilter, setLocationFilter] = useState<LocationType | 'ALL'>('ALL')
   const [creatingLocation, setCreatingLocation] = useState(false)
   const [addLocationOpen, setAddLocationOpen] = useState(false)
@@ -96,6 +97,7 @@ export function ConfigurationPage({ accessToken, currentUserRut, onSessionExpire
   const [editLocationName, setEditLocationName] = useState('')
   const [editLocationSigla, setEditLocationSigla] = useState('')
   const [savingLocation, setSavingLocation] = useState(false)
+  const [deletingLocation, setDeletingLocation] = useState(false)
   const [locationEditError, setLocationEditError] = useState('')
   const usersTableScrollRef = useRef<HTMLDivElement>(null)
   const locationModalRef = useRef<ModalHandle>(null)
@@ -214,6 +216,11 @@ export function ConfigurationPage({ accessToken, currentUserRut, onSessionExpire
       locationTypeOrder[a.tipo] - locationTypeOrder[b.tipo]
       || a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' })),
     [locations],
+  )
+
+  const locationParentOptions = useMemo(
+    () => sortedLocations.filter((location) => location.tipo === (newLocationTipo === 'SECUNDARIA' ? 'PRINCIPAL' : 'SECUNDARIA')),
+    [sortedLocations, newLocationTipo],
   )
 
   const visibleLocations = useMemo(
@@ -340,11 +347,13 @@ export function ConfigurationPage({ accessToken, currentUserRut, onSessionExpire
         nombre,
         sigla,
         tipo: newLocationTipo,
+        ...(newLocationParentId ? { padreId: Number(newLocationParentId) } : {}),
       })
       setLocations((current) => [...current, created])
       setLocationFilter(created.tipo)
       setNewLocationName('')
       setNewLocationSigla('')
+      setNewLocationParentId('')
       addLocationModalRef.current?.close()
     } catch (exception) {
       if (isSessionExpired(exception)) {
@@ -363,6 +372,7 @@ export function ConfigurationPage({ accessToken, currentUserRut, onSessionExpire
     setNewLocationName('')
     setNewLocationSigla('')
     setNewLocationTipo('PRINCIPAL')
+    setNewLocationParentId('')
   }
 
   function startEditLocation(location: Location) {
@@ -401,6 +411,27 @@ export function ConfigurationPage({ accessToken, currentUserRut, onSessionExpire
       setLocationEditError(exception instanceof Error ? exception.message : 'No se pudo actualizar la ubicación')
     } finally {
       setSavingLocation(false)
+    }
+  }
+
+  async function handleDeleteLocation() {
+    if (!editingLocation || savingLocation || deletingLocation) return
+
+    setDeletingLocation(true)
+    setLocationEditError('')
+
+    try {
+      await deleteLocation(accessToken, editingLocation.id)
+      setLocations((current) => current.filter((location) => location.id !== editingLocation.id))
+      locationModalRef.current?.close()
+    } catch (exception) {
+      if (isSessionExpired(exception)) {
+        onSessionExpired()
+        return
+      }
+      setLocationEditError(exception instanceof Error ? exception.message : 'No se pudo eliminar la ubicación')
+    } finally {
+      setDeletingLocation(false)
     }
   }
 
@@ -443,32 +474,52 @@ export function ConfigurationPage({ accessToken, currentUserRut, onSessionExpire
                 Crear
               </button>
               <button
-                className="secondary-button"
+                className="secondary-button config-users-pdf-button"
                 type="button"
                 onClick={() => { void downloadUsersPdf(sortedUsers) }}
                 disabled={usersLoading || sortedUsers.length === 0}
               >
-                Descargar PDF
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m-4-4 4 4 4-4M5 19h14" /></svg>
+                PDF
               </button>
               <button
-                className="secondary-button"
+                className="inventory-select-page"
                 type="button"
+                aria-label="Seleccionar todos los usuarios de esta página"
+                title="Seleccionar todos los usuarios de esta página"
+                disabled={usersLoading || visibleUsers.length === 0 || visibleUsers.every((user) => selectedRuts.has(user.rut))}
                 onClick={selectPageUsers}
-                disabled={usersLoading || visibleUsers.length === 0}
               >
-                Seleccionar página
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="m3.5 5.5 1.5 1.5 2.5-3M10 5.5h10M3.5 12l1.5 1.5 2.5-3M10 12h10M3.5 18.5l1.5 1.5 2.5-3M10 18.5h10" />
+                </svg>
               </button>
               {selectedRuts.size > 0 && (
-                <button
-                  className="config-danger-button config-users-bulk-delete"
-                  type="button"
-                  onClick={() => {
-                    setUsersError('')
-                    setBulkDeleteOpen(true)
-                  }}
-                >
-                  Borrar seleccionados
-                </button>
+                <>
+                  <button
+                    className="inventory-clear-selection"
+                    type="button"
+                    aria-label="Deseleccionar todos los usuarios"
+                    title="Deseleccionar todos"
+                    disabled={deletingBulk}
+                    onClick={() => setSelectedRuts(new Set())}
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <rect x="3.5" y="4" width="12" height="12" rx="2" />
+                      <path d="m6.5 10 2.2 2.2 4.1-4.4M15 15l5.5 5.5M20.5 15 15 20.5" />
+                    </svg>
+                  </button>
+                  <button
+                    className="config-danger-button config-users-bulk-delete"
+                    type="button"
+                    onClick={() => {
+                      setUsersError('')
+                      setBulkDeleteOpen(true)
+                    }}
+                  >
+                    Eliminar
+                  </button>
+                </>
               )}
             </div>
           </div>
@@ -703,7 +754,7 @@ export function ConfigurationPage({ accessToken, currentUserRut, onSessionExpire
           ref={locationModalRef}
           label={`Editar ${editingLocation.nombre}`}
           cardClassName="create-device-card modal-card config-location-modal"
-          dismissible={!savingLocation}
+          dismissible={!savingLocation && !deletingLocation}
           onClose={() => setEditingLocation(null)}
         >
             <div className="device-modal-body">
@@ -734,13 +785,22 @@ export function ConfigurationPage({ accessToken, currentUserRut, onSessionExpire
                 )}
                 {locationEditError && <p className="error device-form-wide" role="alert">{locationEditError}</p>}
                 <div className="device-form-actions device-form-wide">
-                  <button className="secondary-button" type="button" onClick={() => locationModalRef.current?.close()} disabled={savingLocation}>
+                  <button
+                    className="config-danger-button config-location-delete-button"
+                    type="button"
+                    onClick={() => { void handleDeleteLocation() }}
+                    disabled={savingLocation || deletingLocation}
+                    title="Eliminar ubicación"
+                  >
+                    {deletingLocation ? 'Eliminando…' : 'Eliminar ubicación'}
+                  </button>
+                  <button className="secondary-button" type="button" onClick={() => locationModalRef.current?.close()} disabled={savingLocation || deletingLocation}>
                     Cancelar
                   </button>
                   <button
                     className="primary-action primary-action-solid"
                     type="submit"
-                    disabled={savingLocation || !editLocationName.trim() || (editingLocation.padreId === null && !editLocationSigla.trim())}
+                    disabled={savingLocation || deletingLocation || !editLocationName.trim() || (editingLocation.padreId === null && !editLocationSigla.trim())}
                   >
                     {savingLocation ? 'Guardando…' : 'Guardar'}
                   </button>
@@ -782,17 +842,40 @@ export function ConfigurationPage({ accessToken, currentUserRut, onSessionExpire
                   required
                 />
               </label>
-              <div className="device-field device-form-wide field-float">
-                <span>Tipo de ubicación</span>
-                <SelectMenu
-                  id="config-location-type"
-                  ariaLabel="Tipo de ubicación"
-                  value={newLocationTipo}
-                  onChange={(next) => setNewLocationTipo(next as LocationType)}
-                  options={locationTypeOptions}
-                  visibleItems={3}
-                  fixedList
-                />
+              <div className={`config-location-hierarchy-row${newLocationTipo !== 'PRINCIPAL' ? ' has-parent' : ''}`}>
+                <div className="device-field field-float">
+                  <span>Tipo de ubicación</span>
+                  <SelectMenu
+                    id="config-location-type"
+                    ariaLabel="Tipo de ubicación"
+                    value={newLocationTipo}
+                    onChange={(next) => {
+                      setNewLocationTipo(next as LocationType)
+                      setNewLocationParentId('')
+                    }}
+                    options={locationTypeOptions}
+                    visibleItems={3}
+                    fixedList
+                  />
+                </div>
+                {newLocationTipo !== 'PRINCIPAL' && (
+                  <div className="device-field field-float">
+                    <span>{newLocationTipo === 'SECUNDARIA' ? 'Ubicación principal' : 'Ubicación secundaria'}</span>
+                    <SelectMenu
+                      id="config-location-parent"
+                      ariaLabel={newLocationTipo === 'SECUNDARIA' ? 'Ubicación principal' : 'Ubicación secundaria'}
+                      placeholder="Selecciona una ubicación"
+                      value={newLocationParentId}
+                      onChange={setNewLocationParentId}
+                      options={[
+                        { value: '', label: 'Selecciona una ubicación' },
+                        ...locationParentOptions.map((location) => ({ value: String(location.id), label: location.nombre })),
+                      ]}
+                      visibleItems={5}
+                      fixedList
+                    />
+                  </div>
+                )}
               </div>
               {createLocationError && <p className="error device-form-wide" role="alert">{createLocationError}</p>}
               <div className="device-form-actions device-form-wide">
@@ -807,7 +890,7 @@ export function ConfigurationPage({ accessToken, currentUserRut, onSessionExpire
                 <button
                   className="primary-action primary-action-solid"
                   type="submit"
-                  disabled={creatingLocation || !newLocationName.trim() || !newLocationSigla.trim()}
+                  disabled={creatingLocation || !newLocationName.trim() || !newLocationSigla.trim() || (newLocationTipo !== 'PRINCIPAL' && !newLocationParentId)}
                 >
                   {creatingLocation ? 'Creando…' : 'Crear'}
                 </button>

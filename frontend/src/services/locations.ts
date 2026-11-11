@@ -28,7 +28,7 @@ export async function getLocations(accessToken: string): Promise<Location[]> {
 
 export async function createLocation(
   accessToken: string,
-  input: { nombre: string; sigla: string; tipo: LocationType },
+  input: { nombre: string; sigla: string; tipo: LocationType; padreId?: number },
 ): Promise<Location> {
   const response = await apiFetch('/locations', accessToken, {
     method: 'POST',
@@ -37,6 +37,7 @@ export async function createLocation(
       nombre: input.nombre,
       sigla: input.sigla,
       tipo: input.tipo,
+      ...(input.padreId !== undefined ? { padre_id: input.padreId } : {}),
     }),
   })
   const location = await readApiJson<LocationApi>(response, 'No se pudo crear la ubicación')
@@ -57,4 +58,12 @@ export async function renameLocation(
   const location = await readApiJson<LocationApi>(response, 'No se pudo actualizar la ubicación')
 
   return mapLocation(location)
+}
+
+export async function deleteLocation(accessToken: string, id: number): Promise<void> {
+  const response = await apiFetch(`/locations/${id}`, accessToken, { method: 'DELETE' })
+
+  if (!response.ok) {
+    await readApiJson<never>(response, 'No se pudo eliminar la ubicación')
+  }
 }

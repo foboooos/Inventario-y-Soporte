@@ -15,6 +15,7 @@ const PAGE_MARGIN = 16
 const PAGE_WIDTH = 210
 const PAGE_HEIGHT = 297
 const CONTENT_WIDTH = PAGE_WIDTH - PAGE_MARGIN * 2
+const COLLEGE_LOGO_SIZE = 16
 
 const FOOTER_RULE_Y = PAGE_HEIGHT - PAGE_MARGIN - 5
 const FOOTER_TEXT_Y = FOOTER_RULE_Y + 6
@@ -226,7 +227,7 @@ function drawSection(
   return y + (SECTION_RULE_SPACE - BODY_LINE_HEIGHT)
 }
 
-function buildTicketLogPdf(doc: jsPDF, bitacora: TicketBitacora) {
+function buildTicketLogPdf(doc: jsPDF, bitacora: TicketBitacora, logoDataUrl: string) {
   const deviceLabel = bitacora.dispositivo_tipo ? ticketLogDeviceLabels[bitacora.dispositivo_tipo] : null
   const device = deviceLabel
     ? `${deviceLabel}${bitacora.codigo_inventario ? ` · ${bitacora.codigo_inventario}` : ''}`
@@ -235,6 +236,15 @@ function buildTicketLogPdf(doc: jsPDF, bitacora: TicketBitacora) {
   const steps = ticketLogSolutionSteps(bitacora.solucion_aplicada)
 
   let y = 18
+
+  doc.addImage(
+    logoDataUrl,
+    'PNG',
+    PAGE_WIDTH - PAGE_MARGIN - COLLEGE_LOGO_SIZE,
+    PAGE_MARGIN - COLLEGE_LOGO_SIZE / 2,
+    COLLEGE_LOGO_SIZE,
+    COLLEGE_LOGO_SIZE,
+  )
 
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(TITLE_SIZE)
@@ -293,9 +303,36 @@ function buildTicketLogPdf(doc: jsPDF, bitacora: TicketBitacora) {
   return doc
 }
 
+async function loadCollegeLogo(): Promise<string> {
+  const response = await fetch(`${import.meta.env.BASE_URL}logo-colegio.svg`)
+  if (!response.ok) throw new Error('No se pudo cargar el logo del colegio')
+
+  const imageUrl = URL.createObjectURL(await response.blob())
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const element = new Image()
+      element.onload = () => resolve(element)
+      element.onerror = () => reject(new Error('No se pudo procesar el logo del colegio'))
+      element.src = imageUrl
+    })
+
+    const canvas = document.createElement('canvas')
+    canvas.width = 512
+    canvas.height = 512
+    const context = canvas.getContext('2d')
+    if (!context) throw new Error('No se pudo procesar el logo del colegio')
+
+    context.drawImage(image, 0, 0, canvas.width, canvas.height)
+    return canvas.toDataURL('image/png')
+  } finally {
+    URL.revokeObjectURL(imageUrl)
+  }
+}
+
 export async function downloadTicketLogPdf(bitacora: TicketBitacora) {
   const { jsPDF } = await import('jspdf')
-  const doc = buildTicketLogPdf(new jsPDF({ unit: 'mm', format: 'a4' }), bitacora)
+  const logoDataUrl = await loadCollegeLogo()
+  const doc = buildTicketLogPdf(new jsPDF({ unit: 'mm', format: 'a4' }), bitacora, logoDataUrl)
   const blob = doc.output('blob')
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')

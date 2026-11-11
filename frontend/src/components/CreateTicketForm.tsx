@@ -32,6 +32,7 @@ export function CreateTicketForm({ accessToken, onSessionExpired, onTicketCreate
   const [locations, setLocations] = useState<Location[]>([])
   const [location, setLocation] = useState('')
   const [subLocation, setSubLocation] = useState('')
+  const [tertiaryLocation, setTertiaryLocation] = useState('')
   const [deviceId, setDeviceId] = useState('')
   const [symptom, setSymptom] = useState('')
   const [loadingDevices, setLoadingDevices] = useState(true)
@@ -93,10 +94,20 @@ export function CreateTicketForm({ accessToken, onSessionExpired, onTicketCreate
     return parent ? locations.filter((item) => item.padreId === parent.id) : []
   }, [locations, location])
 
+  const tertiaryLocations = useMemo(() => {
+    const parent = locations.find((item) => item.nombre === subLocation)
+    return parent ? locations.filter((item) => item.padreId === parent.id) : []
+  }, [locations, subLocation])
+
   const allowedLocations = useMemo(() => {
-    if (subLocation) return new Set([subLocation])
-    return new Set([location, ...subLocations.map((item) => item.nombre)])
-  }, [location, subLocation, subLocations])
+    if (tertiaryLocation) return new Set([tertiaryLocation])
+    const selectedSecondary = locations.find((item) => item.nombre === subLocation)
+    const tertiaryChildren = locations.filter((item) => selectedSecondary
+      ? item.padreId === selectedSecondary.id
+      : subLocations.some((secondary) => item.padreId === secondary.id))
+    if (subLocation) return new Set([subLocation, ...tertiaryChildren.map((item) => item.nombre)])
+    return new Set([location, ...subLocations.map((item) => item.nombre), ...tertiaryChildren.map((item) => item.nombre)])
+  }, [location, subLocation, tertiaryLocation, locations, subLocations])
 
   const locationDevices = useMemo(
     () => (location ? devices.filter((device) => allowedLocations.has(device.ubicacion)) : []),
@@ -106,7 +117,7 @@ export function CreateTicketForm({ accessToken, onSessionExpired, onTicketCreate
     ? deviceId
     : ''
 
-  const resolvedLocation = subLocation || location
+  const resolvedLocation = tertiaryLocation || subLocation || location
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -121,6 +132,7 @@ export function CreateTicketForm({ accessToken, onSessionExpired, onTicketCreate
       })
       setLocation('')
       setSubLocation('')
+      setTertiaryLocation('')
       setDeviceId('')
       setSymptom('')
       onTicketCreated()
@@ -150,7 +162,7 @@ export function CreateTicketForm({ accessToken, onSessionExpired, onTicketCreate
             placeholder="Selecciona una ubicación"
             value={location}
             disabled={loadingLocations}
-            onChange={(next) => { setLocation(next); setSubLocation(''); setDeviceId('') }}
+            onChange={(next) => { setLocation(next); setSubLocation(''); setTertiaryLocation(''); setDeviceId('') }}
             options={[
               { value: '', label: 'Selecciona una ubicación' },
               ...globalLocations.map((item) => ({ value: item.nombre, label: item.nombre })),
@@ -165,10 +177,26 @@ export function CreateTicketForm({ accessToken, onSessionExpired, onTicketCreate
               ariaLabel="Curso o sub-ubicación"
               placeholder="Toda la ubicación"
               value={subLocation}
-              onChange={(next) => { setSubLocation(next); setDeviceId('') }}
+              onChange={(next) => { setSubLocation(next); setTertiaryLocation(''); setDeviceId('') }}
               options={[
                 { value: '', label: 'Toda la ubicación' },
                 ...subLocations.map((item) => ({ value: item.nombre, label: item.nombre })),
+              ]}
+            />
+          </div>
+        )}
+        {tertiaryLocations.length > 0 && (
+          <div className="ticket-field">
+            <span>Sala / Sub-ubicación</span>
+            <SelectMenu
+              id="ticket-tertiary-location"
+              ariaLabel="Sala o sub-ubicación"
+              placeholder="Toda la ubicación"
+              value={tertiaryLocation}
+              onChange={(next) => { setTertiaryLocation(next); setDeviceId('') }}
+              options={[
+                { value: '', label: 'Toda la ubicación' },
+                ...tertiaryLocations.map((item) => ({ value: item.nombre, label: item.nombre })),
               ]}
             />
           </div>

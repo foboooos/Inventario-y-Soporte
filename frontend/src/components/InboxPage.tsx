@@ -18,6 +18,9 @@ type InboxPageProps = {
   accessToken: string
   onSessionExpired: () => void
   isActive: boolean
+  refreshKey: number
+  targetTicketCode: string | null
+  onTargetTicketFocused: () => void
 }
 
 type EstadoFilter = 'ALL' | TicketStatus
@@ -25,8 +28,6 @@ type EstadoFilter = 'ALL' | TicketStatus
 const PAGE_SIZE = 10
 const MIN_PAGE_SIZE = 5
 const MAX_PAGE_SIZE = 100
-const AUTO_REFRESH_MS = 15000
-
 const statusLabels: Record<TicketStatus, string> = {
   ABIERTO: 'Abierto',
   EN_PROCESO: 'En proceso',
@@ -66,10 +67,11 @@ function formatTicketDate(value?: string) {
   return Number.isNaN(date.getTime()) ? value : dateFormatter.format(date)
 }
 
-function InboxTable({ tickets, startingId, bitacoraId, onSelectTicket, onStartTicket, onOpenBitacora }: {
+function InboxTable({ tickets, startingId, bitacoraId, highlightedTicketCode, onSelectTicket, onStartTicket, onOpenBitacora }: {
   tickets: Ticket[]
   startingId: number | null
   bitacoraId: number | null
+  highlightedTicketCode: string | null
   onSelectTicket: (ticket: Ticket, trigger: HTMLButtonElement) => void
   onStartTicket: (ticket: Ticket) => void
   onOpenBitacora: (ticket: Ticket) => void
@@ -95,9 +97,15 @@ function InboxTable({ tickets, startingId, bitacoraId, onSelectTicket, onStartTi
         <tbody>
           {tickets.map((ticket) => {
             const canResolve = ticket.estado === 'EN_PROCESO'
+            const isOpeningBitacora = bitacoraId === ticket.id_ticket
 
             return (
-              <tr key={ticket.id_ticket}>
+              <tr
+                key={ticket.id_ticket}
+                data-ticket-code={ticket.codigo_ticket}
+                tabIndex={-1}
+                className={highlightedTicketCode === ticket.codigo_ticket ? 'inbox-ticket-target' : undefined}
+              >
                 <td className="inbox-code">
                   {canResolve ? (
                     <button
@@ -153,11 +161,14 @@ function InboxTable({ tickets, startingId, bitacoraId, onSelectTicket, onStartTi
                     <button
                       className="text-button"
                       type="button"
-                      disabled={bitacoraId === ticket.id_ticket}
-                      aria-label={`Ver bitácora del ticket ${ticket.codigo_ticket}`}
+                      disabled={bitacoraId !== null}
+                      aria-busy={isOpeningBitacora}
+                      aria-label={isOpeningBitacora
+                        ? `Cargando bitácora del ticket ${ticket.codigo_ticket}`
+                        : `Ver bitácora del ticket ${ticket.codigo_ticket}`}
                       onClick={() => onOpenBitacora(ticket)}
                     >
-                      {bitacoraId === ticket.id_ticket ? 'Abriendo…' : 'Bitácora'}
+                      Bitácora
                     </button>
                   )}
                 </td>
@@ -170,7 +181,7 @@ function InboxTable({ tickets, startingId, bitacoraId, onSelectTicket, onStartTi
   )
 }
 
-export function InboxPage({ accessToken, onSessionExpired, isActive }: InboxPageProps) {
+export function InboxPage({ accessToken, onSessionExpired, isActive, refreshKey, targetTicketCode, onTargetTicketFocused }: InboxPageProps) {
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -179,6 +190,7 @@ export function InboxPage({ accessToken, onSessionExpired, isActive }: InboxPage
   const [estadoFilter, setEstadoFilter] = useState<EstadoFilter>('ALL')
   const [parentLocation, setParentLocation] = useState('')
   const [subLocation, setSubLocation] = useState('')
+  const [tertiaryLocation, setTertiaryLocation] = useState('')
   const [desde, setDesde] = useState('')
   const [hasta, setHasta] = useState('')
   const [locations, setLocations] = useState<Location[]>([])
@@ -194,17 +206,37 @@ export function InboxPage({ accessToken, onSessionExpired, isActive }: InboxPage
   const [bitacoraId, setBitacoraId] = useState<number | null>(null)
   const [bitacora, setBitacora] = useState<TicketBitacora | null>(null)
   const [actionError, setActionError] = useState('')
+  const [targetListReadyForCode, setTargetListReadyForCode] = useState<string | null>(null)
+  const [highlightedTicketCode, setHighlightedTicketCode] = useState<string | null>(null)
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
   const activePage = Math.min(currentPage, totalPages)
 
   useEffect(() => {
+    if (!targetTicketCode) {
+      setTargetListReadyForCode(null)
+      return
+    }
+
+    setTargetListReadyForCode(null)
+    setEstadoFilter('ALL')
+    setParentLocation('')
+    setSubLocation('')
+    setTertiaryLocation('')
+    setDesde('')
+    setHasta('')
+    setCurrentPage(1)
+  }, [targetTicketCode])
+
+  useEffect(() => {
+    if (!isActive) return
+
     let isMounted = true
 
     getTicketInbox(
       accessToken,
       {
         ...(estadoFilter !== 'ALL' ? { estado: estadoFilter } : {}),
-        ...((subLocation || parentLocation) ? { ubicacion: subLocation || parentLocation } : {}),
+        ...((tertiaryLocation || subLocation || parentLocation) ? { ubicacion: tertiaryLocation || subLocation || parentLocation } : {}),
         ...(desde ? { desde } : {}),
         ...(hasta ? { hasta } : {}),
       },
@@ -217,6 +249,9 @@ export function InboxPage({ accessToken, onSessionExpired, isActive }: InboxPage
         setTotal(result.total)
         setCurrentPage((page) => Math.min(page, Math.max(1, Math.ceil(result.total / pageSize))))
         setError('')
+        if (targetTicketCode && estadoFilter === 'ALL' && !parentLocation && !subLocation && !tertiaryLocation && !desde && !hasta && activePage === 1) {
+          setTargetListReadyForCode(targetTicketCode)
+        }
       })
       .catch((exception: unknown) => {
         if (!isMounted) return
@@ -238,7 +273,26 @@ export function InboxPage({ accessToken, onSessionExpired, isActive }: InboxPage
     return () => {
       isMounted = false
     }
-  }, [accessToken, onSessionExpired, reloadKey, estadoFilter, parentLocation, subLocation, desde, hasta, activePage, pageSize])
+  }, [accessToken, onSessionExpired, reloadKey, refreshKey, isActive, estadoFilter, parentLocation, subLocation, tertiaryLocation, desde, hasta, activePage, pageSize, targetTicketCode])
+
+  useEffect(() => {
+    if (!targetTicketCode || !isActive || targetListReadyForCode !== targetTicketCode) return
+
+    const row = Array.from(document.querySelectorAll<HTMLTableRowElement>('.inbox-table tbody tr[data-ticket-code]'))
+      .find((candidate) => candidate.dataset.ticketCode === targetTicketCode)
+    if (row) {
+      setHighlightedTicketCode(targetTicketCode)
+      row.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      row.focus({ preventScroll: true })
+    }
+    onTargetTicketFocused()
+  }, [targetTicketCode, isActive, targetListReadyForCode, tickets, onTargetTicketFocused])
+
+  useEffect(() => {
+    if (!highlightedTicketCode) return
+    const timeout = window.setTimeout(() => setHighlightedTicketCode(null), 2500)
+    return () => window.clearTimeout(timeout)
+  }, [highlightedTicketCode])
 
   useEffect(() => {
     if (!isActive) return
@@ -249,12 +303,12 @@ export function InboxPage({ accessToken, onSessionExpired, isActive }: InboxPage
       }
     }
 
-    const intervalId = window.setInterval(refresh, AUTO_REFRESH_MS)
     window.addEventListener('focus', refresh)
+    document.addEventListener('visibilitychange', refresh)
 
     return () => {
-      window.clearInterval(intervalId)
       window.removeEventListener('focus', refresh)
+      document.removeEventListener('visibilitychange', refresh)
     }
   }, [isActive])
 
@@ -363,7 +417,12 @@ export function InboxPage({ accessToken, onSessionExpired, isActive }: InboxPage
     return parent ? locations.filter((item) => item.padreId === parent.id) : []
   }, [locations, parentLocation])
 
-  const hasActiveFilters = estadoFilter !== 'ALL' || Boolean(subLocation || parentLocation) || Boolean(desde) || Boolean(hasta)
+  const tertiaryLocations = useMemo(() => {
+    const parent = locations.find((item) => item.nombre === subLocation)
+    return parent ? locations.filter((item) => item.padreId === parent.id) : []
+  }, [locations, subLocation])
+
+  const hasActiveFilters = estadoFilter !== 'ALL' || Boolean(tertiaryLocation || subLocation || parentLocation) || Boolean(desde) || Boolean(hasta)
 
   useEffect(() => {
     const table = tableCardRef.current?.querySelector('table')
@@ -387,6 +446,7 @@ export function InboxPage({ accessToken, onSessionExpired, isActive }: InboxPage
     setEstadoFilter('ALL')
     setParentLocation('')
     setSubLocation('')
+    setTertiaryLocation('')
     setDesde('')
     setHasta('')
     setCurrentPage(1)
@@ -488,7 +548,7 @@ export function InboxPage({ accessToken, onSessionExpired, isActive }: InboxPage
                   id="inbox-location"
                   value={parentLocation}
                   options={[{ value: '', label: 'Todas las ubicaciones' }, ...globalLocations.map((item) => ({ value: item.nombre, label: item.nombre }))]}
-                  onChange={(value) => { setParentLocation(value); setSubLocation(''); resetPage() }}
+                  onChange={(value) => { setParentLocation(value); setSubLocation(''); setTertiaryLocation(''); resetPage() }}
                   ariaLabel="Filtrar por ubicación"
                   placeholder="Todas las ubicaciones"
                 />
@@ -500,8 +560,21 @@ export function InboxPage({ accessToken, onSessionExpired, isActive }: InboxPage
                     id="inbox-sublocation"
                     value={subLocation}
                     options={[{ value: '', label: 'Toda la ubicación' }, ...subLocations.map((item) => ({ value: item.nombre, label: item.nombre }))]}
-                    onChange={(value) => { setSubLocation(value); resetPage() }}
+                    onChange={(value) => { setSubLocation(value); setTertiaryLocation(''); resetPage() }}
                     ariaLabel="Filtrar por curso o sala"
+                    placeholder="Toda la ubicación"
+                  />
+                </label>
+              )}
+              {tertiaryLocations.length > 0 && (
+                <label>
+                  <span>Sala / Sub-ubicación</span>
+                  <SelectMenu
+                    id="inbox-tertiary-location"
+                    value={tertiaryLocation}
+                    options={[{ value: '', label: 'Toda la ubicación' }, ...tertiaryLocations.map((item) => ({ value: item.nombre, label: item.nombre }))]}
+                    onChange={(value) => { setTertiaryLocation(value); resetPage() }}
+                    ariaLabel="Filtrar por sala o sub-ubicación"
                     placeholder="Toda la ubicación"
                   />
                 </label>
@@ -570,6 +643,7 @@ export function InboxPage({ accessToken, onSessionExpired, isActive }: InboxPage
                   tickets={tickets}
                   startingId={startingId}
                   bitacoraId={bitacoraId}
+                  highlightedTicketCode={highlightedTicketCode}
                   onStartTicket={startTicket}
                   onOpenBitacora={openBitacora}
                   onSelectTicket={(ticket, trigger) => {

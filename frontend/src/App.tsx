@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import toast from 'react-hot-toast'
 import './styles/tokens.css'
 import './styles/base.css'
 import './styles/skeleton.css'
@@ -21,8 +22,10 @@ import { NotFoundPage } from './components/NotFoundPage'
 import { SoftwarePage } from './components/SoftwarePage'
 import { SubjectsPage } from './components/SubjectsPage'
 import { SupportPage } from './components/SupportPage'
+import { TicketCreatedToast } from './components/TicketCreatedToast'
 import { getCurrentUser } from './services/auth'
 import { isSessionExpired } from './services/http'
+import { listenForTicketEvents } from './services/tickets'
 import { clearToken, readToken, saveToken } from './utils/session'
 import {
   canAccessRoute,
@@ -51,6 +54,7 @@ function App() {
   const [authChecking, setAuthChecking] = useState(() => Boolean(readToken()))
   const [pathname, setPathname] = useState(() => normalizePath(window.location.pathname))
   const [ticketsVersion, setTicketsVersion] = useState(0)
+  const [ticketToFocus, setTicketToFocus] = useState<string | null>(null)
   const [configSection, setConfigSection] = useState<ConfigSection | null>(() => configSectionFromPath(window.location.pathname))
 
   useEffect(() => {
@@ -114,6 +118,7 @@ function App() {
     (key: RouteKey) => navigate(routePaths[key]),
     [navigate],
   )
+  const handleTicketFocusHandled = useCallback(() => setTicketToFocus(null), [])
 
   const activeRoute = routeFromPath(pathname)
 
@@ -189,6 +194,46 @@ function App() {
     navigate('/login')
   }, [navigate])
 
+  useEffect(() => {
+    if (!accessToken || (user?.rol !== 'ADMIN' && user?.rol !== 'TECNICO')) return
+
+    const controller = new AbortController()
+    void listenForTicketEvents(accessToken, (ticketCode) => {
+      setTicketsVersion((version) => version + 1)
+      if (ticketCode) {
+        let toastId = ''
+        const openInbox = () => {
+          toast.dismiss(toastId)
+          setTicketToFocus(ticketCode)
+          if (routeFromPath(window.location.pathname) !== 'inbox') {
+            navigate(routePaths.inbox)
+          }
+        }
+        toastId = toast.success(
+          <TicketCreatedToast
+            ticketCode={ticketCode}
+            onClose={() => toast.dismiss(toastId)}
+            onOpenInbox={openInbox}
+          />,
+          {
+            duration: 10000,
+            position: 'top-right',
+            icon: (
+              <span>
+                <svg className="ticket-toast-symbol" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a3 3 0 0 0 0 6v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a3 3 0 0 0 0-6V7Z" />
+                  <path d="M13 6v2m0 3v2m0 3v2" />
+                </svg>
+              </span>
+            ),
+          },
+        )
+      }
+    }, handleLogout, controller.signal)
+
+    return () => controller.abort()
+  }, [accessToken, handleLogout, navigate, user?.rol])
+
   if (authChecking) {
     return <div className="session-check" role="status">Validando sesión…</div>
   }
@@ -244,7 +289,16 @@ function App() {
     }
 
     if (route === 'inbox') {
-      return <InboxPage accessToken={token} onSessionExpired={onSessionExpired} isActive={route === activeRoute} />
+      return (
+        <InboxPage
+          accessToken={token}
+          onSessionExpired={onSessionExpired}
+          isActive={route === activeRoute}
+          refreshKey={ticketsVersion}
+          targetTicketCode={ticketToFocus}
+          onTargetTicketFocused={handleTicketFocusHandled}
+        />
+      )
     }
 
     return <InventoryPage user={account} accessToken={token} onSessionExpired={onSessionExpired} />

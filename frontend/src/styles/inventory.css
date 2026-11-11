@@ -29,6 +29,87 @@
   margin-bottom: 10px;
 }
 
+.inventory-clear-selection {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--minimal-muted);
+  background: #fff;
+  cursor: pointer;
+}
+
+.inventory-select-page {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--minimal-muted);
+  background: #fff;
+  cursor: pointer;
+}
+
+.inventory-select-page:hover:not(:disabled) {
+  border-color: var(--minimal-secondary);
+  color: var(--minimal-secondary);
+  background: var(--tint-accent);
+}
+
+.inventory-select-page:focus-visible {
+  outline: 2px solid var(--minimal-secondary);
+  outline-offset: 2px;
+}
+
+.inventory-select-page:disabled {
+  color: var(--minimal-success);
+  background: var(--tint-success);
+  cursor: default;
+}
+
+.inventory-select-page svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+}
+
+.inventory-clear-selection:hover:not(:disabled) {
+  border-color: var(--minimal-secondary);
+  color: var(--minimal-secondary);
+  background: var(--tint-accent);
+}
+
+.inventory-clear-selection:focus-visible {
+  outline: 2px solid var(--minimal-secondary);
+  outline-offset: 2px;
+}
+
+.inventory-clear-selection:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.inventory-clear-selection svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+}
+
 .inventory-summary {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -400,14 +481,19 @@ tbody tr:hover {
   padding: 0;
   border: 0;
   border-radius: var(--radius-sm);
-  color: var(--minimal-muted);
+  color: var(--ink-danger);
   background: transparent;
   cursor: pointer;
 }
 
 .inventory-row-delete:hover:not(:disabled) {
   color: var(--minimal-danger);
-  background: transparent;
+  background: var(--tint-danger);
+}
+
+.inventory-row-delete:focus-visible {
+  outline: 2px solid var(--ink-danger);
+  outline-offset: 1px;
 }
 
 .inventory-row-delete svg {
@@ -549,6 +635,15 @@ tbody tr:hover {
   height: var(--inbox-row-height, 32px);
 }
 
+.inbox-table tbody tr.inbox-ticket-target td {
+  background: var(--tint-accent);
+}
+
+.inbox-table tbody tr.inbox-ticket-target:focus-visible {
+  outline: 2px solid var(--minimal-secondary);
+  outline-offset: -2px;
+}
+
 .inbox-table td {
   padding-top: 4px;
   padding-bottom: 4px;
@@ -594,6 +689,9 @@ tbody tr:hover {
 }
 
 .inbox-actions .text-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 2px 5px;
   font-size: 12px;
   line-height: 1.2;
@@ -686,6 +784,16 @@ tbody tr:hover {
   display: flex;
   align-items: flex-start;
   gap: 16px;
+}
+
+@media (min-width: 701px) {
+  .inbox-status-row {
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .inbox-status-row .inventory-status-tabs {
+    border-bottom: 0;
+  }
 }
 
 .inbox-clear-button {

@@ -7,7 +7,7 @@ API REST en NestJS + TypeORM sobre PostgreSQL. Autenticación JWT y control de a
 - `auth` — inicio de sesión y emisión de JWT.
 - `users` — entidad de usuarios y roles (`ADMIN`, `TECNICO`, `DOCENTE`).
 - `inventory` — dispositivos y resumen del inventario.
-- `tickets` — tickets de soporte, bandeja técnica, bitácora y secuencia de códigos.
+- `tickets` — tickets de soporte, bandeja técnica, bitácora, secuencia de códigos y canal SSE autenticado que avisa a técnicos/administradores cuando se crea un ticket.
 - `academics` — niveles educativos y asignaturas.
 - `software` — software educativo y su relación con asignaturas.
 - `locations` — ubicaciones jerárquicas (globals y cursos/salas).

@@ -48,6 +48,7 @@ function createQueryBuilder(rawRows: Array<{ estado: string; count: string }>) {
   return {
     select: vi.fn().mockReturnThis(),
     addSelect: vi.fn().mockReturnThis(),
+    leftJoin: vi.fn().mockReturnThis(),
     groupBy: vi.fn().mockReturnThis(),
     where: vi.fn().mockReturnThis(),
     getRawMany: vi.fn().mockResolvedValue(rawRows),
@@ -67,6 +68,7 @@ describe('InventoryService', () => {
       order: { codigo_inventario: 'ASC', id_dispositivo: 'ASC' },
       skip: 0,
       take: 10,
+      relations: { ubicacion_relacion: true },
     });
     expect(result).toMatchObject({ data: [], total: 0, page: 1, limit: 10, total_pages: 1 });
   });
@@ -83,7 +85,7 @@ describe('InventoryService', () => {
     expect(where).toHaveLength(4);
 
     const columns = where.flatMap((condition) => Object.keys(condition));
-    expect(columns).toEqual(expect.arrayContaining(['codigo_inventario', 'marca', 'modelo', 'ubicacion']));
+    expect(columns).toEqual(expect.arrayContaining(['codigo_inventario', 'marca', 'modelo', 'ubicacion_relacion']));
 
     const codeCondition = where.find((condition) => 'codigo_inventario' in condition)!;
     const operator = codeCondition.codigo_inventario as FindOperator<string>;
@@ -133,7 +135,7 @@ describe('InventoryService', () => {
     await service.findAll(query({ sortBy: 'location', sortDir: 'desc' }));
 
     expect(findAndCount).toHaveBeenCalledWith(expect.objectContaining({
-      order: { ubicacion: 'DESC', id_dispositivo: 'ASC' },
+      order: { ubicacion_relacion: { nombre: 'DESC' }, id_dispositivo: 'ASC' },
     }));
   });
 
@@ -165,6 +167,7 @@ describe('InventoryService', () => {
       {
         findOneBy: vi.fn().mockResolvedValue({
           nombre: 'Laboratorio de Computación',
+          id_ubicacion: 1,
           sigla: 'LAB',
           padre_id: null,
         }),
@@ -181,8 +184,8 @@ describe('InventoryService', () => {
       {
         findOneBy: vi.fn().mockResolvedValue({ nombre: '1° Básico A', sigla: null, padre_id: 3 }),
         find: vi.fn().mockResolvedValue([
-          { nombre: '1° Básico A', padre_id: 3 },
-          { nombre: '1° Básico B', padre_id: 3 },
+          { id_ubicacion: 10, nombre: '1° Básico A', padre_id: 3 },
+          { id_ubicacion: 11, nombre: '1° Básico B', padre_id: 3 },
         ]),
       },
     );
@@ -232,21 +235,22 @@ describe('InventoryService', () => {
     const device = {
       id_dispositivo: 5,
       tipo: 'PC',
-      ubicacion: 'Laboratorio 1',
+      id_ubicacion: 1,
       codigo_inventario: 'PC-LAB-0001',
     } as Device;
     const findOneBy = vi.fn().mockResolvedValue(device);
     const find = vi.fn().mockResolvedValue([]);
-    const save = vi.fn().mockResolvedValue(device);
+    const save = vi.fn().mockImplementation(async (saved) => saved);
+    const location = { id_ubicacion: 2, nombre: 'Laboratorio 2', sigla: 'LAB2', padre_id: null };
     const service = createService(
       { findOneBy, find, save },
-      { findOneBy: vi.fn().mockResolvedValue({ nombre: 'Laboratorio 2', sigla: 'LAB2', padre_id: null }) },
+      { findOneBy: vi.fn().mockResolvedValue(location) },
     );
 
     await service.update(5, { ubicacion: 'Laboratorio 2' } as UpdateDeviceDto);
 
     expect(save).toHaveBeenCalledWith(expect.objectContaining({
-      ubicacion: 'Laboratorio 2',
+      id_ubicacion: 2,
       codigo_inventario: 'PC-LAB2-0001',
     }));
   });
@@ -255,12 +259,12 @@ describe('InventoryService', () => {
     const device = {
       id_dispositivo: 5,
       tipo: 'PC',
-      ubicacion: 'Laboratorio 1',
+      id_ubicacion: 1,
       codigo_inventario: 'PC-LAB-0001',
     } as Device;
     const findOneBy = vi.fn().mockResolvedValue(device);
     const find = vi.fn().mockResolvedValue([]);
-    const save = vi.fn().mockResolvedValue(device);
+    const save = vi.fn().mockImplementation(async (saved) => saved);
     const service = createService(
       { findOneBy, find, save },
       { findOneBy: vi.fn().mockResolvedValue({ nombre: 'Laboratorio 1', sigla: 'LAB', padre_id: null }) },

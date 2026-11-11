@@ -14,7 +14,8 @@
 }
 
 .field-float:has(:focus):not(:has(.select-menu-button)) > span:not(.device-field-hint),
-.field-float:has(.select-menu-button[aria-expanded='true']) > span:not(.device-field-hint) {
+.field-float:has(.select-menu-button[aria-expanded='true']) > span:not(.device-field-hint),
+.field-float:has(.select-menu-searchable [aria-expanded='true']) > span:not(.device-field-hint) {
   color: var(--minimal-secondary);
 }
 
@@ -47,6 +48,7 @@ select {
 .field-float .password-field:focus-within,
 .field-float .email-input-group:focus-within,
 .field-float .select-menu-button[aria-expanded='true'],
+.field-float .select-menu-searchable:has([aria-expanded='true']),
 .inbox-filters label:has([aria-expanded='true']) :is(.select-menu-button, .date-field-button) {
   border-color: var(--minimal-secondary);
   box-shadow: 0 0 0 3px rgba(49, 44, 133, 0.14);

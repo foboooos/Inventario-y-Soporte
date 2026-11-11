@@ -100,12 +100,13 @@ export function CreateDeviceForm({ accessToken, onCreated, onCancel, onSessionEx
     .filter((item) => item.padreId === null)
     .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }))
   const currentLocation = locations.find((item) => item.nombre === form.ubicacion)
-  const parentName = currentLocation && currentLocation.padreId !== null
-    ? locations.find((item) => item.id === currentLocation.padreId)?.nombre ?? ''
-    : form.ubicacion
+  const parentLocation = currentLocation && currentLocation.padreId !== null
+    ? locations.find((item) => item.id === currentLocation.padreId)
+    : currentLocation
+  const parentName = parentLocation?.nombre ?? form.ubicacion
   const subName = currentLocation && currentLocation.padreId !== null ? form.ubicacion : ''
-  const subLocations = currentLocation && currentLocation.padreId !== null
-    ? locations.filter((item) => item.padreId === currentLocation.padreId)
+  const subLocations = parentLocation
+    ? locations.filter((item) => item.padreId === parentLocation.id)
     : []
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {

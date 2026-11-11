@@ -17,6 +17,7 @@ import { InventoryController } from '../src/inventory/inventory.controller.js';
 import { DeviceType } from '../src/inventory/device-type.enum.js';
 import { InventoryService } from '../src/inventory/inventory.service.js';
 import { TicketController } from '../src/tickets/ticket.controller.js';
+import { TicketEventsService } from '../src/tickets/ticket-events.service.js';
 import { TicketService } from '../src/tickets/ticket.service.js';
 import { UserRole } from '../src/users/user-role.enum.js';
 import { User } from '../src/users/user.entity.js';
@@ -75,6 +76,7 @@ describe('API (e2e, dependencias aisladas)', () => {
         { provide: AuthService, useValue: authService },
         { provide: InventoryService, useValue: inventoryService },
         { provide: TicketService, useValue: ticketService },
+        { provide: TicketEventsService, useValue: { stream: () => ({ subscribe: vi.fn() }) } },
         { provide: getRepositoryToken(User), useValue: usersRepository },
         { provide: DataSource, useValue: dataSource },
       ],

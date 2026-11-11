@@ -1,5 +1,6 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, MessageEvent, Param, ParseIntPipe, Patch, Post, Query, Req, Sse, UseGuards } from '@nestjs/common';
 import type { Request } from 'express';
+import { Observable } from 'rxjs';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { Roles } from '../auth/guards/roles.decorator.js';
 import { RolesGuard } from '../auth/guards/roles.guard.js';
@@ -9,13 +10,23 @@ import { QueryTicketsDto } from './dto/query-tickets.dto.js';
 import { ResolveTicketDto } from './dto/resolve-ticket.dto.js';
 import { UpdateTicketStatusDto } from './dto/update-ticket-status.dto.js';
 import { TicketService } from './ticket.service.js';
+import { TicketEventsService } from './ticket-events.service.js';
 
 type AuthenticatedRequest = Request & { user: { sub: string; rol: string } };
 
 @Controller('tickets')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class TicketController {
-  constructor(private readonly ticketService: TicketService) {}
+  constructor(
+    private readonly ticketService: TicketService,
+    private readonly ticketEvents: TicketEventsService,
+  ) {}
+
+  @Sse('events')
+  @Roles(UserRole.ADMIN, UserRole.TECNICO)
+  events(): Observable<MessageEvent> {
+    return this.ticketEvents.stream();
+  }
 
   @Get('inbox')
   @Roles(UserRole.ADMIN, UserRole.TECNICO)

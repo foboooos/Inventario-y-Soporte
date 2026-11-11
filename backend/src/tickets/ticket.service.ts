@@ -11,6 +11,7 @@ import { QueryTicketsDto } from './dto/query-tickets.dto.js';
 import { ResolveTicketDto } from './dto/resolve-ticket.dto.js';
 import { formatTicketCode } from './ticket-code.js';
 import { Ticket } from './ticket.entity.js';
+import { TicketEventsService } from './ticket-events.service.js';
 import { TicketSequence } from './ticket-sequence.entity.js';
 import { TicketStatus } from './ticket-status.enum.js';
 import { canTransition } from './ticket-status-transitions.js';
@@ -22,7 +23,13 @@ export class TicketService {
     @InjectRepository(Device) private readonly devices: Repository<Device>,
     @InjectRepository(User) private readonly users: Repository<User>,
     @InjectRepository(Ubicacion) private readonly locations: Repository<Ubicacion>,
+    private readonly ticketEvents: TicketEventsService,
   ) {}
+
+  private toApiTicket(ticket: Ticket, locationName = ticket.ubicacion_relacion?.nombre ?? '') {
+    const { ubicacion_relacion: _ubicacion_relacion, id_tecnico: _id_tecnico, tecnico: _tecnico, ...fields } = ticket;
+    return { ...fields, ubicacion: locationName };
+  }
 
   async findInbox(filters: Partial<QueryTicketsDto> = {}) {
     const where: FindOptionsWhere<Ticket> = {};
@@ -32,8 +39,8 @@ export class TicketService {
     }
 
     if (filters.ubicacion) {
-      const names = await this.resolveLocationNames(filters.ubicacion);
-      where.ubicacion = names.length > 1 ? In(names) : names[0];
+      const ids = await this.resolveLocationIds(filters.ubicacion);
+      where.id_ubicacion = In(ids);
     }
 
     if (filters.desde || filters.hasta) {
@@ -50,6 +57,7 @@ export class TicketService {
       order: { fecha_creacion: 'DESC', id_ticket: 'DESC' },
       skip: (page - 1) * limit,
       take: limit,
+      relations: { ubicacion_relacion: true },
     });
 
     const deviceIds = [
@@ -70,7 +78,7 @@ export class TicketService {
       data: tickets.map((ticket) => {
         const device = ticket.id_dispositivo !== null ? devicesById.get(ticket.id_dispositivo) : undefined;
         return {
-          ...ticket,
+          ...this.toApiTicket(ticket),
           dispositivo_tipo: device?.tipo ?? null,
           codigo_inventario: device?.codigo_inventario ?? null,
           solicitante_nombre: solicitantesByRut.get(normalizeRut(ticket.id_solicitante))?.nombre ?? null,
@@ -83,16 +91,23 @@ export class TicketService {
     };
   }
 
-  private async resolveLocationNames(nombre: string): Promise<string[]> {
+  private async resolveLocationIds(nombre: string): Promise<number[]> {
     const location = await this.locations.findOneBy({ nombre });
 
     if (!location) {
-      return [nombre];
+      return [];
     }
 
-    const children = await this.locations.find({ where: { padre_id: location.id_ubicacion } });
+    const ids = [location.id_ubicacion];
+    let parentIds = ids;
 
-    return [location.nombre, ...children.map((child) => child.nombre)];
+    for (let depth = 0; depth < 2 && parentIds.length > 0; depth += 1) {
+      const children = await this.locations.find({ where: { padre_id: In(parentIds) } });
+      parentIds = children.map((child) => child.id_ubicacion);
+      ids.push(...parentIds);
+    }
+
+    return ids;
   }
 
   async findAll(requesterRut: string, query: Partial<QueryTicketsDto> = {}) {
@@ -104,10 +119,11 @@ export class TicketService {
       order: { fecha_creacion: 'DESC', id_ticket: 'DESC' },
       skip: (page - 1) * limit,
       take: limit,
+      relations: { ubicacion_relacion: true },
     });
 
     return {
-      data,
+      data: data.map((ticket) => this.toApiTicket(ticket)),
       total,
       page,
       limit,
@@ -134,6 +150,7 @@ export class TicketService {
       }
 
       const tecnico = await users.findOneBy({ rut: tecnicoRut });
+      if (!tecnico) throw new UnauthorizedException('Sesión inválida');
       const hasDevice = typeof ticket.id_dispositivo === 'number';
 
       if (hasDevice && !resolveTicketDto.estado_final) {
@@ -143,7 +160,8 @@ export class TicketService {
       ticket.causa_raiz = resolveTicketDto.causa_raiz.trim();
       ticket.solucion_aplicada = resolveTicketDto.solucion_aplicada.trim();
       ticket.estado_final = hasDevice ? resolveTicketDto.estado_final! : null;
-      ticket.tecnico_nombre = tecnico?.nombre ?? null;
+      ticket.id_tecnico = tecnico.rut;
+      ticket.tecnico_nombre = tecnico.nombre;
       ticket.fecha_resolucion = new Date();
       ticket.estado = TicketStatus.RESUELTO;
 
@@ -160,7 +178,8 @@ export class TicketService {
         }
       }
 
-      return saved;
+      const location = await manager.getRepository(Ubicacion).findOneBy({ id_ubicacion: saved.id_ubicacion });
+      return this.toApiTicket(saved, location?.nombre ?? '');
     });
   }
 
@@ -175,8 +194,10 @@ export class TicketService {
       throw new ConflictException('Para resolver el ticket debes registrar la bitácora');
     }
 
+    const location = await this.locations.findOneBy({ id_ubicacion: ticket.id_ubicacion });
+
     if (ticket.estado === nextStatus) {
-      return ticket;
+      return this.toApiTicket(ticket, location?.nombre ?? '');
     }
 
     if (!canTransition(ticket.estado, nextStatus)) {
@@ -192,7 +213,7 @@ export class TicketService {
       throw new ConflictException('El ticket fue modificado mientras se actualizaba');
     }
 
-    return { ...ticket, estado: nextStatus };
+    return this.toApiTicket({ ...ticket, estado: nextStatus }, location?.nombre ?? '');
   }
 
   async findBitacora(idTicket: number) {
@@ -214,7 +235,7 @@ export class TicketService {
       codigo_ticket: ticket.codigo_ticket,
       fecha_resolucion: ticket.fecha_resolucion,
       tecnico_nombre: ticket.tecnico_nombre,
-      ubicacion: ticket.ubicacion,
+      ubicacion: (await this.locations.findOneBy({ id_ubicacion: ticket.id_ubicacion }))?.nombre ?? '',
       dispositivo_tipo: device?.tipo ?? null,
       codigo_inventario: device?.codigo_inventario ?? null,
       sintoma: ticket.sintoma,
@@ -225,26 +246,31 @@ export class TicketService {
   }
 
   async create(createTicketDto: CreateTicketDto, requesterRut: string) {
-    return this.tickets.manager.transaction(async (transactionManager) => {
+    const { ticket, locationName } = await this.tickets.manager.transaction(async (transactionManager) => {
       const tickets = transactionManager.getRepository(Ticket);
       const devices = transactionManager.getRepository(Device);
       const locations = transactionManager.getRepository(Ubicacion);
       const sequences = transactionManager.getRepository(TicketSequence);
       let deviceId: number | null = null;
-      let ubicacion = createTicketDto.ubicacion.trim();
+      let idUbicacion: number | null = null;
+      let nombreUbicacion = createTicketDto.ubicacion.trim();
 
       if (createTicketDto.id_dispositivo !== undefined) {
         const device = await devices.findOneBy({ id_dispositivo: createTicketDto.id_dispositivo });
         if (!device) throw new NotFoundException('El dispositivo seleccionado no existe');
         deviceId = device.id_dispositivo;
-        ubicacion = device.ubicacion;
+        idUbicacion = device.id_ubicacion;
       }
 
-      const location = await locations.findOneBy({ nombre: ubicacion });
+      const location = idUbicacion === null
+        ? await locations.findOneBy({ nombre: nombreUbicacion })
+        : await locations.findOneBy({ id_ubicacion: idUbicacion });
 
       if (!location) {
         throw new NotFoundException('La ubicación no existe');
       }
+      idUbicacion = location.id_ubicacion;
+      nombreUbicacion = location.nombre;
 
       const requester = await transactionManager.getRepository(User).findOne({
         where: { rut: requesterRut },
@@ -281,12 +307,17 @@ export class TicketService {
         codigo_ticket: formatTicketCode(year, sequence.ultimo_numero),
         id_solicitante: requester.rut,
         id_dispositivo: deviceId,
-        ubicacion,
+        id_ubicacion: idUbicacion,
+        ubicacion_relacion: location,
+        anio_ticket: year,
         sintoma: createTicketDto.sintoma.trim(),
         estado: TicketStatus.ABIERTO,
       });
 
-      return tickets.save(ticket);
+      return { ticket: await tickets.save(ticket), locationName: nombreUbicacion };
     });
+
+    this.ticketEvents.publishCreated(ticket);
+    return this.toApiTicket(ticket, locationName);
   }
 }

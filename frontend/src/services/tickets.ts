@@ -1,5 +1,5 @@
 import type { CreateTicketInput, DeviceOption, ResolveTicketInput, Ticket, TicketBitacora, TicketPage, TicketStatus } from '../types/ticket'
-import { apiFetch, readApiJson } from './http'
+import { API_URL, apiFetch, readApiJson } from './http'
 
 export type TicketPageQuery = {
   page?: number
@@ -90,4 +90,87 @@ export async function createTicket(accessToken: string, input: CreateTicketInput
     body: JSON.stringify(input),
   })
   return readApiJson<Ticket>(response, 'No se pudo crear el ticket')
+}
+
+export async function listenForTicketEvents(
+  accessToken: string,
+  onChange: (ticketCode?: string) => void,
+  onSessionExpired: () => void,
+  signal: AbortSignal,
+): Promise<void> {
+  while (!signal.aborted) {
+    try {
+      const response = await fetch(`${API_URL}/tickets/events`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          Accept: 'text/event-stream',
+        },
+        signal,
+      })
+
+      if (response.status === 401) {
+        onSessionExpired()
+        return
+      }
+      if (response.status === 403) return
+      if (!response.ok || !response.body) throw new Error('No se pudo abrir el canal de tickets')
+
+      onChange()
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      let eventName = ''
+      let eventData = ''
+
+      try {
+        while (!signal.aborted) {
+          const { value, done } = await reader.read()
+          if (done) break
+          buffer += decoder.decode(value, { stream: true })
+
+          let newline = buffer.indexOf('\n')
+          while (newline !== -1) {
+            const line = buffer.slice(0, newline).replace(/\r$/, '')
+            buffer = buffer.slice(newline + 1)
+
+            if (!line) {
+              if (eventName === 'ticket.created') {
+                let ticketCode: string | undefined
+                try {
+                  ticketCode = JSON.parse(eventData).codigo_ticket
+                } catch {
+                  // The inbox still refreshes if the event has no readable code.
+                }
+                onChange(ticketCode)
+              }
+              eventName = ''
+              eventData = ''
+            } else if (line.startsWith('event:')) {
+              eventName = line.slice(6).trim()
+            } else if (line.startsWith('data:')) {
+              eventData += `${eventData ? '\n' : ''}${line.slice(5).trimStart()}`
+            }
+
+            newline = buffer.indexOf('\n')
+          }
+        }
+      } finally {
+        reader.releaseLock()
+      }
+    } catch {
+      if (signal.aborted) return
+    }
+
+    if (!signal.aborted) {
+      await new Promise<void>((resolve) => {
+        const finish = () => {
+          window.clearTimeout(timeoutId)
+          signal.removeEventListener('abort', finish)
+          resolve()
+        }
+        const timeoutId = window.setTimeout(finish, 2000)
+        signal.addEventListener('abort', finish, { once: true })
+      })
+    }
+  }
 }

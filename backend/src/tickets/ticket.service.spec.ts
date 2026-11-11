@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { FindOperator, type Repository } from 'typeorm';
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { DeviceStatus } from '../inventory/device-status.enum.js';
@@ -18,7 +18,11 @@ function createService(
   devices: Partial<Repository<Device>> = {},
   users: Partial<Repository<User>> = {},
   locations: Partial<Repository<Ubicacion>> = {},
+  ticketEvents = { publishCreated: vi.fn() },
 ) {
+  if (!locations.findOneBy) {
+    locations.findOneBy = vi.fn().mockResolvedValue(null);
+  }
   const repositories = new Map<unknown, unknown>([
     [Ticket, tickets],
     [Device, devices],
@@ -40,6 +44,7 @@ function createService(
     devices as Repository<Device>,
     users as Repository<User>,
     locations as Repository<Ubicacion>,
+    ticketEvents as never,
   );
 }
 
@@ -65,6 +70,7 @@ describe('TicketService', () => {
       order: { fecha_creacion: 'DESC', id_ticket: 'DESC' },
       skip: 0,
       take: 10,
+      relations: { ubicacion_relacion: true },
     });
   });
 
@@ -146,21 +152,25 @@ describe('TicketService', () => {
     const findAndCount = vi.fn().mockResolvedValue([[], 0]);
     const locations = {
       findOneBy: vi.fn().mockResolvedValue({ id_ubicacion: 3, nombre: 'Laboratorio 1', padre_id: null } as Ubicacion),
-      find: vi.fn().mockResolvedValue([
-        { id_ubicacion: 10, nombre: 'Laboratorio 1 - A', padre_id: 3 } as Ubicacion,
-        { id_ubicacion: 11, nombre: 'Laboratorio 1 - B', padre_id: 3 } as Ubicacion,
-      ]),
+      find: vi.fn()
+        .mockResolvedValueOnce([
+          { id_ubicacion: 10, nombre: 'Laboratorio 1 - A', padre_id: 3 } as Ubicacion,
+          { id_ubicacion: 11, nombre: 'Laboratorio 1 - B', padre_id: 3 } as Ubicacion,
+        ])
+        .mockResolvedValueOnce([
+          { id_ubicacion: 20, nombre: 'Sala de lectura', padre_id: 10 } as Ubicacion,
+        ]),
     };
     const service = createService({ findAndCount }, {}, {}, locations);
 
     await service.findInbox({ ubicacion: 'Laboratorio 1' });
 
     const arg = findAndCount.mock.calls[0][0];
-    expect(arg.where.ubicacion).toBeInstanceOf(FindOperator);
-    expect(arg.where.ubicacion.value).toEqual(['Laboratorio 1', 'Laboratorio 1 - A', 'Laboratorio 1 - B']);
+    expect(arg.where.id_ubicacion).toBeInstanceOf(FindOperator);
+    expect(arg.where.id_ubicacion.value).toEqual([3, 10, 11, 20]);
   });
 
-  it('falls back to an exact location match when the location is not registered', async () => {
+  it('returns no location matches when the requested location is not registered', async () => {
     const findAndCount = vi.fn().mockResolvedValue([[], 0]);
     const locations = { findOneBy: vi.fn().mockResolvedValue(null) };
     const service = createService({ findAndCount }, {}, {}, locations);
@@ -168,7 +178,7 @@ describe('TicketService', () => {
     await service.findInbox({ ubicacion: 'Pasillo segundo piso' });
 
     expect(findAndCount).toHaveBeenCalledWith(expect.objectContaining({
-      where: { ubicacion: 'Pasillo segundo piso' },
+      where: { id_ubicacion: expect.any(FindOperator) },
     }));
   });
 
@@ -195,7 +205,7 @@ describe('TicketService', () => {
 
     const arg = findAndCount.mock.calls[0][0];
     expect(arg.where.estado).toBe(TicketStatus.ABIERTO);
-    expect(arg.where.ubicacion).toBe('Sala 5');
+    expect(arg.where.id_ubicacion).toBeInstanceOf(FindOperator);
     expect(arg.where.fecha_creacion).toBeInstanceOf(FindOperator);
   });
 
@@ -210,6 +220,7 @@ describe('TicketService', () => {
       order: { fecha_creacion: 'DESC', id_ticket: 'DESC' },
       skip: 0,
       take: 10,
+      relations: { ubicacion_relacion: true },
     });
   });
 
@@ -249,12 +260,30 @@ describe('TicketService', () => {
       causa_raiz: input.causa_raiz,
       solucion_aplicada: input.solucion_aplicada,
       estado_final: DeviceStatus.ACTIVO,
+      id_tecnico: '12345678-9',
       tecnico_nombre: 'Ana Pérez',
       fecha_resolucion: new Date('2026-04-15T12:00:00.000Z'),
       estado: TicketStatus.RESUELTO,
     });
     expect(save).toHaveBeenCalledWith(ticket);
-    expect(result).toBe(ticket);
+    expect(result).toMatchObject({ tecnico_nombre: 'Ana Pérez', estado: TicketStatus.RESUELTO });
+    expect(result).not.toHaveProperty('id_tecnico');
+    expect(result.ubicacion).toBe('');
+  });
+
+  it('rejects resolution if the authenticated technician no longer exists', async () => {
+    const ticket = { id_ticket: 7, estado: TicketStatus.EN_PROCESO, id_dispositivo: null } as Ticket;
+    const findOne = vi.fn().mockResolvedValue(ticket);
+    const service = createService(
+      { findOne, save: vi.fn() },
+      {},
+      { findOneBy: vi.fn().mockResolvedValue(null) },
+    );
+
+    await expect(service.resolve(7, {
+      causa_raiz: 'Falla',
+      solucion_aplicada: 'Reparación',
+    }, '12345678-9')).rejects.toThrow(UnauthorizedException);
   });
 
   it('marks the affected device with the final status when the ticket is resolved', async () => {
@@ -340,10 +369,10 @@ describe('TicketService', () => {
   it('builds the bitácora record for a resolved ticket with its device', async () => {
     const ticket = {
       id_ticket: 7,
+      id_ubicacion: 3,
       codigo_ticket: 'TCK-2026-0007',
       estado: TicketStatus.RESUELTO,
       id_dispositivo: 5,
-      ubicacion: 'Laboratorio 1',
       sintoma: 'No enciende',
       causa_raiz: 'Fuente dañada',
       solucion_aplicada: 'Se reemplazó la fuente',
@@ -353,7 +382,12 @@ describe('TicketService', () => {
     } as Ticket;
     const findOneBy = vi.fn().mockResolvedValue(ticket);
     const findDevice = vi.fn().mockResolvedValue({ id_dispositivo: 5, codigo_inventario: 'PRJ-SALA-02', tipo: 'PROYECTOR' } as Device);
-    const service = createService({ findOneBy }, { findOneBy: findDevice });
+    const service = createService(
+      { findOneBy },
+      { findOneBy: findDevice },
+      {},
+      { findOneBy: vi.fn().mockResolvedValue({ nombre: 'Laboratorio 1' } as Ubicacion) },
+    );
 
     const result = await service.findBitacora(7);
 
@@ -399,7 +433,7 @@ describe('TicketService', () => {
       { id_ticket: 7, estado: TicketStatus.ABIERTO },
       { estado: TicketStatus.EN_PROCESO },
     );
-    expect(result).toEqual({ ...ticket, estado: TicketStatus.EN_PROCESO });
+    expect(result).toEqual({ ...ticket, estado: TicketStatus.EN_PROCESO, ubicacion: '' });
   });
 
   it('keeps an in-progress ticket unchanged when it is started again', async () => {
@@ -411,7 +445,7 @@ describe('TicketService', () => {
     const result = await service.changeStatus(7, TicketStatus.EN_PROCESO);
 
     expect(update).not.toHaveBeenCalled();
-    expect(result).toBe(ticket);
+    expect(result).toEqual({ ...ticket, ubicacion: '' });
   });
 
   it('rejects an invalid status transition', async () => {
@@ -473,7 +507,7 @@ describe('TicketService', () => {
       findOneBy: vi.fn().mockResolvedValue(null),
     };
     const locationRepository = {
-      findOneBy: vi.fn().mockResolvedValue({ nombre: 'Laboratorio 1' } as Ubicacion),
+      findOneBy: vi.fn().mockResolvedValue({ id_ubicacion: 5, nombre: 'Laboratorio 1' } as Ubicacion),
     };
     const userRepository = {
       findOne: vi.fn().mockResolvedValue({ rut: '12345678-9' } as User),
@@ -492,6 +526,7 @@ describe('TicketService', () => {
       create: vi.fn().mockReturnValue(createdTicket),
       save: vi.fn().mockResolvedValue(createdTicket),
     };
+    const ticketEvents = { publishCreated: vi.fn() };
     transactionManager.getRepository.mockImplementation((entity: unknown) => {
       if (entity === Ticket) return ticketRepository;
       if (entity === Device) return deviceRepository;
@@ -505,6 +540,7 @@ describe('TicketService', () => {
       deviceRepository,
       userRepository,
       locationRepository,
+      ticketEvents,
     );
     const input = {
       ubicacion: 'Laboratorio 1',
@@ -518,8 +554,11 @@ describe('TicketService', () => {
     expect(ticketRepository.create).toHaveBeenCalledWith(expect.objectContaining({
       codigo_ticket: 'TCK-2026-0001',
       estado: TicketStatus.ABIERTO,
+      id_ubicacion: 5,
+      anio_ticket: 2026,
     }));
-    expect(result).toBe(createdTicket);
+    expect(result).toEqual({ ...createdTicket, ubicacion: 'Laboratorio 1' });
+    expect(ticketEvents.publishCreated).toHaveBeenCalledWith(createdTicket);
   });
 
   it('rejects creating a ticket in a location that does not exist', async () => {

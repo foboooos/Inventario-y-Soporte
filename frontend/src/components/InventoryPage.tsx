@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { getInventory, deleteInventoryDevice, type InventorySummary } from '../services/inventory'
+import { getLocations } from '../services/locations'
 import { isSessionExpired } from '../services/http'
 import type { AuthUser } from '../types/auth'
 import type { Device, DeviceStatus, DeviceType } from '../types/inventory'
+import type { Location } from '../types/location'
 import { TrashIcon } from './ActionIcons'
 import { CreateDeviceForm } from './CreateDeviceForm'
 import { EditDeviceForm } from './EditDeviceForm'
@@ -79,6 +81,7 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
   const [initial] = useState<StoredFilters>(() => loadStoredFilters())
 
   const [devices, setDevices] = useState<Device[]>([])
+  const [locations, setLocations] = useState<Location[]>([])
   const [searchInput, setSearchInput] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
   const [total, setTotal] = useState(0)
@@ -158,6 +161,20 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
   }, [accessToken, onSessionExpired, reloadKey, searchTerm, statusFilter, activePage, pageSize])
 
   useEffect(() => {
+    let active = true
+
+    getLocations(accessToken)
+      .then((loaded) => {
+        if (active) setLocations(loaded)
+      })
+      .catch((exception: unknown) => {
+        if (active && isSessionExpired(exception)) onSessionExpired()
+      })
+
+    return () => { active = false }
+  }, [accessToken, onSessionExpired])
+
+  useEffect(() => {
     const handle = setTimeout(() => {
       setSearchTerm(searchInput.trim())
       setCurrentPage(1)
@@ -181,6 +198,10 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
     const table = tableScrollRef.current?.querySelector('table')
     table?.classList.toggle('is-partial', devices.length < pageSize)
   }, [devices, pageSize])
+
+  useEffect(() => {
+    setSelectedIds(new Set())
+  }, [pageSize, searchTerm, statusFilter])
 
   useEffect(() => {
     function computePageSize() {
@@ -292,8 +313,16 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
     })
   }
 
+  function selectCurrentPage() {
+    setSelectedIds((current) => {
+      const next = new Set(current)
+      devices.forEach((device) => next.add(device.id))
+      return next
+    })
+  }
+
   async function handleBulkDelete() {
-    const targets = devices.filter((device) => selectedIds.has(device.id))
+    const targets = [...selectedIds]
     if (targets.length === 0) return
 
     setDeletingBulk(true)
@@ -301,16 +330,17 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
     const deleted: number[] = []
     const failed: string[] = []
 
-    for (const device of targets) {
+    for (const deviceId of targets) {
       try {
-        await deleteInventoryDevice(accessToken, device.id)
-        deleted.push(device.id)
+        await deleteInventoryDevice(accessToken, deviceId)
+        deleted.push(deviceId)
       } catch (exception: unknown) {
         if (isSessionExpired(exception)) {
           onSessionExpired()
           return
         }
-        failed.push(exception instanceof Error ? exception.message : `No se pudo eliminar ${device.code}`)
+        const device = devices.find((item) => item.id === deviceId)
+        failed.push(exception instanceof Error ? exception.message : `No se pudo eliminar ${device?.code ?? `el dispositivo ${deviceId}`}`)
       }
     }
 
@@ -377,6 +407,21 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
     )
   }
 
+  function renderLocation(device: Device) {
+    const location = locations.find((item) => item.nombre === device.location)
+    if (!location || location.padreId === null) return device.location
+
+    const parent = locations.find((item) => item.id === location.padreId)
+    if (!parent) return device.location
+
+    return (
+      <>
+        <strong>{parent.nombre}</strong>
+        <span className="secondary-cell">{location.nombre}</span>
+      </>
+    )
+  }
+
   return (
     <main className="inventory-shell">
       <section className="inventory-content" aria-label="Inventario">
@@ -384,19 +429,48 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
     <div className="inventory-actions" ref={actionsRef}>
       <button className="primary-action primary-action-solid" type="button" onClick={() => setModal({ kind: 'create' })}>
         <svg viewBox="0 0 24 24" aria-hidden="true" className="button-icon"><path d="M12 5v14M5 12h14" /></svg>
-        Nuevo dispositivo
+        Nuevo
       </button>
-      {selectedIds.size > 0 && (
+      {devices.length > 0 && (
         <button
-          className="config-danger-button"
+          className="inventory-select-page"
           type="button"
-          onClick={() => {
-            setBulkDeleteError('')
-            setBulkDeleteOpen(true)
-          }}
+          aria-label="Seleccionar todos los dispositivos de esta página"
+          title="Seleccionar todos los dispositivos de esta página"
+          disabled={devices.every((device) => selectedIds.has(device.id))}
+          onClick={selectCurrentPage}
         >
-          Borrar seleccionados
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m3.5 5.5 1.5 1.5 2.5-3M10 5.5h10M3.5 12l1.5 1.5 2.5-3M10 12h10M3.5 18.5l1.5 1.5 2.5-3M10 18.5h10" />
+          </svg>
         </button>
+      )}
+      {selectedIds.size > 0 && (
+        <>
+          <button
+            className="inventory-clear-selection"
+            type="button"
+            aria-label="Deseleccionar todos los dispositivos"
+            title="Deseleccionar todos"
+            disabled={deletingBulk}
+            onClick={() => setSelectedIds(new Set())}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="3.5" y="4" width="12" height="12" rx="2" />
+              <path d="m6.5 10 2.2 2.2 4.1-4.4M15 15l5.5 5.5M20.5 15 15 20.5" />
+            </svg>
+          </button>
+          <button
+            className="config-danger-button"
+            type="button"
+            onClick={() => {
+              setBulkDeleteError('')
+              setBulkDeleteOpen(true)
+            }}
+          >
+            Eliminar
+          </button>
+        </>
       )}
     </div>
   )}
@@ -653,7 +727,7 @@ export function InventoryPage({ user, accessToken, onSessionExpired }: Inventory
                     </td>
                     <td>{typeLabels[device.type]}</td>
                     <td>{renderBrandModel(device)}</td>
-                    <td>{device.location}</td>
+                    <td>{renderLocation(device)}</td>
                     <td><div className="inventory-row-actions">
                       <span className={`status status-${device.status.toLowerCase().replace('_', '-')}`}>{statusLabels[device.status]}</span>
                       {canManageInventory && (

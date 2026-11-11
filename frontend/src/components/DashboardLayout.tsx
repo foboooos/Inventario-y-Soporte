@@ -1,9 +1,15 @@
-import { useState, type ReactNode } from 'react'
+import { isValidElement, useState, type ReactNode } from 'react'
+import { ToastBar, Toaster } from 'react-hot-toast'
 import type { AuthUser } from '../types/auth'
 import { Sidebar } from './Sidebar'
 import type { RouteKey } from '../routes'
 
 const SIDEBAR_STORAGE_KEY = 'sidebar_collapsed'
+
+type TicketToastMessageProps = {
+  ticketCode?: string
+  onOpenInbox?: () => void
+}
 
 type DashboardLayoutProps = {
   children: ReactNode
@@ -57,6 +63,58 @@ export function DashboardLayout({ children, user, activeRoute, onNavigate, onLog
         </svg>
       </button>
       <div className="dashboard-main">{children}</div>
+      <Toaster
+        position="top-right"
+        gutter={8}
+        containerStyle={{ top: 12, right: 12 }}
+        toastOptions={{
+          duration: 10000,
+          ariaProps: { role: 'status', 'aria-live': 'polite' },
+        }}
+      >
+        {(ticketToast) => {
+          const toastMessage = isValidElement<TicketToastMessageProps>(ticketToast.message)
+            ? ticketToast.message
+            : null
+          const onOpenInbox = toastMessage?.props.onOpenInbox
+
+          return (
+            <div
+              className="ticket-toast-clickable"
+              role={onOpenInbox ? 'link' : undefined}
+              tabIndex={onOpenInbox ? 0 : undefined}
+              aria-label={toastMessage?.props.ticketCode ? `Abrir ${toastMessage.props.ticketCode} en la bandeja` : undefined}
+              onClick={onOpenInbox}
+              onKeyDown={(event) => {
+                if (!onOpenInbox || event.target !== event.currentTarget) return
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault()
+                  onOpenInbox()
+                }
+              }}
+            >
+              <ToastBar
+                toast={ticketToast}
+                style={{
+                  ...ticketToast.style,
+                  alignItems: 'flex-start',
+                  width: 'min(250px, calc(100vw - 24px))',
+                  minWidth: 'min(230px, calc(100vw - 24px))',
+                  maxWidth: 'calc(100vw - 24px)',
+                  boxSizing: 'border-box',
+                }}
+              >
+                {({ icon, message }) => (
+                  <>
+                    <span className="ticket-toast-icon-offset">{icon}</span>
+                    {message}
+                  </>
+                )}
+              </ToastBar>
+            </div>
+          )
+        }}
+      </Toaster>
     </div>
   )
 }

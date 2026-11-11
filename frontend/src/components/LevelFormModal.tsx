@@ -54,7 +54,7 @@ export function LevelFormModal({ accessToken, level, onSaved, onCancel, onSessio
       ref={modalRef}
       label={isEditing ? `Renombrar ${level.nombre}` : 'Nuevo nivel educativo'}
       backdropClassName="device-modal-backdrop"
-      cardClassName="create-device-card modal-card config-level-modal"
+      cardClassName={`create-device-card modal-card config-level-modal${isEditing ? ' config-level-edit-modal' : ''}`}
       dismissible={!saving}
       onClose={onCancel}
     >

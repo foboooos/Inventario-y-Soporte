@@ -30,7 +30,7 @@ export class InventoryService {
       conditions.push({ ...base, codigo_inventario: ILike(pattern) });
       conditions.push({ ...base, marca: ILike(pattern) });
       conditions.push({ ...base, modelo: ILike(pattern) });
-      conditions.push({ ...base, ubicacion: ILike(pattern) });
+      conditions.push({ ...base, ubicacion_relacion: { nombre: ILike(pattern) } });
     }
 
     const where: FindOptionsWhere<Device> | FindOptionsWhere<Device>[] = conditions.length > 0
@@ -39,7 +39,7 @@ export class InventoryService {
 
     const dir = query.sortDir === 'desc' ? 'DESC' : 'ASC';
     const order: FindOptionsOrder<Device> =
-      query.sortBy === 'location' ? { ubicacion: dir, id_dispositivo: 'ASC' }
+      query.sortBy === 'location' ? { ubicacion_relacion: { nombre: dir }, id_dispositivo: 'ASC' }
         : query.sortBy === 'status' ? { estado: dir, id_dispositivo: 'ASC' }
           : { codigo_inventario: dir, id_dispositivo: 'ASC' };
 
@@ -48,10 +48,11 @@ export class InventoryService {
       order,
       skip: (query.page - 1) * query.limit,
       take: query.limit,
+      relations: { ubicacion_relacion: true },
     });
 
     return {
-      data,
+      data: data.map((device) => this.toApiDevice(device)),
       total,
       page: query.page,
       limit: query.limit,
@@ -63,13 +64,14 @@ export class InventoryService {
   private async buildSummary(term?: string) {
     const summaryQuery = this.devices
       .createQueryBuilder('device')
+      .leftJoin('device.ubicacion_relacion', 'location')
       .select('device.estado', 'estado')
       .addSelect('COUNT(*)', 'count')
       .groupBy('device.estado');
 
     if (term) {
       summaryQuery.where(
-        '(device.codigo_inventario ILIKE :pattern OR device.marca ILIKE :pattern OR device.modelo ILIKE :pattern OR device.ubicacion ILIKE :pattern)',
+        '(device.codigo_inventario ILIKE :pattern OR device.marca ILIKE :pattern OR device.modelo ILIKE :pattern OR location.nombre ILIKE :pattern)',
         { pattern: `%${term}%` },
       );
     }
@@ -91,16 +93,14 @@ export class InventoryService {
 
   findOptions() {
     return this.devices.find({
-      select: {
-        id_dispositivo: true,
-        codigo_inventario: true,
-        tipo: true,
-        marca: true,
-        modelo: true,
-        ubicacion: true,
-      },
+      relations: { ubicacion_relacion: true },
       order: { codigo_inventario: 'ASC' },
-    });
+    }).then((devices) => devices.map((device) => this.toApiDevice(device)));
+  }
+
+  private toApiDevice(device: Device) {
+    const { ubicacion_relacion, ...fields } = device;
+    return { ...fields, ubicacion: ubicacion_relacion.nombre };
   }
 
   async nextCode(tipo: CreateDeviceDto['tipo'], ubicacion: string) {
@@ -127,12 +127,12 @@ export class InventoryService {
     devices: Repository<Device>,
     locations: Repository<Ubicacion>,
   ) {
-    const locationNames = location.padre_id !== null
-      ? (await locations.find()).filter((item) => item.padre_id !== null).map((item) => item.nombre)
-      : [location.nombre];
+    const locationIds = location.padre_id !== null
+      ? (await locations.find()).filter((item) => item.padre_id !== null).map((item) => item.id_ubicacion)
+      : [location.id_ubicacion];
     const group = await devices.find({
       select: { codigo_inventario: true },
-      where: { tipo, ubicacion: In(locationNames) },
+      where: { tipo, id_ubicacion: In(locationIds) },
     });
     const used = new Set(group.map((device) => device.codigo_inventario));
     let numero = group.length + 1;
@@ -149,10 +149,10 @@ export class InventoryService {
   private async nextCodeForUpdate(
     manager: EntityManager,
     tipo: CreateDeviceDto['tipo'],
-    ubicacion: string,
+    idUbicacion: number,
   ) {
     const locations = manager.getRepository(Ubicacion);
-    const location = await locations.findOneBy({ nombre: ubicacion.trim() });
+    const location = await locations.findOneBy({ id_ubicacion: idUbicacion });
 
     if (!location) {
       throw new NotFoundException('La ubicación no existe');
@@ -167,9 +167,13 @@ export class InventoryService {
 
   async create(createDeviceDto: CreateDeviceDto) {
     const ubicacion = createDeviceDto.ubicacion.trim();
+    const { ubicacion: _locationName, ...deviceInput } = createDeviceDto;
     return this.devices.manager.transaction(async (manager) => {
       const devices = manager.getRepository(Device);
-      const codigo_inventario = await this.nextCodeForUpdate(manager, createDeviceDto.tipo, ubicacion);
+      const location = await manager.getRepository(Ubicacion).findOneBy({ nombre: ubicacion });
+      if (!location) throw new NotFoundException('La ubicación no existe');
+
+      const codigo_inventario = await this.nextCodeForUpdate(manager, createDeviceDto.tipo, location.id_ubicacion);
       const existingDevice = await devices.findOneBy({ codigo_inventario });
 
       if (existingDevice) {
@@ -177,20 +181,22 @@ export class InventoryService {
       }
 
       const device = devices.create({
-        ...createDeviceDto,
+        ...deviceInput,
         codigo_inventario,
         marca: createDeviceDto.marca?.trim() || null,
         modelo: createDeviceDto.modelo?.trim() || null,
-        ubicacion,
+        id_ubicacion: location.id_ubicacion,
+        ubicacion_relacion: location,
       });
 
-      return devices.save(device);
+      return this.toApiDevice(await devices.save(device));
     });
   }
 
   async update(id: number, updateDeviceDto: UpdateDeviceDto) {
     return this.devices.manager.transaction(async (manager) => {
       const devices = manager.getRepository(Device);
+      const locations = manager.getRepository(Ubicacion);
       const device = await devices.findOneBy({ id_dispositivo: id });
 
       if (!device) {
@@ -198,28 +204,32 @@ export class InventoryService {
       }
 
       const nextTipo = updateDeviceDto.tipo ?? device.tipo;
-      let nextUbicacion = device.ubicacion;
+      let nextUbicacionId = device.id_ubicacion;
 
       if (updateDeviceDto.ubicacion !== undefined) {
-        nextUbicacion = updateDeviceDto.ubicacion.trim();
-        const location = await manager.getRepository(Ubicacion).findOneBy({ nombre: nextUbicacion });
+        const nextUbicacion = updateDeviceDto.ubicacion.trim();
+        const location = await locations.findOneBy({ nombre: nextUbicacion });
 
         if (!location) {
           throw new NotFoundException('La ubicación no existe');
         }
+
+        nextUbicacionId = location.id_ubicacion;
       }
 
-      if (nextTipo !== device.tipo || nextUbicacion !== device.ubicacion) {
-        device.codigo_inventario = await this.nextCodeForUpdate(manager, nextTipo, nextUbicacion);
+      if (nextTipo !== device.tipo || nextUbicacionId !== device.id_ubicacion) {
+        device.codigo_inventario = await this.nextCodeForUpdate(manager, nextTipo, nextUbicacionId);
       }
 
       device.tipo = nextTipo;
-      device.ubicacion = nextUbicacion;
+      device.id_ubicacion = nextUbicacionId;
       if (updateDeviceDto.marca !== undefined) device.marca = updateDeviceDto.marca.trim() || null;
       if (updateDeviceDto.modelo !== undefined) device.modelo = updateDeviceDto.modelo.trim() || null;
       if (updateDeviceDto.estado !== undefined) device.estado = updateDeviceDto.estado;
 
-      return devices.save(device);
+      const saved = await devices.save(device);
+      const location = await locations.findOneBy({ id_ubicacion: saved.id_ubicacion });
+      return this.toApiDevice({ ...saved, ubicacion_relacion: location! });
     });
   }
 

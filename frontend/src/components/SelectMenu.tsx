@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import type { CSSProperties, KeyboardEvent } from 'react'
+import type { CSSProperties, KeyboardEvent, ReactNode } from 'react'
 
-export type SelectOption = { value: string; label: string }
+export type SelectOption = { value: string; label: string; icon?: ReactNode }
 
 type SelectMenuProps = {
   id: string
@@ -264,7 +264,10 @@ export function SelectMenu({ id, value, options, onChange, ariaLabel, placeholde
           onKeyDown={handleKeyDown}
         >
           <span className={value ? 'select-menu-value' : 'select-menu-placeholder'}>
-            {value ? selected?.label : placeholder ?? 'Selecciona'}
+            {value && selected?.icon && <span className="select-menu-option-icon">{selected.icon}</span>}
+            {value
+              ? <span className="select-menu-selected-label">{selected?.label}</span>
+              : placeholder ?? 'Selecciona'}
           </span>
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="m6 9 6 6 6-6" />
@@ -295,6 +298,7 @@ export function SelectMenu({ id, value, options, onChange, ariaLabel, placeholde
                 commit(index)
               }}
             >
+              {option.icon && <span className="select-menu-option-icon">{option.icon}</span>}
               {option.label}
             </li>
           ))}

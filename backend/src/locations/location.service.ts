@@ -39,6 +39,7 @@ export class LocationService {
     }
 
     let padreId: number | null = null;
+    let tipo = createLocationDto.tipo ?? 'PRINCIPAL';
 
     if (createLocationDto.padre_id !== undefined) {
       const padre = await this.locations.findOneBy({ id_ubicacion: createLocationDto.padre_id });
@@ -47,11 +48,18 @@ export class LocationService {
         throw new NotFoundException('La ubicación padre no existe');
       }
 
-      if (padre.padre_id !== null) {
-        throw new ConflictException('Solo se permiten dos niveles de anidación');
+      if (padre.tipo === 'TERCIARIA') {
+        throw new ConflictException('Solo se permiten tres niveles de ubicaciones');
       }
 
+      const tipoEsperado = padre.tipo === 'PRINCIPAL' ? 'SECUNDARIA' : 'TERCIARIA';
+      if (createLocationDto.tipo && createLocationDto.tipo !== tipoEsperado) {
+        throw new ConflictException('El tipo de ubicación no corresponde a la ubicación padre');
+      }
+      tipo = tipoEsperado;
       padreId = padre.id_ubicacion;
+    } else if (tipo !== 'PRINCIPAL') {
+      throw new ConflictException('Las ubicaciones secundarias y terciarias requieren una ubicación padre');
     }
 
     return this.locations.save(
@@ -59,7 +67,7 @@ export class LocationService {
         nombre,
         sigla,
         padre_id: padreId,
-        tipo: createLocationDto.tipo ?? 'PRINCIPAL',
+        tipo,
       }),
     );
   }
@@ -81,9 +89,6 @@ export class LocationService {
         if (duplicate) {
           throw new ConflictException('La ubicación ya existe');
         }
-
-        await manager.getRepository(Device).update({ ubicacion: location.nombre }, { ubicacion: nombre });
-        await manager.getRepository(Ticket).update({ ubicacion: location.nombre }, { ubicacion: nombre });
 
         location.nombre = nombre;
       }
@@ -113,15 +118,15 @@ export class LocationService {
       throw new NotFoundException('La ubicación padre no existe');
     }
 
-    if (padre.padre_id !== null) {
-      throw new ConflictException('Solo se permiten dos niveles de anidación');
+    if (padre.tipo !== 'PRINCIPAL') {
+      throw new ConflictException('Los cursos solo se pueden generar bajo una ubicación principal');
     }
 
     const usedNames = new Set((await this.locations.find()).map((location) => location.nombre));
     const missing = buildCourseNames().filter((nombre) => !usedNames.has(nombre));
 
     if (missing.length > 0) {
-      await this.locations.save(missing.map((nombre) => this.locations.create({ nombre, padre_id: padreId })));
+      await this.locations.save(missing.map((nombre) => this.locations.create({ nombre, padre_id: padreId, tipo: 'SECUNDARIA' })));
     }
 
     return this.locations.find({ where: { padre_id: padreId }, order: { id_ubicacion: 'ASC' } });
@@ -142,7 +147,7 @@ export class LocationService {
       );
     }
 
-    const deviceCount = await this.devices.count({ where: { ubicacion: location.nombre } });
+    const deviceCount = await this.devices.count({ where: { id_ubicacion: location.id_ubicacion } });
 
     if (deviceCount > 0) {
       throw new ConflictException(
@@ -150,7 +155,7 @@ export class LocationService {
       );
     }
 
-    const ticketCount = await this.tickets.count({ where: { ubicacion: location.nombre } });
+    const ticketCount = await this.tickets.count({ where: { id_ubicacion: location.id_ubicacion } });
 
     if (ticketCount > 0) {
       throw new ConflictException(

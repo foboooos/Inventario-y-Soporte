@@ -7,12 +7,13 @@ import { emailFromName, localPartOfEmail, USER_EMAIL_DOMAIN } from '../utils/ema
 import { formatRut, rutCaretPosition } from '../utils/rut'
 import { Modal } from './Modal'
 import type { ModalHandle } from './Modal'
+import { RoleIcon } from './RoleIcon'
 import { SelectMenu } from './SelectMenu'
 
 const roleOptions = [
-  { value: 'DOCENTE', label: 'Docente' },
-  { value: 'TECNICO', label: 'Técnico' },
-  { value: 'ADMIN', label: 'Administrador' },
+  { value: 'DOCENTE', label: 'Docente', icon: <RoleIcon role="DOCENTE" /> },
+  { value: 'TECNICO', label: 'Técnico', icon: <RoleIcon role="TECNICO" /> },
+  { value: 'ADMIN', label: 'Administrador', icon: <RoleIcon role="ADMIN" /> },
 ]
 
 const initialForm = {
@@ -93,13 +94,13 @@ export function CreateUserForm({ accessToken, onClose, onCreated, onSessionExpir
       ref={modalRef}
       label="Crear usuario"
       backdropClassName="device-modal-backdrop"
-      cardClassName="create-device-card modal-card create-user-modal"
+      cardClassName="create-device-card modal-card create-user-modal user-form-three-column"
       dismissible={!saving}
       onClose={onClose}
     >
         <div className="device-modal-body">
-          <form className="device-form" onSubmit={handleSubmit}>
-            <label className="field-float">
+          <form className="device-form create-user-create-form" onSubmit={handleSubmit}>
+            <label className="field-float create-user-primary-field">
               <span>RUT</span>
               <input
                 ref={rutInputRef}
@@ -110,7 +111,7 @@ export function CreateUserForm({ accessToken, onClose, onCreated, onSessionExpir
                 required
               />
             </label>
-            <label className="field-float">
+            <label className="field-float create-user-primary-field">
               <span>Nombre</span>
               <input
                 value={form.nombre}
@@ -120,7 +121,18 @@ export function CreateUserForm({ accessToken, onClose, onCreated, onSessionExpir
                 required
               />
             </label>
-            <label className="field-float" htmlFor="create-user-email">
+            <div className="device-field field-float create-user-primary-field">
+              <span>Rol</span>
+              <SelectMenu
+                id="config-user-role"
+                ariaLabel="Rol del usuario"
+                value={form.rol}
+                onChange={(next) => updateField('rol', next as UserRole)}
+                options={roleOptions}
+                visibleItems={3}
+              />
+            </div>
+            <label className="field-float create-user-secondary-field create-user-email-field">
               <span>Email</span>
               <div className="email-input-group">
                 <input
@@ -133,7 +145,7 @@ export function CreateUserForm({ accessToken, onClose, onCreated, onSessionExpir
                 <span className="email-input-suffix">{USER_EMAIL_DOMAIN}</span>
               </div>
             </label>
-            <label className="field-float">
+            <label className="field-float create-user-secondary-field create-user-birth-field">
               <span>Fecha de nacimiento</span>
               <input
                 type="date"
@@ -142,17 +154,6 @@ export function CreateUserForm({ accessToken, onClose, onCreated, onSessionExpir
                 required
               />
             </label>
-            <div className="device-field field-float">
-              <span>Rol</span>
-              <SelectMenu
-                id="config-user-role"
-                ariaLabel="Rol del usuario"
-                value={form.rol}
-                onChange={(next) => updateField('rol', next as UserRole)}
-                options={roleOptions}
-                visibleItems={3}
-              />
-            </div>
             {error && <p className="error device-form-wide" role="alert">{error}</p>}
             <div className="device-form-actions device-form-wide">
               <button className="secondary-button" type="button" onClick={() => modalRef.current?.close()} disabled={saving}>

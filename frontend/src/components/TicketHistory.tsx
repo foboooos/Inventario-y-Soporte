@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { getTickets } from '../services/tickets'
 import { isSessionExpired } from '../services/http'
 import { TicketSymptomPreview } from './TicketSymptomPreview'
 import { TableSkeleton } from './Skeleton'
 import { getPageNumbers } from '../utils/pagination'
 import type { Ticket, TicketStatus } from '../types/ticket'
+import type { RefObject } from 'react'
 
 type TicketHistoryProps = {
   accessToken: string
@@ -13,7 +14,11 @@ type TicketHistoryProps = {
   desktopOnly?: boolean
 }
 
-const PAGE_SIZE = 5
+const INITIAL_PAGE_SIZE = 10
+const MIN_PAGE_SIZE = 5
+const MAX_PAGE_SIZE = 30
+const FALLBACK_HEADER_HEIGHT = 30
+const TABLE_ROW_HEIGHT = 31
 
 const statusLabels: Record<TicketStatus, string> = {
   ABIERTO: 'Abierto',
@@ -35,12 +40,12 @@ function formatTicketDate(value?: string) {
 }
 
 
-function TicketHistoryTable({ tickets }: { tickets: Ticket[] }) {
+function TicketHistoryTable({ tickets, pageSize, scrollRef }: { tickets: Ticket[]; pageSize: number; scrollRef: RefObject<HTMLDivElement | null> }) {
   const [expandedSymptomId, setExpandedSymptomId] = useState<number | null>(null)
 
   return (
-    <div className="ticket-history-table-scroll" role="region" tabIndex={0} aria-label="Tabla de historial de tickets">
-      <table className="ticket-history-table">
+    <div ref={scrollRef} className="ticket-history-table-scroll" role="region" tabIndex={0} aria-label="Tabla de historial de tickets">
+      <table className={`ticket-history-table${tickets.length < pageSize ? ' is-partial' : ''}`}>
         <caption className="sr-only">Historial de tickets de soporte</caption>
         <thead>
           <tr>
@@ -90,6 +95,60 @@ export function TicketHistory({ accessToken, onSessionExpired, refreshKey, deskt
   const [error, setError] = useState('')
   const [reloadKey, setReloadKey] = useState(0)
   const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(INITIAL_PAGE_SIZE)
+  const tableScrollRef = useRef<HTMLDivElement>(null)
+  const pageSizeRef = useRef(INITIAL_PAGE_SIZE)
+  const baseRowHeightRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    const scrollElement = tableScrollRef.current
+    if (!scrollElement) return
+
+    const updatePageSize = () => {
+      if (scrollElement.clientHeight === 0) return
+      const table = scrollElement.querySelector('table')
+      table?.style.removeProperty('--ticket-history-row-height')
+
+      const headerHeight = table?.tHead?.getBoundingClientRect().height ?? 0
+      const rows = table ? Array.from(table.querySelectorAll('tbody tr')) : []
+      const naturalRowHeight = rows.reduce(
+        (max, row) => Math.max(max, row.getBoundingClientRect().height),
+        0,
+      )
+      if (naturalRowHeight > 0) baseRowHeightRef.current = naturalRowHeight
+
+      const baseRowHeight = naturalRowHeight || baseRowHeightRef.current || TABLE_ROW_HEIGHT
+      const availableHeight = scrollElement.clientHeight - (headerHeight || FALLBACK_HEADER_HEIGHT) - 2
+      if (availableHeight <= 0 || !table) return
+
+      const nextPageSize = Math.min(
+        MAX_PAGE_SIZE,
+        Math.max(MIN_PAGE_SIZE, Math.floor(availableHeight / baseRowHeight)),
+      )
+
+      if (pageSizeRef.current !== nextPageSize) {
+        const previousPageSize = pageSizeRef.current
+        pageSizeRef.current = nextPageSize
+        setPageSize(nextPageSize)
+        setCurrentPage((page) => Math.floor(((page - 1) * previousPageSize) / nextPageSize) + 1)
+      }
+
+      table.style.setProperty(
+        '--ticket-history-row-height',
+        `${Math.max(baseRowHeight, availableHeight / nextPageSize)}px`,
+      )
+    }
+
+    updatePageSize()
+    const observer = new ResizeObserver(updatePageSize)
+    observer.observe(scrollElement)
+    window.addEventListener('resize', updatePageSize)
+
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', updatePageSize)
+    }
+  }, [loading])
 
   useEffect(() => {
     let isMounted = true
@@ -99,7 +158,7 @@ export function TicketHistory({ accessToken, onSessionExpired, refreshKey, deskt
       setError('')
 
       try {
-        const result = await getTickets(accessToken, { page: currentPage, limit: PAGE_SIZE })
+        const result = await getTickets(accessToken, { page: currentPage, limit: pageSize })
         if (isMounted) {
           setTickets(result.tickets)
           setTotal(result.total)
@@ -122,11 +181,11 @@ export function TicketHistory({ accessToken, onSessionExpired, refreshKey, deskt
     return () => {
       isMounted = false
     }
-  }, [accessToken, onSessionExpired, refreshKey, reloadKey, currentPage])
+  }, [accessToken, onSessionExpired, refreshKey, reloadKey, currentPage, pageSize])
 
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
   const activePage = Math.min(currentPage, totalPages)
-  const pageStart = (activePage - 1) * PAGE_SIZE
+  const pageStart = (activePage - 1) * pageSize
   const pageNumbers = getPageNumbers(activePage, totalPages)
 
   return (
@@ -142,7 +201,7 @@ export function TicketHistory({ accessToken, onSessionExpired, refreshKey, deskt
               'calc((100% - 218px) * 0.258)',
               'calc((100% - 218px) * 0.387)',
             ]}
-            rows={PAGE_SIZE}
+            rows={pageSize}
           />
         )}
 
@@ -161,9 +220,9 @@ export function TicketHistory({ accessToken, onSessionExpired, refreshKey, deskt
 
         {!loading && !error && tickets.length > 0 && (
           <>
-            <TicketHistoryTable tickets={tickets} />
+            <TicketHistoryTable tickets={tickets} pageSize={pageSize} scrollRef={tableScrollRef} />
             <footer className="table-footer">
-              <span>Mostrando {pageStart + 1}–{Math.min(pageStart + PAGE_SIZE, total)} de {total} tickets</span>
+              <span>Mostrando {pageStart + 1}–{Math.min(pageStart + pageSize, total)} de {total} tickets</span>
               <nav className="pagination" aria-label="Paginación del historial de tickets">
                 <button className="pagination-button" type="button" disabled={activePage === 1} onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}>Anterior</button>
                 {pageNumbers.map((page, index) => page === 'ellipsis'

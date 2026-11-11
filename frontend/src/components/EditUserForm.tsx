@@ -72,17 +72,17 @@ export function EditUserForm({ accessToken, user, isSelf, onUpdated, onCancel, o
       ref={modalRef}
       label={`Editar usuario ${user.nombre}`}
       backdropClassName="device-modal-backdrop"
-      cardClassName="create-device-card modal-card create-user-modal"
+      cardClassName="create-device-card modal-card create-user-modal user-form-three-column"
       dismissible={!saving}
       onClose={onCancel}
     >
       <div className="device-modal-body">
         <form className="device-form" onSubmit={handleSubmit}>
-          <label className="field-float" htmlFor="edit-user-rut">
+          <label className="field-float create-user-primary-field" htmlFor="edit-user-rut">
             <span>RUT</span>
             <input id="edit-user-rut" value={user.rut} readOnly />
           </label>
-          <label className="field-float" htmlFor="edit-user-name">
+          <label className="field-float create-user-primary-field" htmlFor="edit-user-name">
             <span>Nombre</span>
             <input
               id="edit-user-name"
@@ -92,29 +92,7 @@ export function EditUserForm({ accessToken, user, isSelf, onUpdated, onCancel, o
               required
             />
           </label>
-          <label className="field-float" htmlFor="edit-user-email">
-            <span>Email</span>
-            <div className="email-input-group">
-              <input
-                id="edit-user-email"
-                type="text"
-                value={localPartOfEmail(emailFromName(form.nombre))}
-                readOnly
-                aria-label="Correo generado desde el nombre"
-              />
-              <span className="email-input-suffix">{USER_EMAIL_DOMAIN}</span>
-            </div>
-          </label>
-          <label className="field-float" htmlFor="edit-user-birth-date">
-            <span>Fecha de nacimiento</span>
-            <input
-              id="edit-user-birth-date"
-              type="date"
-              value={form.fecha_nacimiento ?? ''}
-              onChange={(event) => updateField('fecha_nacimiento', event.target.value)}
-            />
-          </label>
-          <div className="device-field field-float">
+          <div className="device-field field-float create-user-primary-field">
             <span>Rol</span>
             <SelectMenu
               id="edit-user-role"
@@ -127,6 +105,28 @@ export function EditUserForm({ accessToken, user, isSelf, onUpdated, onCancel, o
             />
             {isSelf && <span className="device-field-hint">No puedes modificar tu propio rol.</span>}
           </div>
+          <label className="field-float create-user-secondary-field" htmlFor="edit-user-email">
+            <span>Email</span>
+            <div className="email-input-group">
+              <input
+                id="edit-user-email"
+                type="text"
+                value={localPartOfEmail(emailFromName(form.nombre))}
+                readOnly
+                aria-label="Correo generado desde el nombre"
+              />
+              <span className="email-input-suffix">{USER_EMAIL_DOMAIN}</span>
+            </div>
+          </label>
+          <label className="field-float create-user-secondary-field" htmlFor="edit-user-birth-date">
+            <span>Fecha de nacimiento</span>
+            <input
+              id="edit-user-birth-date"
+              type="date"
+              value={form.fecha_nacimiento ?? ''}
+              onChange={(event) => updateField('fecha_nacimiento', event.target.value)}
+            />
+          </label>
           {error && <p className="error device-form-wide" role="alert">{error}</p>}
           <div className="device-form-actions device-form-wide">
             <button className="secondary-button" type="button" onClick={() => modalRef.current?.close()} disabled={saving}>

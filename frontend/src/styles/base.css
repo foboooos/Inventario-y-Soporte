@@ -329,6 +329,24 @@ button:disabled {
   color: var(--minimal-muted);
 }
 
+.select-menu-value {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.select-menu-selected-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.select-menu-value .select-menu-option-icon {
+  flex-shrink: 0;
+  margin-right: 0;
+}
+
 .select-menu-list {
   position: absolute;
   z-index: 40;
@@ -403,4 +421,25 @@ button:disabled {
 .select-menu-option.is-selected {
   color: var(--minimal-secondary);
   font-weight: 700;
+}
+
+.select-menu-option-icon {
+  display: inline-flex;
+  flex: 0 0 16px;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+  color: var(--minimal-secondary);
+}
+
+.select-menu-option-icon svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
 }

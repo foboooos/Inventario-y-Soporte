@@ -50,25 +50,27 @@ describe('LocationService', () => {
   it('creates a sub-location under a global location', async () => {
     const findOneBy = vi.fn()
       .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce({ id_ubicacion: 2, nombre: 'Sala de clases', padre_id: null } as Ubicacion);
+      .mockResolvedValueOnce({ id_ubicacion: 2, nombre: 'Sala de clases', padre_id: null, tipo: 'PRINCIPAL' } as Ubicacion);
     const save = vi.fn().mockResolvedValue({ id_ubicacion: 7, nombre: '1° Básico A', padre_id: 2 } as Ubicacion);
     const create = vi.fn((value: Partial<Ubicacion>) => value as Ubicacion);
     const service = createService({ findOneBy, save, create: create as unknown as Repository<Ubicacion>['create'] });
 
     await service.create({ nombre: '1° Básico A', padre_id: 2 });
 
-    expect(create).toHaveBeenCalledWith({ nombre: '1° Básico A', sigla: null, padre_id: 2, tipo: 'PRINCIPAL' });
+    expect(create).toHaveBeenCalledWith({ nombre: '1° Básico A', sigla: null, padre_id: 2, tipo: 'SECUNDARIA' });
   });
 
-  it('stores the requested location type', async () => {
-    const findOneBy = vi.fn().mockResolvedValue(null);
-    const save = vi.fn().mockResolvedValue({ id_ubicacion: 3, nombre: 'Patio', padre_id: null, tipo: 'TERCIARIA' } as Ubicacion);
+  it('creates a tertiary location under a secondary location', async () => {
+    const findOneBy = vi.fn()
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ id_ubicacion: 7, nombre: '1° Básico A', padre_id: 2, tipo: 'SECUNDARIA' } as Ubicacion);
+    const save = vi.fn().mockResolvedValue({ id_ubicacion: 8, nombre: 'Sala de lectura', padre_id: 7, tipo: 'TERCIARIA' } as Ubicacion);
     const create = vi.fn((value: Partial<Ubicacion>) => value as Ubicacion);
     const service = createService({ findOneBy, save, create: create as unknown as Repository<Ubicacion>['create'] });
 
-    await service.create({ nombre: 'Patio', tipo: 'TERCIARIA' });
+    await service.create({ nombre: 'Sala de lectura', tipo: 'TERCIARIA', padre_id: 7 });
 
-    expect(create).toHaveBeenCalledWith({ nombre: 'Patio', sigla: null, padre_id: null, tipo: 'TERCIARIA' });
+    expect(create).toHaveBeenCalledWith({ nombre: 'Sala de lectura', sigla: null, padre_id: 7, tipo: 'TERCIARIA' });
   });
 
   it('rejects creating a sub-location when the parent does not exist', async () => {
@@ -78,16 +80,23 @@ describe('LocationService', () => {
     await expect(service.create({ nombre: '1° Básico A', padre_id: 99 })).rejects.toThrow(NotFoundException);
   });
 
-  it('rejects creating a third nesting level', async () => {
+  it('rejects creating a fourth nesting level', async () => {
     const findOneBy = vi.fn()
       .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce({ id_ubicacion: 9, nombre: '1° Básico A', padre_id: 2 } as Ubicacion);
+      .mockResolvedValueOnce({ id_ubicacion: 9, nombre: 'Sala de lectura', padre_id: 7, tipo: 'TERCIARIA' } as Ubicacion);
     const service = createService({ findOneBy });
 
     await expect(service.create({ nombre: 'Rincón', padre_id: 9 })).rejects.toThrow(ConflictException);
   });
 
-  it('propagates a rename to devices and tickets', async () => {
+  it('requires parent locations for secondary and tertiary types', async () => {
+    const findOneBy = vi.fn().mockResolvedValue(null);
+    const service = createService({ findOneBy });
+
+    await expect(service.create({ nombre: 'Sububicación', tipo: 'TERCIARIA' })).rejects.toThrow(ConflictException);
+  });
+
+  it('renames a location without rewriting device or ticket references', async () => {
     const location = { id_ubicacion: 5, nombre: 'Laboratorio 1', padre_id: null } as Ubicacion;
     const findOneBy = vi.fn().mockResolvedValueOnce(location).mockResolvedValueOnce(null);
     const save = vi.fn().mockResolvedValue(location);
@@ -105,13 +114,13 @@ describe('LocationService', () => {
 
     const result = await service.rename(5, { nombre: 'Laboratorio A' });
 
-    expect(deviceUpdate).toHaveBeenCalledWith({ ubicacion: 'Laboratorio 1' }, { ubicacion: 'Laboratorio A' });
-    expect(ticketUpdate).toHaveBeenCalledWith({ ubicacion: 'Laboratorio 1' }, { ubicacion: 'Laboratorio A' });
+    expect(deviceUpdate).not.toHaveBeenCalled();
+    expect(ticketUpdate).not.toHaveBeenCalled();
     expect(save).toHaveBeenCalledWith(location);
     expect(result.nombre).toBe('Laboratorio A');
   });
 
-  it('keeps devices and tickets untouched when the name does not change', async () => {
+  it('keeps device and ticket references untouched when the name does not change', async () => {
     const location = { id_ubicacion: 5, nombre: 'Laboratorio 1', padre_id: null } as Ubicacion;
     const findOneBy = vi.fn().mockResolvedValue(location);
     const save = vi.fn().mockResolvedValue(location);
@@ -146,7 +155,7 @@ describe('LocationService', () => {
   });
 
   it('generates the standard courses under a global location', async () => {
-    const padre = { id_ubicacion: 2, nombre: 'Sala de clases', padre_id: null } as Ubicacion;
+    const padre = { id_ubicacion: 2, nombre: 'Sala de clases', padre_id: null, tipo: 'PRINCIPAL' } as Ubicacion;
     const findOneBy = vi.fn().mockResolvedValue(padre);
     const find = vi.fn().mockResolvedValueOnce([]).mockResolvedValueOnce([]);
     const save = vi.fn().mockResolvedValue([]);
@@ -157,14 +166,14 @@ describe('LocationService', () => {
 
     expect(create).toHaveBeenCalledTimes(24);
     expect(save).toHaveBeenCalledWith(expect.arrayContaining([
-      expect.objectContaining({ nombre: '1° Básico A', padre_id: 2 }),
-      expect.objectContaining({ nombre: '8° Básico B', padre_id: 2 }),
-      expect.objectContaining({ nombre: '4° Medio B', padre_id: 2 }),
+      expect.objectContaining({ nombre: '1° Básico A', padre_id: 2, tipo: 'SECUNDARIA' }),
+      expect.objectContaining({ nombre: '8° Básico B', padre_id: 2, tipo: 'SECUNDARIA' }),
+      expect.objectContaining({ nombre: '4° Medio B', padre_id: 2, tipo: 'SECUNDARIA' }),
     ]));
   });
 
   it('only creates the courses that are missing', async () => {
-    const padre = { id_ubicacion: 2, nombre: 'Sala de clases', padre_id: null } as Ubicacion;
+    const padre = { id_ubicacion: 2, nombre: 'Sala de clases', padre_id: null, tipo: 'PRINCIPAL' } as Ubicacion;
     const findOneBy = vi.fn().mockResolvedValue(padre);
     const existing = [{ id_ubicacion: 10, nombre: '1° Básico A', padre_id: 2 } as Ubicacion];
     const find = vi.fn().mockResolvedValueOnce(existing).mockResolvedValueOnce(existing);

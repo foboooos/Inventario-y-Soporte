@@ -17,6 +17,7 @@ import { SortButton } from './SortButton'
 import type { SortKey, SortOption } from './SortButton'
 import { ChipDisclosure } from './ChipDisclosure'
 import { useCustomScrollbar } from '../utils/useCustomScrollbar'
+import { AvailableLevelsModal } from './AvailableLevelsModal'
 
 type SubjectsPageProps = {
   accessToken: string
@@ -46,14 +47,9 @@ export function SubjectsPage({ accessToken, onSessionExpired }: SubjectsPageProp
   const [reloadKey, setReloadKey] = useState(0)
 
   const [levelModal, setLevelModal] = useState<{ level: EducationalLevel | null } | null>(null)
+  const [levelsModalOpen, setLevelsModalOpen] = useState(false)
   const [pendingDeleteLevel, setPendingDeleteLevel] = useState<EducationalLevel | null>(null)
   const scrollbarKey = `${levels.length}:${loading}`
-  const {
-    scrollRef: levelsListRef,
-    thumbRef: levelsThumbRef,
-    barRef: levelsScrollbarRef,
-    handlePointerDown: handleLevelsScrollbarPointerDown,
-  } = useCustomScrollbar<HTMLUListElement>(scrollbarKey)
   const {
     scrollRef: checklistRef,
     thumbRef: checklistThumbRef,
@@ -273,7 +269,7 @@ export function SubjectsPage({ accessToken, onSessionExpired }: SubjectsPageProp
           )}
 
           <div className="subjects-grid subjects-grid-split">
-            <section className="support-card subjects-card subjects-levels-card" aria-label="Niveles educativos">
+            <section className="support-card subjects-card subjects-create-card" aria-label="Crear asignatura">
               <div className="subjects-levels-toolbar">
                 <button
                   className="primary-action primary-action-solid subjects-levels-add"
@@ -285,55 +281,14 @@ export function SubjectsPage({ accessToken, onSessionExpired }: SubjectsPageProp
                   </svg>
                   Nuevo nivel
                 </button>
+                <button
+                  className="secondary-button subjects-levels-add"
+                  type="button"
+                  onClick={() => setLevelsModalOpen(true)}
+                >
+                  Niveles disponibles ({levels.length})
+                </button>
               </div>
-
-              {loading && <ListSkeleton label="Cargando niveles educativos…" rows={4} />}
-              {!loading && levels.length === 0 && (
-                <p className="subjects-state" role="status">Aún no hay niveles educativos registrados.</p>
-              )}
-
-              {!loading && levels.length > 0 && (
-                <div className="subjects-level-scroll">
-                  <ul className="subjects-list" ref={levelsListRef}>
-                    {levels.map((level) => (
-                      <li className="subjects-item" key={level.id}>
-                        <span className="subjects-name">{level.nombre}</span>
-                        <div className="subjects-actions">
-                          <button
-                            className="subjects-icon-button"
-                            type="button"
-                            aria-label={`Renombrar ${level.nombre}`}
-                            title="Renombrar"
-                            onClick={() => setLevelModal({ level })}
-                          >
-                            <PencilIcon />
-                          </button>
-                          <button
-                            className="subjects-icon-button subjects-icon-button-danger"
-                            type="button"
-                            aria-label={`Eliminar ${level.nombre}`}
-                            title="Eliminar"
-                            onClick={() => setPendingDeleteLevel(level)}
-                          >
-                            <TrashIcon />
-                          </button>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                  <div
-                    className="list-scrollbar"
-                    aria-hidden="true"
-                    ref={levelsScrollbarRef}
-                    onPointerDown={handleLevelsScrollbarPointerDown}
-                  >
-                    <span className="list-scrollbar-thumb" ref={levelsThumbRef} />
-                  </div>
-                </div>
-              )}
-            </section>
-
-            <section className="support-card subjects-card subjects-create-card" aria-label="Crear asignatura">
               <form className="subjects-form subjects-form-column" onSubmit={handleCreateSubject}>
                 <label className="field-float">
                   <span>Asignatura</span>
@@ -425,6 +380,15 @@ export function SubjectsPage({ accessToken, onSessionExpired }: SubjectsPageProp
               }}
               onCancel={() => setEditingSubject(null)}
               onSessionExpired={onSessionExpired}
+            />
+          )}
+
+          {levelsModalOpen && (
+            <AvailableLevelsModal
+              levels={levels}
+              onEdit={(level) => setLevelModal({ level })}
+              onDelete={setPendingDeleteLevel}
+              onClose={() => setLevelsModalOpen(false)}
             />
           )}
 
