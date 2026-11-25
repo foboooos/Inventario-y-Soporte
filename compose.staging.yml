@@ -2,6 +2,9 @@ services:
   migrate:
     image: inventario-soporte-migrate:staging-20261109
 
+  bootstrap-admin:
+    image: inventario-soporte-bootstrap-admin:staging-20261109
+
   backend:
     image: inventario-soporte-backend:staging-20261109
 

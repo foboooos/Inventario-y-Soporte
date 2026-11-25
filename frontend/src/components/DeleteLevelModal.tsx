@@ -42,7 +42,7 @@ export function DeleteLevelModal({ accessToken, level, onDeleted, onCancel, onSe
       role="alertdialog"
       label={`Eliminar ${level.nombre}`}
       backdropClassName="device-modal-backdrop"
-      cardClassName="create-device-card modal-card config-delete-modal"
+      cardClassName="create-device-card modal-card config-delete-modal config-delete-level-modal"
       dismissible={!deleting}
       onClose={onCancel}
     >

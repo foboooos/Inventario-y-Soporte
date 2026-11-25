@@ -32,6 +32,30 @@ services:
         condition: service_healthy
     command: ["node", "dist/database/run-migrations.js"]
 
+  bootstrap-admin:
+    image: inventario-soporte-bootstrap-admin:prod
+    build:
+      context: ./backend
+      target: production
+    restart: "no"
+    environment:
+      NODE_ENV: production
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: "${POSTGRES_USER:?POSTGRES_USER must be set}"
+      DB_PASSWORD: "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}"
+      DB_DATABASE: "${POSTGRES_DB:?POSTGRES_DB must be set}"
+      SYS_ADMIN_PASSWORD: "${SYS_ADMIN_PASSWORD:?SYS_ADMIN_PASSWORD must be set}"
+      SYS_ADMIN_RUT: "${SYS_ADMIN_RUT:-12.345.678-9}"
+      SYS_ADMIN_NOMBRE: "${SYS_ADMIN_NOMBRE:?SYS_ADMIN_NOMBRE must be set}"
+      SYS_ADMIN_EMAIL: "${SYS_ADMIN_EMAIL:-miguel.ramirez@davincicoquimbo.cl}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    command: ["node", "dist/database/run-bootstrap-admin.js"]
+
   backend:
     image: inventario-soporte-backend:prod
     build:
@@ -55,6 +79,8 @@ services:
       postgres:
         condition: service_healthy
       migrate:
+        condition: service_completed_successfully
+      bootstrap-admin:
         condition: service_completed_successfully
     expose:
       - "3000"

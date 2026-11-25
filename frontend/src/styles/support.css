@@ -1074,6 +1074,10 @@
   width: min(100%, 420px);
 }
 
+.config-delete-level-modal {
+  width: min(100%, 360px);
+}
+
 .config-location-modal {
   width: min(100%, 420px);
 }

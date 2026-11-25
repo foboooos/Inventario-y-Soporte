@@ -17,6 +17,28 @@ services:
       timeout: 5s
       retries: 10
 
+  bootstrap-admin:
+    build:
+      context: ./backend
+      target: development
+    container_name: davinci-bootstrap-admin
+    restart: "no"
+    environment:
+      NODE_ENV: development
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: "${POSTGRES_USER:?POSTGRES_USER must be set}"
+      DB_PASSWORD: "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}"
+      DB_DATABASE: "${POSTGRES_DB:?POSTGRES_DB must be set}"
+      SYS_ADMIN_PASSWORD: "${SYS_ADMIN_PASSWORD:?SYS_ADMIN_PASSWORD must be set}"
+      SYS_ADMIN_NOMBRE: "${SYS_ADMIN_NOMBRE:?SYS_ADMIN_NOMBRE must be set}"
+      SYS_ADMIN_RUT: "${SYS_ADMIN_RUT:-12.345.678-9}"
+      SYS_ADMIN_EMAIL: "${SYS_ADMIN_EMAIL:-miguel.ramirez@davincicoquimbo.cl}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["sh", "-c", "npm run migration:run && npm run bootstrap:admin"]
+
   backend:
     build:
       context: ./backend
@@ -39,6 +61,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      bootstrap-admin:
+        condition: service_completed_successfully
     develop:
       watch:
         - action: sync
